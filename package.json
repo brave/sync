@@ -1,0 +1,37 @@
+{
+  "name": "brave-sync-client",
+  "version": "0.0.1",
+  "description": "Client for Brave sync protocol",
+  "main": "lib/index.js",
+  "scripts": {
+    "flow": "flow; test $? -eq 0 -o $? -eq 2",
+    "build": "browserify lib/index.js -o build/sync.js",
+    "check": "nsp check",
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/brave/sync-client.git"
+  },
+  "keywords": [
+    "brave",
+    "browser",
+    "sync"
+  ],
+  "author": "Brave Developers <support@brave.com>",
+  "license": "MPL-2.0",
+  "bugs": {
+    "url": "https://github.com/brave/sync-client/issues"
+  },
+  "homepage": "https://github.com/brave/sync-client#readme",
+  "devDependencies": {
+    "browserify": "^13.1.1",
+    "flow-bin": "^0.35.0",
+    "mocha": "^3.1.2",
+    "nsp": "^2.6.2",
+    "standard": "^8.5.0"
+  },
+  "dependencies": {
+    "tweetnacl": "^0.14.3"
+  }
+}
