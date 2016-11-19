@@ -35,7 +35,6 @@ describe('getNonce', () => {
     while (i < 100) {
       i++
       let nonce = crypto.getNonce(1)
-      console.log('got nonce', byteArrayToString(nonce))
       assert.equal(nonce[0], 1)
       assert.equal(nonce[5], 1)
       assert(nonce[6] > 87)
