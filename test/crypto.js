@@ -2,6 +2,7 @@
 
 const assert = require('assert')
 const crypto = require('../lib/crypto')
+const serializer = require('../lib/serializer')
 
 function byteArrayToString (byteArray) {
   return byteArray.join(' ')
@@ -59,12 +60,9 @@ describe('encrypt and decrypt', () => {
     assert.equal(result2.ciphertext.length, 144)
     assert.equal(result2.nonce.length, 24)
   })
-  it('encodes and decodes between byte array and string', () => {
-    assert.equal(message, crypto.byteArrayToString(crypto.stringToByteArray(message)))
-  })
   it('decrypts to original message', () => {
-    const encrypted = crypto.encrypt(crypto.stringToByteArray(message), key, 0)
+    const encrypted = crypto.encrypt(serializer.stringToByteArray(message), key, 0)
     const decrypted = crypto.decrypt(encrypted.ciphertext, encrypted.nonce, key)
-    assert.equal(crypto.stringToByteArray(message).join(' '), decrypted.join(' '))
+    assert.equal(message, serializer.byteArrayToString(decrypted))
   })
 })

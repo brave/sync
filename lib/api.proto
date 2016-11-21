@@ -1,0 +1,17 @@
+package api;
+syntax = "proto3";
+
+message SignedMessage {
+  required bytes signedData = 1;
+}
+
+message SecretBoxRecord {
+  required bytes encryptedData = 1;
+  required int deviceId = 2;
+  required bytes nonceRandom = 3;
+  required bytes nonceTimestamp = 4;
+}
+
+message GenericMessage {
+  string message = 1;
+}
