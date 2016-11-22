@@ -145,18 +145,15 @@ test('hkdf', (t) => {
     "L"     : 42,
     "OKM"   : "1407d46013d98bc6decefcfee55f0f90b0c7f63d68eb1a80eaf07e953cfc0a3a5240a155d6e4daa965bb"
   }]
-  t.plan(2)
+  t.plan(5)
   results.forEach((result) => {
     var hkdf = crypto.getHKDF(
       fromHex(result['IKM']),
       fromHex(result['info']),
       result['L'],
-      result['salt']
+      fromHex(result['salt'])
     )
-    if (!result['info']) {
-      // TODO: unskip tests with nonempty info
-      t.equal(result['OKM'], toHex(hkdf))
-    }
+    t.equal(toHex(hkdf), result['OKM'])
   })
 })
 
