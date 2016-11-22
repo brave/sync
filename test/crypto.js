@@ -6,30 +6,28 @@ function byteArrayToString (byteArray) {
   return byteArray.join(' ')
 }
 
-const zeroes = '0 0 0 0 0 0 0 0 0 0 0 0 0'
-
 let previousNonces = []
 
 test('getNonce', (t) => {
-  t.test('gets a nonce with deviceID 0', (q) => {
+  t.test('gets a nonce with counter 0', (q) => {
     q.plan(5)
     let nonce = crypto.getNonce(0)
     previousNonces.push(byteArrayToString(nonce))
     q.equal(nonce.length, 24)
+    q.equal(nonce[1], 0)
     q.equal(nonce[0], 0)
-    q.equal(nonce[5], 1)
-    q.ok(nonce[6] > 87)
-    q.equal(zeroes, byteArrayToString(nonce.slice(11)))
+    q.equal(nonce[22], 0)
+    q.equal(nonce[23], 0)
   })
-  t.test('gets a nonce with deviceID 244', (q) => {
+  t.test('gets a nonce with counter 1000', (q) => {
     q.plan(5)
-    let nonce = crypto.getNonce(244)
+    let nonce = crypto.getNonce(1000)
     previousNonces.push(byteArrayToString(nonce))
     q.equal(nonce.length, 24)
-    q.equal(nonce[0], 244)
-    q.equal(nonce[5], 1)
-    q.ok(nonce[6] > 87)
-    q.equal(zeroes, byteArrayToString(nonce.slice(11)))
+    q.equal(nonce[1], 232)
+    q.equal(nonce[0], 3)
+    q.equal(nonce[22], 0)
+    q.equal(nonce[23], 0)
   })
   t.test('does not repeat nonces', (q) => {
     q.plan(500)
@@ -37,17 +35,19 @@ test('getNonce', (t) => {
     while (i < 100) {
       i++
       let nonce = crypto.getNonce(1)
-      q.equal(nonce[0], 1)
-      q.equal(nonce[5], 1)
-      q.ok(nonce[6] > 87)
-      q.equal(zeroes, byteArrayToString(nonce.slice(11)))
-      q.ok(!previousNonces.includes(byteArrayToString(nonce)))
+      let nonceString = byteArrayToString(nonce)
+      q.equal(nonce[1], 1)
+      q.equal(nonce[0], 0)
+      q.equal(nonce[22], 0)
+      q.equal(nonce[23], 0)
+      q.ok(!previousNonces.includes(nonceString))
+      previousNonces.push(nonceString)
     }
   })
-  t.test('throws if device id is too high', (q) => {
+  t.test('throws if counter is too high', (q) => {
     q.plan(1)
     q.throws(
-      crypto.getNonce.bind(null, 256, 1), /Invalid device/)
+      crypto.getNonce.bind(null, Math.pow(256, 2)), /Invalid counter/)
   })
 })
 
