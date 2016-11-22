@@ -7,7 +7,7 @@
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
     "build": "browserify lib/index.js -o build/sync.js",
     "check": "nsp check",
-    "test": "mocha"
+    "test": "tape test/*.js"
   },
   "repository": {
     "type": "git",
@@ -27,9 +27,9 @@
   "devDependencies": {
     "browserify": "^13.1.1",
     "flow-bin": "^0.35.0",
-    "mocha": "^3.1.2",
     "nsp": "^2.6.2",
-    "standard": "^8.5.0"
+    "standard": "^8.5.0",
+    "tape": "^4.6.2"
   },
   "dependencies": {
     "protobufjs": "github:dcodeio/protobuf.js",

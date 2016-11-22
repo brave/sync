@@ -1,15 +1,12 @@
-/* global describe, it */
-
-const assert = require('assert')
+const test = require('tape')
 const serializer = require('../lib/serializer')
 
-describe('serializing strings', () => {
+test('serializing strings', (t) => {
   const messages = ['€ are my favorite moneys', 'hello world',
     'test abc     ', '']
-  it('deserializes to original message', () => {
-    messages.forEach((msg) => {
-      const bytes = serializer.stringToByteArray(msg)
-      assert.equal(msg, serializer.byteArrayToString(bytes))
-    })
+  t.plan(4)
+  messages.forEach((msg) => {
+    const bytes = serializer.stringToByteArray(msg)
+    t.equal(msg, serializer.byteArrayToString(bytes))
   })
 })
