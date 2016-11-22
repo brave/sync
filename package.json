@@ -8,7 +8,8 @@
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
     "build": "browserify lib/index.js -o build/sync.js",
     "check": "nsp check",
-    "test": "tape test/*.js"
+    "test": "tape test/*.js",
+    "browsertest": "browserify test/*.js > testbundle.js && python -m SimpleHTTPServer"
   },
   "repository": {
     "type": "git",
