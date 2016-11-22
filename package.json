@@ -4,6 +4,7 @@
   "description": "Client for Brave sync protocol",
   "main": "lib/index.js",
   "scripts": {
+    "lint": "standard",
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
     "build": "browserify lib/index.js -o build/sync.js",
     "check": "nsp check",
@@ -34,5 +35,10 @@
   "dependencies": {
     "protobufjs": "github:dcodeio/protobuf.js",
     "tweetnacl": "^0.14.3"
+  },
+  "standard": {
+    "ignore": [
+      "test/crypto.js"
+    ]
   }
 }
