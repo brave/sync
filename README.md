@@ -1,7 +1,7 @@
 # Brave Sync
 
 [![Build
-Status](https://travis-ci.com/brave/sync-client.svg?token=Z9Cjdxe1hxpZUxkophZN&branch=master)](https://travis-ci.com/brave/sync-client)
+Status](https://travis-ci.org/brave/sync.svg?branch=master)](https://travis-ci.org/brave/sync)
 
 A client/server for Brave sync
 
