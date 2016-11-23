@@ -1,7 +1,7 @@
-const Express = require("express")
+const Express = require('express')
 var router = Express.Router()
 
-var UserAwsCredentialGenerator = require("./services/user-aws-credential-generator")
+var UserAwsCredentialGenerator = require('./services/user-aws-credential-generator')
 
 // Shared
 // ===
@@ -15,11 +15,11 @@ function verifyRequest (request, response, next, userId) {
 // Routes
 // ===
 
-router.param("userId", verifyRequest)
+router.param('userId', verifyRequest)
 
 // Generate temporary AWS credentials allowing user to access their Sync data.
-router.post("/:userId/credentials", (request, response) => {
-  const service = new UserAwsCredentialGenerator(userId = request.userId)
+router.post('/:userId/credentials', (request, response) => {
+  const service = new UserAwsCredentialGenerator(request.userId)
   service.perform()
     .then((data) => {
       response.send(data.Credentials)

@@ -1,9 +1,9 @@
-"use strict";
+'use strict'
 
-const Config = require("config")
-const Crypto = require("crypto")
-const AwsSdk = require("aws-sdk")
-const Util = require("../util.js")
+const Config = require('config')
+const Crypto = require('crypto')
+const AwsSdk = require('aws-sdk')
+const Util = require('../util.js')
 
 class UserAwsCredentialGenerator {
   constructor (userId) {
@@ -25,7 +25,7 @@ class UserAwsCredentialGenerator {
 
   awsStsName () {
     var token = Crypto.randomBytes(4).toString('hex')
-    return `sync-client-${Config.util.getEnv("NODE_ENV")}-${token}`
+    return `sync-client-${Config.util.getEnv('NODE_ENV')}-${token}`
   }
 
   awsStsPolicy () {
@@ -73,7 +73,7 @@ class UserAwsCredentialGenerator {
         }
       ]
     }
-    `;
+    `
   }
 }
 
