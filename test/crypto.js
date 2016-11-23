@@ -2,6 +2,9 @@ const test = require('tape')
 const crypto = require('../lib/crypto')
 const serializer = require('../lib/serializer')
 
+var testSerializer = null
+serializer.init().then((s) => testSerializer = s)
+
 function toHex (byteArray) {
   var str = ''
   for (var i = 0; i < byteArray.length; i++) {
@@ -171,8 +174,9 @@ test('encrypt and decrypt', (t) => {
   })
   t.test('decrypts to original message', (q) => {
     q.plan(1)
-    const encrypted = crypto.encrypt(serializer.stringToByteArray(message), key, 0)
+    if (!testSerializer) q.fail('serializer not initialized')
+    const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message), key, 0)
     const decrypted = crypto.decrypt(encrypted.ciphertext, encrypted.nonce, key)
-    q.equal(message, serializer.byteArrayToString(decrypted))
+    q.equal(message, testSerializer.byteArrayToString(decrypted))
   })
 })
