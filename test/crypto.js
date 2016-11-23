@@ -105,7 +105,7 @@ test('hmac', (t) => {
     '80b24263c7c1a3ebb71493c1dd7be8b49b46d1f41b4aeec1121b013783f8f3526b56d037e05f2598bd0fd2215d6a1e5295e64f73f63f0aec8b915a985d786598',
     'e37b6a775dc87dbaa4dfa9f96e5e3ffddebd71f8867289865df5a32d20cdc944b6022cac3c4982b10d5eeb55c3e4de15134676fb6de0446065c97440fa8c6a58'
   ]
-  t.plan(7)
+  t.plan(8)
   outputs.forEach((output, i) => {
     if (i === 4) {
       // test case 5 tests truncation to 128 bits
@@ -114,6 +114,7 @@ test('hmac', (t) => {
     }
     t.equal(output, toHex(crypto.hmac(fromHex(data[i]), fromHex(keys[i]))))
   })
+  t.throws(crypto.hmac.bind(null, new Uint8Array(), []), /Uint8Arrays/, 'errors if inputs are wrong type')
 })
 
 test('hkdf', (t) => {
@@ -148,7 +149,7 @@ test('hkdf', (t) => {
     "L"     : 42,
     "OKM"   : "1407d46013d98bc6decefcfee55f0f90b0c7f63d68eb1a80eaf07e953cfc0a3a5240a155d6e4daa965bb"
   }]
-  t.plan(5)
+  t.plan(6)
   results.forEach((result) => {
     var hkdf = crypto.getHKDF(
       fromHex(result['IKM']),
@@ -158,6 +159,7 @@ test('hkdf', (t) => {
     )
     t.equal(toHex(hkdf), result['OKM'])
   })
+  t.throws(crypto.getHKDF.bind(null, new Uint8Array(1), new Uint8Array(), 16321), /Invalid extract length/, 'error when extract length is too long')
 })
 
 test('encrypt and decrypt', (t) => {
@@ -179,16 +181,25 @@ test('encrypt and decrypt', (t) => {
     const decrypted = crypto.decrypt(encrypted.ciphertext, encrypted.nonce, key)
     q.equal(message, testSerializer.byteArrayToString(decrypted))
   })
+  t.test('decryption failures', (q) => {
+    q.plan(3)
+    const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message), key, 0)
+    q.equal(crypto.decrypt(encrypted.ciphertext, new Uint8Array(24), key), false)
+    q.equal(crypto.decrypt(encrypted.ciphertext, encrypted.nonce, new Uint8Array(32)), false)
+    encrypted.ciphertext[0] = 255
+    q.equal(crypto.decrypt(encrypted.ciphertext, encrypted.nonce, key), false)
+  })
 })
 
 test('key derivation', (t) => {
-  t.plan(7)
+  t.plan(8)
   t.equal(crypto.getSeed().length, 32, 'gets 32-byte seed')
   const key = crypto.deriveKeys(fromHex("5bb5ceb168e4c8e26a1a16ed34d9fc7fe92c1481579338da362cb8d9f925d7cb"))
   t.equal('f58ca446f0c33ee7e8e9874466da442b2e764afd77ad46034bdff9e01f9b87d4', key.fingerprint, 'gets fingerprint')
   t.equal('f58ca446f0c33ee7e8e9874466da442b2e764afd77ad46034bdff9e01f9b87d4', toHex(key.publicKey), 'gets pub key')
   t.equal('b5abda6940984c5153a2ba3653f047f98dfb19e39c3e02f07c8bbb0bd8e8872ef58ca446f0c33ee7e8e9874466da442b2e764afd77ad46034bdff9e01f9b87d4', toHex(key.secretKey), 'gets priv key')
   t.equal('3f36b2accde947ab30e273f8ec0bd5a1547d31b7cf5637e1cb4885409b5da829', toHex(key.secretboxKey), 'gets secretbox key')
+  t.throws(crypto.deriveKeys.bind(null, []), /Uint8Array/)
   const message = '€ 123 ッッッ　あ'
   t.test('can encrypt and decrypt with the derived key', (q) => {
     if (!testSerializer) q.fail('serializer not initialized')
@@ -201,11 +212,17 @@ test('key derivation', (t) => {
   })
   t.test('can sign and verify with the derived key', (q) => {
     if (!testSerializer) q.fail('serializer not initialized')
-    q.plan(2)
+    q.plan(4)
     const signed = crypto.sign(testSerializer.stringToByteArray(message),
       key.secretKey)
     q.equal(89, signed.length)
-    const verified = crypto.verify(signed, key.publicKey)
+    let verified = crypto.verify(signed, key.publicKey)
     q.equal(testSerializer.byteArrayToString(verified), message)
+    // Test verification failures
+    verified = crypto.verify(signed, key.secretboxKey)
+    q.equal(null, verified)
+    signed[0] = 255
+    verified = crypto.verify(signed, key.publicKey)
+    q.equal(null, verified)
   })
 })
