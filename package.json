@@ -1,12 +1,12 @@
 {
-  "name": "brave-sync-client",
+  "name": "brave-sync",
   "version": "0.0.1",
-  "description": "Client for Brave sync protocol",
-  "main": "lib/index.js",
+  "description": "Brave sync server and client",
+  "main": "server/index.js",
   "scripts": {
     "lint": "standard",
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
-    "build": "browserify lib/index.js -o build/sync.js",
+    "build": "browserify client/sync.js -o build/syncbundle.js",
     "check": "nsp check",
     "test": "tape test/*.js",
     "coverage": "browserify -t coverify test/*.js --bare | node | coverify",
@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/brave/sync-client.git"
+    "url": "git+ssh://git@github.com/brave/sync.git"
   },
   "keywords": [
     "brave",
@@ -24,9 +24,9 @@
   "author": "Brave Developers <support@brave.com>",
   "license": "MPL-2.0",
   "bugs": {
-    "url": "https://github.com/brave/sync-client/issues"
+    "url": "https://github.com/brave/sync/issues"
   },
-  "homepage": "https://github.com/brave/sync-client#readme",
+  "homepage": "https://github.com/brave/sync#readme",
   "devDependencies": {
     "browserify": "^13.1.1",
     "coverify": "^1.4.1",

@@ -1,13 +1,29 @@
-# Brave Sync Client
+# Brave Sync
 
 [![Build
 Status](https://travis-ci.com/brave/sync-client.svg?token=Z9Cjdxe1hxpZUxkophZN&branch=master)](https://travis-ci.com/brave/sync-client)
 
-A client for Brave sync
+A client/server for Brave sync
 
 ## Building
 
-`npm install`
+Install dependencies:
+
+```
+npm install
+```
+
+Build a bundled JS library for the client:
+
+```
+npm run build
+```
+
+Run the server (TODO):
+
+```
+npm start
+```
 
 ## Testing
 
