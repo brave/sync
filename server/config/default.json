@@ -1,0 +1,8 @@
+{
+  "logLevel": "info",
+  "awsAccessKeyId": null,
+  "awsSecretAccessKey": null,
+  "awsRegion": "us-west-2",
+  "port": 4000,
+  "userAgent": null
+}

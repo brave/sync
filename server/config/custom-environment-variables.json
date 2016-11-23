@@ -1,0 +1,8 @@
+{
+  "logLevel": "LOG_LEVEL",
+  "awsAccessKeyId": "AWS_ACCESS_KEY_ID",
+  "awsSecretAccessKey": "AWS_SECRET_ACCESS_KEY",
+  "awsRegion": "AWS_REGION",
+  "port": "PORT",
+  "userAgent": "USER_AGENT"
+}

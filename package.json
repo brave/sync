@@ -10,7 +10,9 @@
     "check": "nsp check",
     "test": "tape test/*.js",
     "coverage": "istanbul cover tape test/*.js --report lcovonly -- -R spec",
-    "browsertest": "browserify test/*.js > testbundle.js && python -m SimpleHTTPServer"
+    "browsertest": "browserify test/*.js > testbundle.js && python -m SimpleHTTPServer",
+    "start": "NODE_CONFIG_DIR=server/config/ node server/index.js",
+    "start-dev": "NODE_CONFIG_DIR=server/config/ nodemon server/index.js"
   },
   "repository": {
     "type": "git",
@@ -31,13 +33,20 @@
     "browserify": "^13.1.1",
     "flow-bin": "^0.35.0",
     "istanbul": "^0.4.5",
+    "nodemon": "^1.11.0",
     "nsp": "^2.6.2",
+    "pryjs": "^1.0.3",
     "standard": "^8.5.0",
     "tape": "^4.6.2"
   },
   "dependencies": {
+    "aws-sdk": "^2.7.7",
+    "body-parser": "^1.15.2",
+    "config": "^1.24.0",
+    "express": "^4.14.0",
     "protobufjs": "github:dcodeio/protobuf.js",
-    "tweetnacl": "^0.14.3"
+    "tweetnacl": "^0.14.3",
+    "winston": "^2.3.0"
   },
   "standard": {
     "ignore": [
