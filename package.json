@@ -9,7 +9,7 @@
     "build": "browserify client/sync.js -o build/syncbundle.js",
     "check": "nsp check",
     "test": "tape test/*.js",
-    "coverage": "browserify -t coverify test/*.js --bare | node | coverify",
+    "coverage": "istanbul cover tape test/*.js --report lcovonly -- -R spec",
     "browsertest": "browserify test/*.js > testbundle.js && python -m SimpleHTTPServer"
   },
   "repository": {
@@ -29,8 +29,8 @@
   "homepage": "https://github.com/brave/sync#readme",
   "devDependencies": {
     "browserify": "^13.1.1",
-    "coverify": "^1.4.1",
     "flow-bin": "^0.35.0",
+    "istanbul": "^0.4.5",
     "nsp": "^2.6.2",
     "standard": "^8.5.0",
     "tape": "^4.6.2"
