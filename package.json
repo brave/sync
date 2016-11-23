@@ -41,7 +41,9 @@
   },
   "standard": {
     "ignore": [
-      "test/crypto.js"
+      "test/crypto.js",
+      "testbundle.js",
+      "build/*.js"
     ]
   }
 }

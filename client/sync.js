@@ -1,3 +1,3 @@
-const crypt = require('../lib/crypto');
+const crypt = require('../lib/crypto')
 
 window.braveCrypto = crypt
