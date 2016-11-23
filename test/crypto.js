@@ -180,3 +180,13 @@ test('encrypt and decrypt', (t) => {
     q.equal(message, testSerializer.byteArrayToString(decrypted))
   })
 })
+
+test('key derivation', (t) => {
+  t.plan(5)
+  t.equal(crypto.getSeed().length, 32, 'gets 32-byte seed')
+  let key = crypto.deriveKeys(fromHex("5bb5ceb168e4c8e26a1a16ed34d9fc7fe92c1481579338da362cb8d9f925d7cb"))
+  t.equal('f58ca446f0c33ee7e8e9874466da442b2e764afd77ad46034bdff9e01f9b87d4', key.fingerprint, 'gets fingerprint')
+  t.equal('f58ca446f0c33ee7e8e9874466da442b2e764afd77ad46034bdff9e01f9b87d4', toHex(key.publicKey), 'gets pub key')
+  t.equal('b5abda6940984c5153a2ba3653f047f98dfb19e39c3e02f07c8bbb0bd8e8872ef58ca446f0c33ee7e8e9874466da442b2e764afd77ad46034bdff9e01f9b87d4', toHex(key.secretKey), 'gets priv key')
+  t.equal('3f36b2accde947ab30e273f8ec0bd5a1547d31b7cf5637e1cb4885409b5da829', toHex(key.secretboxKey), 'gets secretbox key')
+})
