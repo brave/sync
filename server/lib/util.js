@@ -35,8 +35,6 @@ exports.debugLogger = (request, response, next) => {
   next()
 }
 
-exports.userAgent = `sync-server/${process.env.npm_package_version} (brave.com)`
-
 // https://muffinresearch.co.uk/removing-leading-whitespace-in-es6-template-strings/
 exports.conciseTemplateString = (strings, ...values) => {
   // Interweave the strings with the

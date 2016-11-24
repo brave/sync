@@ -10,32 +10,25 @@ const Express = require('express')
 
 // const Querystring = require("querystring")
 
-// HTTP requests
-// const Request = require("request")
-
 // See config/
-var Config = require('config')
+const Config = require('config')
 
 // Local libs
 // ===
-var Util = require('./util.js')
+const Util = require('./lib/util.js')
 
 // App
 // ===
 
-var express = Express()
+const express = Express()
 express.disable('x-powered-by')
 express.use(BodyParser.text({type: '*/*'}))
 if (Config.logLevel === 'debug') {
   express.use(Util.debugLogger)
 }
 
-var UsersRouter = require('./users.js')
+const UsersRouter = require('./users.js')
 express.use('/', UsersRouter)
-
-express.get('/', (request, response) => {
-  response.send('☁️🎬✌️')
-})
 
 express.listen(Config.port)
 

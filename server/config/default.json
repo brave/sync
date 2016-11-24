@@ -3,6 +3,8 @@
   "awsAccessKeyId": null,
   "awsSecretAccessKey": null,
   "awsRegion": "us-west-2",
+  "awsS3Bucket": null,
   "port": 4000,
-  "userAgent": null
+  "userAgent": null,
+  "userAwsCredentialTtl": 3600
 }

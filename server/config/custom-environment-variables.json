@@ -3,6 +3,8 @@
   "awsAccessKeyId": "AWS_ACCESS_KEY_ID",
   "awsSecretAccessKey": "AWS_SECRET_ACCESS_KEY",
   "awsRegion": "AWS_REGION",
+  "awsS3Bucket": "AWS_S3_BUCKET",
   "port": "PORT",
-  "userAgent": "USER_AGENT"
+  "userAgent": "USER_AGENT",
+  "userAwsCredentialTtl": "USER_AWS_CREDENTIAL_TTL"
 }

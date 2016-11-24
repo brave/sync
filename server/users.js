@@ -1,7 +1,7 @@
 const Express = require('express')
 var router = Express.Router()
 
-var UserAwsCredentialGenerator = require('./services/user-aws-credential-generator')
+var UserAwsCredentialGenerator = require('./lib/user-aws-credential-generator')
 
 // Shared
 // ===
@@ -25,6 +25,10 @@ router.post('/:userId/credentials', (request, response) => {
       response.send(data.Credentials)
     })
     .catch((error) => { response.send(error) })
+})
+
+router.get('/', (_request, response) => {
+  response.send('☁️🎬✌️')
 })
 
 module.exports = router

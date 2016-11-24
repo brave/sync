@@ -8,11 +8,12 @@
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
     "build": "browserify client/sync.js -o build/syncbundle.js",
     "check": "nsp check",
-    "test": "tape test/*.js",
     "coverage": "istanbul cover tape test/*.js --report lcovonly -- -R spec",
     "browsertest": "browserify test/*.js > testbundle.js && python -m SimpleHTTPServer",
     "start": "NODE_CONFIG_DIR=server/config/ node server/index.js",
-    "start-dev": "NODE_CONFIG_DIR=server/config/ nodemon server/index.js"
+    "start-dev": "NODE_CONFIG_DIR=server/config/ nodemon server/index.js",
+    "tape": "NODE_CONFIG_DIR=server/config/ tape",
+    "test": "NODE_CONFIG_DIR=server/config/ tape test/**/*.js"
   },
   "repository": {
     "type": "git",
