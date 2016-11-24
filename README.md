@@ -7,6 +7,8 @@ A client/server for Brave sync
 
 ## Building
 
+Both npm and [yarn](https://yarnpkg.com/) should work. If you're adding packages to package.json, please `yarn install` and commit changes to yarn.lock.
+
 Install dependencies:
 
 ```
