@@ -213,9 +213,10 @@ test('key derivation', (t) => {
   t.test('can sign and verify with the derived key', (q) => {
     if (!testSerializer) q.fail('serializer not initialized')
     q.plan(4)
-    const signed = crypto.sign(testSerializer.stringToByteArray(message),
-      key.secretKey)
-    q.equal(89, signed.length)
+    // XXX: bytes is length 25 in node and 47 in browser!
+    const bytes = testSerializer.stringToByteArray(message)
+    const signed = crypto.sign(bytes, key.secretKey)
+    q.equal(signed.length, bytes.length + 64)
     let verified = crypto.verify(signed, key.publicKey)
     q.equal(testSerializer.byteArrayToString(verified), message)
     // Test verification failures
