@@ -12,6 +12,10 @@ test('userAwsCredentialGenerator', (t) => {
   )
 
   t.test('perform()', (t) => {
+    const apiVersion = config.apiVersion
+    const categoryIdBookmarks = config.categoryIdBookmarks
+    const categoryIdHistorySites = config.categoryIdHistorySites
+    const categoryIdPreferences = config.categoryIdPreferences
     // TODO: Make this deterministic for tests
     const keys = crypto.deriveKeys(crypto.getSeed())
     const userId = Buffer.from(keys.publicKey).toString('base64')
@@ -30,40 +34,147 @@ test('userAwsCredentialGenerator', (t) => {
 
     t.test('credential AWS permissions', (t) => {
       credentialPromise.then((data) => {
-        const credentials = data.Credentials
-        awsSdk.config.credentials = new awsSdk.Credentials({
-          accessKeyId: credentials.AccessKeyId,
-          secretAccessKey: credentials.SecretAccessKey,
-          sessionToken: credentials.SessionToken
-        })
         awsSdk.region = config.awsRegion
-        const s3 = new awsSdk.S3()
+        const credentials = data.Credentials
+        const s3 = new awsSdk.S3({
+          credentials: new awsSdk.Credentials({
+            accessKeyId: credentials.AccessKeyId,
+            secretAccessKey: credentials.SecretAccessKey,
+            sessionToken: credentials.SessionToken
+          })
+        })
         const s3Bucket = config.awsS3Bucket
-
-        t.test('permissions allowed', (t) => {
-          const params = {
-            Bucket: s3Bucket,
-            Prefix: `${userId}/`
-          }
-          s3.listObjectsV2(params).promise()
-            .then((data) => { t.assert(data.Contents, 's3 listObjectsV2 {userId}/* is allowed') })
-            .catch((data) => { t.fail('s3 listObjectsV2 {another userId}/* should be allowed') })
-          t.end()
+        const adminS3 = new awsSdk.S3({
+          credentials: new awsSdk.Credentials({
+            accessKeyId: config.awsAccessKeyId,
+            secretAccessKey: config.awsSecretAccessKey
+          })
         })
 
-        t.test('permissions denied', (t) => {
+        t.test('permissions', (t) => {
+          t.test('allow: s3 listObjectsV2 {apiVersion}/{userId}/*', (t) => {
+            s3.listObjectsV2({
+              Bucket: s3Bucket,
+              Prefix: `${apiVersion}/${userId}/`
+            }).promise()
+              .then((data) => { t.assert(data.Contents, t.name) })
+              .catch((data) => { t.fail(t.name) })
+            t.end()
+          })
+
+          t.test('allow: s3 listObjectsV2 {apiVersion}/{userId}/{categoryIdBookmarks}/*', (t) => {
+            s3.listObjectsV2({
+              Bucket: s3Bucket,
+              Prefix: `${apiVersion}/${userId}/${categoryIdBookmarks}`
+            }).promise()
+              .then((data) => { t.assert(data.Contents, t.name) })
+              .catch((data) => { t.fail(t.name) })
+            t.end()
+          })
+
+          t.test('allow: s3 listObjectsV2 {apiVersion}/{userId}/{categoryIdHistorySites}/*', (t) => {
+            const prefix = `${apiVersion}/${userId}/${categoryIdHistorySites}`
+            s3.listObjectsV2({
+              Bucket: s3Bucket,
+              Prefix: prefix
+            }).promise()
+              .then((data) => { t.assert(data.Contents, t.name) })
+              .catch((data) => { t.fail(t.name) })
+            s3.listObjectsV2({
+              Bucket: s3Bucket,
+              Prefix: prefix,
+              StartAfter: `${prefix}/1230`
+            }).promise()
+              .then((data) => { t.assert(data.Contents, `${t.name} StartAfter`) })
+              .catch((data) => { t.fail(`${t.name} StartAfter`) })
+            t.end()
+          })
+
+          t.test('allow: s3 listObjectsV2 {apiVersion}/{userId}/{categoryIdPreferences}/*', (t) => {
+            s3.listObjectsV2({
+              Bucket: s3Bucket,
+              Prefix: `${apiVersion}/${userId}/${categoryIdPreferences}`
+            }).promise()
+              .then((data) => { t.assert(data.Contents, t.name) })
+              .catch((data) => { t.fail(t.name) })
+            t.end()
+          })
+
+          t.test('allow: s3 deleteObject {apiVersion}/{userId}/{categoryIdHistorySites}', (t) => {
+            adminS3.putObject({
+              Bucket: s3Bucket,
+              Key: `${apiVersion}/${userId}/${categoryIdHistorySites}/1234/recordData`
+            }).promise()
+              .then((data) => {
+                s3.deleteObject({
+                  Bucket: s3Bucket,
+                  Key: `${apiVersion}/${userId}/${categoryIdHistorySites}`
+                }).promise()
+                  .then((data) => { t.pass(t.name) })
+                  .catch((data) => { t.fail(t.name) })
+              })
+              .catch((data) => { t.fail(t.name) })
+            t.end()
+          })
+
+          t.test('allow: s3 deleteObject {apiVersion}/{userId}', (t) => {
+            adminS3.putObject({
+              Bucket: s3Bucket,
+              Key: `${apiVersion}/${userId}/${categoryIdHistorySites}/1234/recordData`
+            }).promise()
+              .then((data) => {
+                s3.deleteObject({
+                  Bucket: s3Bucket,
+                  Key: `${apiVersion}/${userId}`
+                }).promise()
+                  .then((data) => { t.pass(t.name) })
+                  .catch((data) => { t.fail(t.name) })
+              })
+              .catch((data) => { t.fail(t.name) })
+            t.end()
+          })
+
+          // Note we don't grant putObject here; it's authorized with
+          // signed POST requests to limit upload size.
+          t.test('deny: s3 putObject {apiVersion}/{userId}/{...}', (t) => {
+            s3.putObject({
+              Bucket: s3Bucket,
+              Key: `${apiVersion}/${userIdTwo}/{categoryIdPreferences}/1234/recordData`
+            }).promise()
+              .then((data) => { t.fail(data, t.name) })
+              .catch((data) => { t.equal(data.code, 'AccessDenied', t.name) })
+            t.end()
+          })
+
           const keysTwo = crypto.deriveKeys(crypto.getSeed())
           const userIdTwo = Buffer.from(keysTwo.publicKey).toString('base64')
-          const params = {
-            Bucket: s3Bucket,
-            Prefix: userIdTwo
-          }
-          s3.listObjectsV2(params).promise()
-            .then((data) => { t.fail(data, 's3 listObjectsV2 {another userId}/* should be denied') })
-            .catch((data) => { t.equal(data.code, 'AccessDenied', 's3 listObjectsV2 {another userId}/* is denied') })
+
+          t.test('deny: s3 listObjectsV2 {apiVersion}/{another userId}/*', (t) => {
+            const keysTwo = crypto.deriveKeys(crypto.getSeed())
+            const userIdTwo = Buffer.from(keysTwo.publicKey).toString('base64')
+            s3.listObjectsV2({
+              Bucket: s3Bucket,
+              Prefix: `${apiVersion}/${userIdTwo}/`
+            }).promise()
+              .then((data) => { t.fail(data, t.name) })
+              .catch((data) => { t.equal(data.code, 'AccessDenied', t.name) })
+            t.end()
+          })
+
+          t.test('deny: s3 putObject {apiVersion}/{another userId}/{...}', (t) => {
+            s3.putObject({
+              Bucket: s3Bucket,
+              Key: `${apiVersion}/${userIdTwo}/{categoryIdPreferences}/1234/recordData`
+            }).promise()
+              .then((data) => { t.fail(data, t.name) })
+              .catch((data) => { t.equal(data.code, 'AccessDenied', t.name) })
+            t.end()
+          })
+
           t.end()
         })
       })
+        .catch((data) => { t.fail(`promise should resolve (${data})`) })
       t.end()
     })
 

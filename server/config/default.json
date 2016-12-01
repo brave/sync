@@ -1,9 +1,13 @@
 {
-  "logLevel": "info",
   "awsAccessKeyId": null,
   "awsSecretAccessKey": null,
   "awsRegion": "us-west-2",
   "awsS3Bucket": null,
+  "apiVersion": 0,
+  "categoryIdBookmarks": "\u0001",
+  "categoryIdHistorySites": "\u0002",
+  "categoryIdPreferences": "\u0003",
+  "logLevel": "info",
   "port": 4000,
   "userAgent": null,
   "userAwsCredentialTtl": 3600
