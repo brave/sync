@@ -6,13 +6,10 @@ const crypto = require('../../../lib/crypto')
 const UserAwsCredentialGenerator = require('../../../server/lib/user-aws-credential-generator.js')
 
 test('userAwsCredentialGenerator', (t) => {
-  t.test('requires userId', (t) => {
-    t.throws(
-      () => { return new UserAwsCredentialGenerator() },
-      'requires userId'
-    )
-    t.end()
-  })
+  t.throws(
+    () => { return new UserAwsCredentialGenerator() },
+    'requires userId'
+  )
 
   t.test('perform()', (t) => {
     // TODO: Make this deterministic for tests
@@ -20,18 +17,15 @@ test('userAwsCredentialGenerator', (t) => {
     const userId = Buffer.from(keys.publicKey).toString('base64')
     let credentialPromise = null
 
-    t.test('returns a Promise resolving with credential data', (t) => {
-      const generator = new UserAwsCredentialGenerator(userId)
-      credentialPromise = generator.perform()
-      t.equal(typeof credentialPromise.then, 'function')
-      credentialPromise.then((data) => {
-        const credentials = data.Credentials
-        t.assert(credentials)
-        t.assert(credentials.AccessKeyId)
-        t.assert(credentials.SecretAccessKey)
-        t.assert(credentials.SessionToken)
-      })
-      t.end()
+    const generator = new UserAwsCredentialGenerator(userId)
+    credentialPromise = generator.perform()
+    t.equal(typeof credentialPromise.then, 'function', 'perform() returns a Promise')
+    credentialPromise.then((data) => {
+      const credentials = data.Credentials
+      t.assert(credentials, 'perform() resolves and returns credentials')
+      t.assert(credentials.AccessKeyId, 'credentials include AccessKeyId')
+      t.assert(credentials.SecretAccessKey, 'credentials include SecretAccessKey')
+      t.assert(credentials.SessionToken, 'credentials include SessionToken')
     })
 
     t.test('credential AWS permissions', (t) => {
@@ -46,33 +40,27 @@ test('userAwsCredentialGenerator', (t) => {
         const s3 = new awsSdk.S3()
         const s3Bucket = config.awsS3Bucket
 
-        t.test('allowed', (t) => {
-          t.test('s3 listObjectsV2 {userId}/*', (t) => {
-            const params = {
-              Bucket: s3Bucket,
-              Prefix: `${userId}/`
-            }
-            s3.listObjectsV2(params).promise()
-              .then((data) => { t.assert(data.Contents) })
-              .catch((data) => { t.fail(data) })
-            t.end()
-          })
+        t.test('permissions allowed', (t) => {
+          const params = {
+            Bucket: s3Bucket,
+            Prefix: `${userId}/`
+          }
+          s3.listObjectsV2(params).promise()
+            .then((data) => { t.assert(data.Contents, 's3 listObjectsV2 {userId}/* is allowed') })
+            .catch((data) => { t.fail('s3 listObjectsV2 {another userId}/* should be allowed') })
           t.end()
         })
 
-        t.test('denied', (t) => {
-          t.test('s3 listObjectsV2 {another userId}/*', (t) => {
-            const keysTwo = crypto.deriveKeys(crypto.getSeed())
-            const userIdTwo = Buffer.from(keysTwo.publicKey).toString('base64')
-            const params = {
-              Bucket: s3Bucket,
-              Prefix: userIdTwo
-            }
-            s3.listObjectsV2(params).promise()
-              .then((data) => { t.fail(data, 'should not work') })
-              .catch((data) => { t.equal(data.code, 'AccessDenied') })
-            t.end()
-          })
+        t.test('permissions denied', (t) => {
+          const keysTwo = crypto.deriveKeys(crypto.getSeed())
+          const userIdTwo = Buffer.from(keysTwo.publicKey).toString('base64')
+          const params = {
+            Bucket: s3Bucket,
+            Prefix: userIdTwo
+          }
+          s3.listObjectsV2(params).promise()
+            .then((data) => { t.fail(data, 's3 listObjectsV2 {another userId}/* should be denied') })
+            .catch((data) => { t.equal(data.code, 'AccessDenied', 's3 listObjectsV2 {another userId}/* is denied') })
           t.end()
         })
       })
