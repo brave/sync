@@ -7,11 +7,67 @@ message SignedMessage {
 
 message SecretBoxRecord {
   bytes encryptedData = 1;
-  int deviceId = 2;
+  int counter = 2;
   bytes nonceRandom = 3;
-  bytes nonceTimestamp = 4;
 }
 
 message GenericMessage {
   string message = 1;
+}
+
+message SyncRecord {
+  enum Action {
+    CREATE = 0;
+    UPDATE = 1;
+    DELETE = 2;
+  }
+  message Site {
+    string location = 1;
+    string title = 2;
+    string customTitle = 3;
+    string favicon = 4;
+    number lastAccessedTime = 5;
+    number creationTime = 6;
+  }
+  message Bookmark {
+    Site site = 1;
+    bool isFolder = 2;
+    number folderId = 3;
+    number parentFolderId = 4;
+  }
+  message SiteSetting {
+    string hostPattern = 1;
+    number zoomLevel = 2;
+    bool shieldsUp = 3;
+    enum AdControl {
+      SHOW_BRAVE_ADS = 0;
+      BLOCK_ADS = 1;
+      ALLOW_ADS_AND_TRACKING = 2;
+    }
+    enum CookieControl {
+      BLOCK_THIRD_PARTY_COOKIE = 0;
+      ALLOW_ALL_COOKIES = 1;
+    }
+    AdControl adControl = 4;
+    CookieControl cookieControl = 5;
+    bool safeBrowsing = 6;
+    bool noScript = 7;
+    bool httpsEverywhere = 8;
+    bool fingerprintingProtection = 9;
+    bool ledgerPayments = 10;
+    bool ledgerPaymentsShown = 11;
+  }
+  message Device {
+    bytes deviceId = 1;
+    string name = 2;
+  }
+  Action action = 1;
+  bytes deviceId = 2;
+  bytes objectId = 3;
+  oneof objectData {
+    Bookmark bookmark = 4;
+    Site historySite = 5;
+    SiteSetting siteSetting = 6;
+    Device device = 7;
+  }
 }

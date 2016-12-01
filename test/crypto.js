@@ -2,8 +2,9 @@ const test = require('tape')
 const crypto = require('../lib/crypto')
 const serializer = require('../lib/serializer')
 
-var testSerializer = null
-serializer.init().then((s) => testSerializer = s)
+function initSerializer() {
+  return serializer.init()
+}
 
 function toHex (byteArray) {
   var str = ''
@@ -176,18 +177,21 @@ test('encrypt and decrypt', (t) => {
   })
   t.test('decrypts to original message', (q) => {
     q.plan(1)
-    if (!testSerializer) q.fail('serializer not initialized')
-    const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message), key, 0)
-    const decrypted = crypto.decrypt(encrypted.ciphertext, encrypted.nonce, key)
-    q.equal(message, testSerializer.byteArrayToString(decrypted))
+    initSerializer().then((testSerializer) => {
+      const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message), key, 0)
+      const decrypted = crypto.decrypt(encrypted.ciphertext, encrypted.nonce, key)
+      q.equal(message, testSerializer.byteArrayToString(decrypted))
+    })
   })
   t.test('decryption failures', (q) => {
     q.plan(3)
-    const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message), key, 0)
-    q.equal(crypto.decrypt(encrypted.ciphertext, new Uint8Array(24), key), false)
-    q.equal(crypto.decrypt(encrypted.ciphertext, encrypted.nonce, new Uint8Array(32)), false)
-    encrypted.ciphertext[0] = 255
-    q.equal(crypto.decrypt(encrypted.ciphertext, encrypted.nonce, key), false)
+    initSerializer().then((testSerializer) => {
+      const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message), key, 0)
+      q.equal(crypto.decrypt(encrypted.ciphertext, new Uint8Array(24), key), false)
+      q.equal(crypto.decrypt(encrypted.ciphertext, encrypted.nonce, new Uint8Array(32)), false)
+      encrypted.ciphertext[0] = 255
+      q.equal(crypto.decrypt(encrypted.ciphertext, encrypted.nonce, key), false)
+    })
   })
 })
 
@@ -202,28 +206,30 @@ test('key derivation', (t) => {
   t.throws(crypto.deriveKeys.bind(null, []), /Uint8Array/)
   const message = '€ 123 ッッッ　あ'
   t.test('can encrypt and decrypt with the derived key', (q) => {
-    if (!testSerializer) q.fail('serializer not initialized')
     q.plan(1)
-    const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message),
-      key.secretboxKey, 1)
-    const decrypted = crypto.decrypt(encrypted.ciphertext, encrypted.nonce,
-      key.secretboxKey)
-    q.equal(testSerializer.byteArrayToString(decrypted), message)
+    initSerializer().then((testSerializer) => {
+      const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message),
+        key.secretboxKey, 1)
+      const decrypted = crypto.decrypt(encrypted.ciphertext, encrypted.nonce,
+        key.secretboxKey)
+      q.equal(testSerializer.byteArrayToString(decrypted), message)
+    })
   })
   t.test('can sign and verify with the derived key', (q) => {
-    if (!testSerializer) q.fail('serializer not initialized')
     q.plan(4)
     // XXX: bytes is length 25 in node and 47 in browser!
-    const bytes = testSerializer.stringToByteArray(message)
-    const signed = crypto.sign(bytes, key.secretKey)
-    q.equal(signed.length, bytes.length + 64)
-    let verified = crypto.verify(signed, key.publicKey)
-    q.equal(testSerializer.byteArrayToString(verified), message)
-    // Test verification failures
-    verified = crypto.verify(signed, key.secretboxKey)
-    q.equal(null, verified)
-    signed[0] = 255
-    verified = crypto.verify(signed, key.publicKey)
-    q.equal(null, verified)
+    initSerializer().then((testSerializer) => {
+      const bytes = testSerializer.stringToByteArray(message)
+      const signed = crypto.sign(bytes, key.secretKey)
+      q.equal(signed.length, bytes.length + 64)
+      let verified = crypto.verify(signed, key.publicKey)
+      q.equal(testSerializer.byteArrayToString(verified), message)
+      // Test verification failures
+      verified = crypto.verify(signed, key.secretboxKey)
+      q.equal(null, verified)
+      signed[0] = 255
+      verified = crypto.verify(signed, key.publicKey)
+      q.equal(null, verified)
+    })
   })
 })
