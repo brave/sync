@@ -3117,6 +3117,10 @@ timed-out@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/timed-out/-/timed-out-2.0.0.tgz#f38b0ae81d3747d628001f41dafc652ace671c0a"
 
+timekeeper@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/timekeeper/-/timekeeper-1.0.0.tgz#2f38aee1e94b11dd66d8580ff1aa9dcc6a2ba0d8"
+
 timers-browserify@^1.0.1:
   version "1.4.2"
   resolved "https://registry.yarnpkg.com/timers-browserify/-/timers-browserify-1.4.2.tgz#c9c58b575be8407375cb5e2462dacee74359f41d"
