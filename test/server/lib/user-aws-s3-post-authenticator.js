@@ -22,9 +22,9 @@ test('userAwsS3PostAuthenticator', (t) => {
       })
     })
     const apiVersion = config.apiVersion
-    // const categoryIdBookmarks = config.categoryIdBookmarks
+    const categoryIdBookmarks = config.categoryIdBookmarks
     const categoryIdHistorySites = config.categoryIdHistorySites
-    // const categoryIdPreferences = config.categoryIdPreferences
+    const categoryIdPreferences = config.categoryIdPreferences
     // TODO: Make this deterministic for tests
     const keys = crypto.deriveKeys(crypto.getSeed())
     const userId = Buffer.from(keys.publicKey).toString('base64')
@@ -35,8 +35,64 @@ test('userAwsS3PostAuthenticator', (t) => {
     t.equals(result.bucket, config.awsS3Bucket, 'returns S3 bucket')
     t.assert(result.postParams, 'returns post params')
 
-    t.test('works: uploading sync records', (t) => {
+    t.test('works: uploading sync records (historySites)', (t) => {
       const objectKey = `${apiVersion}/${userId}/${categoryIdHistorySites}/1234/objectData`
+      const formData = Object.assign(
+        {},
+        { key: objectKey },
+        result.postParams,
+        { file: new Buffer([]) }
+      )
+      request.post({
+        url: util.awsS3Endpoint(),
+        formData: formData
+      }, (_error, response, body) => {
+        if (response.statusCode >= 200 && response.statusCode <= 299) {
+          t.pass(t.name)
+        } else {
+          t.fail(`${t.name} (${response.statusCode}) (${body})`)
+        }
+      })
+
+      test.onFinish(() => {
+        adminS3.deleteObject({
+          Bucket: config.awsS3Bucket,
+          Key: `${apiVersion}/${userId}`
+        })
+      })
+      t.end()
+    })
+
+    t.test('works: uploading sync records (bookmarks)', (t) => {
+      const objectKey = `${apiVersion}/${userId}/${categoryIdBookmarks}/1234/objectData`
+      const formData = Object.assign(
+        {},
+        { key: objectKey },
+        result.postParams,
+        { file: new Buffer([]) }
+      )
+      request.post({
+        url: util.awsS3Endpoint(),
+        formData: formData
+      }, (_error, response, body) => {
+        if (response.statusCode >= 200 && response.statusCode <= 299) {
+          t.pass(t.name)
+        } else {
+          t.fail(`${t.name} (${response.statusCode}) (${body})`)
+        }
+      })
+
+      test.onFinish(() => {
+        adminS3.deleteObject({
+          Bucket: config.awsS3Bucket,
+          Key: `${apiVersion}/${userId}`
+        })
+      })
+      t.end()
+    })
+
+    t.test('works: uploading sync records (preferences)', (t) => {
+      const objectKey = `${apiVersion}/${userId}/${categoryIdPreferences}/1234/objectData`
       const formData = Object.assign(
         {},
         { key: objectKey },
