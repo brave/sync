@@ -1,10 +1,10 @@
-const Winston = require('winston')
-const Config = require('config')
+const winston = require('winston')
+const config = require('config')
 
-exports.logger = new (Winston.Logger)({
-  level: Config.logLevel,
+exports.logger = new (winston.Logger)({
+  level: winston.logLevel,
   transports: [
-    new (Winston.transports.Console)()
+    new (winston.transports.Console)()
   ]
 })
 
@@ -52,4 +52,20 @@ exports.conciseTemplateString = (strings, ...values) => {
   return lines.map((line) => {
     return line.replace(/^\s+/gm, '')
   }).join(' ').trim()
+}
+
+const padDatePart = (number) => {
+  if (number < 10) {
+    return '0' + number
+  }
+  return number
+}
+
+// 20130728T000000Z
+exports.dateToAmzDate = (date) => {
+  return `${date.getUTCFullYear()}${padDatePart(date.getUTCMonth() + 1)}${padDatePart(date.getUTCDate())}T${padDatePart(date.getUTCHours())}${padDatePart(date.getUTCMinutes())}${padDatePart(date.getUTCSeconds())}Z`
+}
+
+exports.awsS3Endpoint = () => {
+  return `https://${config.awsS3Bucket}.s3.amazonaws.com/`
 }
