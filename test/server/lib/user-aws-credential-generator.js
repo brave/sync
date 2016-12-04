@@ -25,23 +25,22 @@ test('userAwsCredentialGenerator', (t) => {
     credentialPromise = generator.perform()
     t.equal(typeof credentialPromise.then, 'function', 'perform() returns a Promise')
     credentialPromise.then((data) => {
-      const credentials = data.Credentials
-      t.assert(credentials, 'perform() resolves and returns credentials')
-      t.assert(credentials.AccessKeyId, 'credentials include AccessKeyId')
-      t.assert(credentials.SecretAccessKey, 'credentials include SecretAccessKey')
-      t.assert(credentials.SessionToken, 'credentials include SessionToken')
+      t.assert(data.accessKeyId, 'credentials include AccessKeyId')
+      t.assert(data.secretAccessKey, 'credentials include SecretAccessKey')
+      t.assert(data.sessionToken, 'credentials include SessionToken')
     })
+      .catch((data) => { t.fail(`promise should resolve (${data})`) })
 
     t.test('credential AWS permissions', (t) => {
       credentialPromise.then((data) => {
         awsSdk.region = config.awsRegion
-        const credentials = data.Credentials
+        const credentialData = {
+          accessKeyId: data.accessKeyId,
+          secretAccessKey: data.secretAccessKey,
+          sessionToken: data.sessionToken
+        }
         const s3 = new awsSdk.S3({
-          credentials: new awsSdk.Credentials({
-            accessKeyId: credentials.AccessKeyId,
-            secretAccessKey: credentials.SecretAccessKey,
-            sessionToken: credentials.SessionToken
-          })
+          credentials: new awsSdk.Credentials(credentialData)
         })
         const s3Bucket = config.awsS3Bucket
         const adminS3 = new awsSdk.S3({
@@ -174,7 +173,6 @@ test('userAwsCredentialGenerator', (t) => {
           t.end()
         })
       })
-        .catch((data) => { t.fail(`promise should resolve (${data})`) })
       t.end()
     })
 

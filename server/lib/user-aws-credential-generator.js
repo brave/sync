@@ -14,12 +14,36 @@ class UserAwsCredentialGenerator {
   }
 
   perform () {
+    // AwsSts #getFederationToken() returns:
+    /* {
+         ResponseMetadata: { RequestId: '...' },
+         Credentials: {
+           AccessKeyId: '...', SecretAccessKey: '...', SessionToken: '...', Expiration: 2016-12-04T01:23:45.000Z
+         },
+         FederatedUser: { FederatedUserId: '012345678900:{specified below}',
+         Arn: 'arn:aws:sts::012345678900:federated-user/{specified below}' },
+         PackedPolicySize: 42
+        }
+    */
     const params = {
       DurationSeconds: config.userAwsCredentialTtl,
       Name: this.awsStsName(),
       Policy: this.awsStsPolicy()
     }
-    return this.awsSts().getFederationToken(params).promise()
+
+  return new Promise((resolve, reject) => {
+    this.awsSts().getFederationToken(params).promise()
+      .catch((data) => { reject(data) })
+      .then((data) => {
+        const returnData = {
+          accessKeyId: data.Credentials.AccessKeyId,
+          secretAccessKey: data.Credentials.SecretAccessKey,
+          sessionToken: data.Credentials.SessionToken,
+          expiration: data.Credentials.Expiration
+        }
+        resolve(returnData)
+      })
+   })
   }
 
   awsSts () {
