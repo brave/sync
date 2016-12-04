@@ -38,6 +38,7 @@
     "nsp": "^2.6.2",
     "pryjs": "^1.0.3",
     "standard": "^8.5.0",
+    "supertest": "^2.0.1",
     "tape": "^4.6.2",
     "timekeeper": "^1.0.0"
   },

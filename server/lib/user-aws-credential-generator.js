@@ -31,8 +31,8 @@ class UserAwsCredentialGenerator {
       Policy: this.awsStsPolicy()
     }
 
-  return new Promise((resolve, reject) => {
-    this.awsSts().getFederationToken(params).promise()
+    return new Promise((resolve, reject) => {
+      this.awsSts().getFederationToken(params).promise()
       .catch((data) => { reject(data) })
       .then((data) => {
         const returnData = {
@@ -43,7 +43,7 @@ class UserAwsCredentialGenerator {
         }
         resolve(returnData)
       })
-   })
+    })
   }
 
   awsSts () {

@@ -20,17 +20,17 @@ const Util = require('./lib/util.js')
 // App
 // ===
 
-const express = Express()
-express.disable('x-powered-by')
-express.use(BodyParser.text({type: '*/*'}))
+const app = Express()
+app.disable('x-powered-by')
+app.use(BodyParser.text({type: '*/*'}))
 if (Config.logLevel === 'debug') {
-  express.use(Util.debugLogger)
+  app.use(Util.debugLogger)
 }
 
 const UsersRouter = require('./users.js')
-express.use('/', UsersRouter)
+app.use('/', UsersRouter)
 
-express.listen(Config.port)
+app.listen(Config.port)
 
 Util.logger.info(`NODE_ENV: ${Config.util.getEnv('NODE_ENV')}`)
 Util.logger.info(`sync server up on localhost:${Config.port}`)
