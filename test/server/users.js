@@ -9,7 +9,7 @@ const util = require('../../server/lib/util.js')
 const Express = require('express')
 
 // HACK: How do I deterministically test express routers? This seems to fail half the time.
-test('users router', {skip: true}, (t) => {
+test('users router', (t) => {
   const apiVersion = config.apiVersion
   const categoryIdHistorySites = config.categoryIdHistorySites
   const app = Express()
@@ -20,7 +20,7 @@ test('users router', {skip: true}, (t) => {
     const s3Bucket = config.awsS3Bucket
     const userId = Buffer.from(keys.publicKey).toString('base64')
 
-    supertest(app).post(`/${userId}/credentials`).end((error, response) => {
+    supertest(app).post(`/${encodeURIComponent(userId)}/credentials`).end((error, response) => {
       if (error) {
         return t.fail(`${t.name} ${error} ${response}`)
       }

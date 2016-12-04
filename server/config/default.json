@@ -7,7 +7,7 @@
   "categoryIdBookmarks": "\u0001",
   "categoryIdHistorySites": "\u0002",
   "categoryIdPreferences": "\u0003",
-  "logLevel": "info",
+  "logLevel": "debug",
   "port": 4000,
   "userAgent": null,
   "userAwsCredentialTtl": 3600
