@@ -1,10 +1,6 @@
 package api;
 syntax = "proto3";
 
-message SignedMessage {
-  bytes signedData = 1;
-}
-
 message SecretBoxRecord {
   bytes encryptedData = 1;
   int counter = 2;
