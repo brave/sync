@@ -1,6 +1,27 @@
 package api;
 syntax = "proto3";
 
+message Credentials {
+  message Aws {
+    string accessKeyId = 1;
+    string secretAccessKey = 2;
+    string sessionToken = 3;
+    string expiration = 4;
+  }
+  message S3Post {
+    message PostData {
+      string AWSAccessKeyId = 1;
+      string policy = 2;
+      string signature = 3;
+      string acl = 4;
+    }
+    PostData postData = 1;
+    string bucket = 2;
+  }
+  Aws aws = 1;
+  S3Post s3Post = 2;
+}
+
 message SecretBoxRecord {
   bytes encryptedData = 1;
   int counter = 2;

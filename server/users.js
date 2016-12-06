@@ -25,8 +25,9 @@ router.post('/:userId/credentials', (request, response) => {
   })
 
   Promise.all([credentialPromise, postAuthenticatorPromise])
-    .then(([awsCredentials, s3PostParams]) => {
-      response.send({awsCredentials, s3PostParams})
+    .then(([aws, s3Post]) => {
+      const serialized = serializer.serializer.credentialsToByteArray({aws, s3Post})
+      response.send(serialized)
     })
     .catch((error) => { response.send(error) })
 })

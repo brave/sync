@@ -34,7 +34,11 @@ module.exports = function (request, response, next, userId) {
       return response.status(400).end('Signed request body is required.')
     }
     const publicKey = Buffer.from(userId, 'base64')
-    const verifiedBytes = crypto.verify(body, publicKey)
+
+    let verifiedBytes = null
+    try {
+      verifiedBytes = crypto.verify(body, publicKey)
+    } catch (e) {}
     if (!verifiedBytes) {
       return response.status(400).end('Unable to verify the signed request. Please check the signing private key matches the pubkey.')
     }

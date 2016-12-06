@@ -33,8 +33,12 @@ test('users router', (t) => {
       }
 
       t.test('POST /:userId/credentials', (t) => {
-        const sharedParams = { method: 'POST', url: '/credentials' }
-        baseRequest(sharedParams, (_error, response, body) => {
+        const sharedParams = {
+          encoding: null,
+          method: 'POST',
+          url: '/credentials'
+        }
+        baseRequest(sharedParams, (_error, response, _body) => {
           if (response.statusCode >= 400 && response.statusCode <= 499) {
             t.pass('required signed timestamp')
           } else {
@@ -50,12 +54,11 @@ test('users router', (t) => {
           if (error) { return t.fail(`${t.name} ${error} ${response}`) }
           t.equals(response.statusCode, 200, `${t.name} -> 200`)
 
-          // TODO: Use protobuf?
-          const parsedBody = JSON.parse(response.body)
-          const credentials = parsedBody.awsCredentials
+          const parsedBody = serializer.serializer.byteArrayToCredentials(response.body)
+          const credentials = parsedBody.aws
           t.assert(credentials, 'response has aws credentials')
-          const s3PostParams = parsedBody.s3PostParams
-          t.assert(s3PostParams, 'response has s3 post params')
+          const s3PostData = parsedBody.s3Post
+          t.assert(s3PostData, 'response has s3 post params')
 
           t.test('aws credentials', (t) => {
             const s3 = new awsSdk.S3({
@@ -90,7 +93,7 @@ test('users router', (t) => {
               const formData = Object.assign(
                 {},
                 { key: objectKey },
-                s3PostParams.postParams,
+                s3PostData.postData,
                 { file: new Buffer([]) }
               )
               request.post({

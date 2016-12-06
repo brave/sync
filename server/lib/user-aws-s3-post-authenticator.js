@@ -23,7 +23,7 @@ class UserAwsS3PostAuthenticator {
       .digest('base64')
     return {
       bucket: this.s3Bucket,
-      postParams: {
+      postData: {
         AWSAccessKeyId: config.awsAccessKeyId,
         policy: s3PostPolicy,
         signature: policySignature,

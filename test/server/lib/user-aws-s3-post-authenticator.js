@@ -33,14 +33,14 @@ test('userAwsS3PostAuthenticator', (t) => {
     const service = new UserAwsS3PostAuthenticator(userId)
     result = service.perform()
     t.equals(result.bucket, config.awsS3Bucket, 'returns S3 bucket')
-    t.assert(result.postParams, 'returns post params')
+    t.assert(result.postData, 'returns post params')
 
     t.test('works: uploading sync records (historySites)', (t) => {
       const objectKey = `${apiVersion}/${userId}/${categoryIdHistorySites}/1234/objectData`
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postParams,
+        result.postData,
         { file: new Buffer([]) }
       )
       request.post({
@@ -68,7 +68,7 @@ test('userAwsS3PostAuthenticator', (t) => {
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postParams,
+        result.postData,
         { file: new Buffer([]) }
       )
       request.post({
@@ -96,7 +96,7 @@ test('userAwsS3PostAuthenticator', (t) => {
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postParams,
+        result.postData,
         { file: new Buffer([]) }
       )
       request.post({
@@ -128,7 +128,7 @@ test('userAwsS3PostAuthenticator', (t) => {
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postParams,
+        result.postData,
         { file: new Buffer([]) }
       )
       request.post({
@@ -152,7 +152,7 @@ test('userAwsS3PostAuthenticator', (t) => {
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postParams,
+        result.postData,
         { file: new Buffer([1, 2, 3]) }
       )
       request.post({
@@ -173,7 +173,7 @@ test('userAwsS3PostAuthenticator', (t) => {
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postParams,
+        result.postData,
         { file: new Buffer([1, 2, 3]) }
       )
       request.post({
