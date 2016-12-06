@@ -7,8 +7,10 @@
   "categoryIdBookmarks": "\u0001",
   "categoryIdHistorySites": "\u0002",
   "categoryIdPreferences": "\u0003",
+  "clientTimestampOffsetMax": 120,
   "logLevel": "debug",
   "port": 4000,
+  "serverUrl": "http://localhost:4000",
   "userAgent": null,
   "userAwsCredentialTtl": 3600
 }
