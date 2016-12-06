@@ -38,7 +38,7 @@
     "nsp": "^2.6.2",
     "pryjs": "^1.0.3",
     "standard": "^8.5.0",
-    "tape": "^4.6.2",
+    "tape": "^4.6.3",
     "timekeeper": "^1.0.0"
   },
   "dependencies": {
