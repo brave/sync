@@ -11,7 +11,7 @@ test('users router', (t) => {
   app.post('/:userId/', (_request, response) => { response.send('sweet') })
 
   const server = app.listen(0, 'localhost', () => {
-    serializer.initSerializer().then(() => {
+    serializer.init().then(() => {
       const serverUrl = `http://localhost:${server.address().port}`
       console.log(`server up on ${serverUrl}`)
 

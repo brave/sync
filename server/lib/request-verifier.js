@@ -3,7 +3,7 @@
 const config = require('config')
 const crypto = require('../../lib/crypto')
 const serializer = require('../../lib/serializer.js')
-serializer.initSerializer()
+serializer.init()
 
 /**
  * Check if a client's reported timestamp is within the acceptable range.

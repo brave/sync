@@ -12,7 +12,7 @@ test('users router', (t) => {
   const app = Express()
   app.use('/', usersRouter)
   const server = app.listen(0, 'localhost', () => {
-    serializer.initSerializer().then(() => {
+    serializer.init().then(() => {
       const serverUrl = `http://localhost:${server.address().port}`
       console.log(`server up on ${serverUrl}`)
 

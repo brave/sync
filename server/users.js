@@ -5,7 +5,7 @@ const requestVerifier = require('./lib/request-verifier.js')
 const router = Express.Router()
 const serializer = require('../lib/serializer.js')
 // TODO: This returns a Promise; we may want to block requests until it resolves
-serializer.initSerializer()
+serializer.init()
 
 const UserAwsCredentialGenerator = require('./lib/user-aws-credential-generator')
 const UserAwsS3PostAuthenticator = require('./lib/user-aws-s3-post-authenticator')
