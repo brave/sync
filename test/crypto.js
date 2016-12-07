@@ -2,7 +2,7 @@ const test = require('tape')
 const crypto = require('../lib/crypto')
 const serializer = require('../lib/serializer')
 
-function initSerializer() {
+function init() {
   return serializer.init()
 }
 
@@ -177,7 +177,7 @@ test('encrypt and decrypt', (t) => {
   })
   t.test('decrypts to original message', (q) => {
     q.plan(1)
-    initSerializer().then((testSerializer) => {
+    init().then((testSerializer) => {
       const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message), key, 0)
       const decrypted = crypto.decrypt(encrypted.ciphertext, encrypted.nonce, key)
       q.equal(message, testSerializer.byteArrayToString(decrypted))
@@ -185,7 +185,7 @@ test('encrypt and decrypt', (t) => {
   })
   t.test('decryption failures', (q) => {
     q.plan(3)
-    initSerializer().then((testSerializer) => {
+    init().then((testSerializer) => {
       const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message), key, 0)
       q.equal(crypto.decrypt(encrypted.ciphertext, new Uint8Array(24), key), false)
       q.equal(crypto.decrypt(encrypted.ciphertext, encrypted.nonce, new Uint8Array(32)), false)
@@ -207,7 +207,7 @@ test('key derivation', (t) => {
   const message = '€ 123 ッッッ　あ'
   t.test('can encrypt and decrypt with the derived key', (q) => {
     q.plan(1)
-    initSerializer().then((testSerializer) => {
+    init().then((testSerializer) => {
       const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message),
         key.secretboxKey, 1)
       const decrypted = crypto.decrypt(encrypted.ciphertext, encrypted.nonce,
@@ -218,7 +218,7 @@ test('key derivation', (t) => {
   t.test('can sign and verify with the derived key', (q) => {
     q.plan(4)
     // XXX: bytes is length 25 in node and 47 in browser!
-    initSerializer().then((testSerializer) => {
+    init().then((testSerializer) => {
       const bytes = testSerializer.stringToByteArray(message)
       const signed = crypto.sign(bytes, key.secretKey)
       q.equal(signed.length, bytes.length + 64)

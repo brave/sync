@@ -9,12 +9,16 @@ const util = require('../../../server/lib/util.js')
 const UserAwsS3PostAuthenticator = require('../../../server/lib/user-aws-s3-post-authenticator.js')
 
 test('userAwsS3PostAuthenticator', (t) => {
+  t.plan(2)
+
   t.throws(
     () => { return new UserAwsS3PostAuthenticator() },
     'requires userId'
   )
 
   t.test('perform()', (t) => {
+    t.plan(8)
+
     const adminS3 = new awsSdk.S3({
       credentials: new awsSdk.Credentials({
         accessKeyId: config.awsAccessKeyId,
@@ -33,14 +37,16 @@ test('userAwsS3PostAuthenticator', (t) => {
     const service = new UserAwsS3PostAuthenticator(userId)
     result = service.perform()
     t.equals(result.bucket, config.awsS3Bucket, 'returns S3 bucket')
-    t.assert(result.postParams, 'returns post params')
+    t.assert(result.postData, 'returns post params')
 
     t.test('works: uploading sync records (historySites)', (t) => {
+      t.plan(1)
+
       const objectKey = `${apiVersion}/${userId}/${categoryIdHistorySites}/1234/objectData`
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postParams,
+        result.postData,
         { file: new Buffer([]) }
       )
       request.post({
@@ -60,15 +66,16 @@ test('userAwsS3PostAuthenticator', (t) => {
           Key: `${apiVersion}/${userId}`
         })
       })
-      t.end()
     })
 
     t.test('works: uploading sync records (bookmarks)', (t) => {
+      t.plan(1)
+
       const objectKey = `${apiVersion}/${userId}/${categoryIdBookmarks}/1234/objectData`
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postParams,
+        result.postData,
         { file: new Buffer([]) }
       )
       request.post({
@@ -88,15 +95,16 @@ test('userAwsS3PostAuthenticator', (t) => {
           Key: `${apiVersion}/${userId}`
         })
       })
-      t.end()
     })
 
     t.test('works: uploading sync records (preferences)', (t) => {
+      t.plan(1)
+
       const objectKey = `${apiVersion}/${userId}/${categoryIdPreferences}/1234/objectData`
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postParams,
+        result.postData,
         { file: new Buffer([]) }
       )
       request.post({
@@ -116,11 +124,12 @@ test('userAwsS3PostAuthenticator', (t) => {
           Key: `${apiVersion}/${userId}`
         })
       })
-      t.end()
     })
 
     t.test('deny: uploading sync records with expired signed params', (t) => {
-      timekeeper.freeze(new Date().getTime() - config.userAwsCredentialTtl * 1000)
+      t.plan(1)
+
+      timekeeper.freeze(new Date().getTime() - config.userAwsCredentialTtl * 1000 - 60 * 1000)
       const result = new UserAwsS3PostAuthenticator(userId).perform()
       timekeeper.reset()
 
@@ -128,7 +137,7 @@ test('userAwsS3PostAuthenticator', (t) => {
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postParams,
+        result.postData,
         { file: new Buffer([]) }
       )
       request.post({
@@ -141,18 +150,18 @@ test('userAwsS3PostAuthenticator', (t) => {
           t.pass(t.name)
         }
       })
-
-      t.end()
     })
 
     t.test('deny: uploading to another user\'s prefix', (t) => {
+      t.plan(1)
+
       const keysTwo = crypto.deriveKeys(crypto.getSeed())
       const userIdTwo = Buffer.from(keysTwo.publicKey).toString('base64')
       const objectKey = `${apiVersion}/${userIdTwo}/${categoryIdHistorySites}/1234/objectData`
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postParams,
+        result.postData,
         { file: new Buffer([1, 2, 3]) }
       )
       request.post({
@@ -165,15 +174,16 @@ test('userAwsS3PostAuthenticator', (t) => {
           t.pass(t.name)
         }
       })
-      t.end()
     })
 
     t.test('deny: uploading objects with content', (t) => {
+      t.plan(1)
+
       const objectKey = `${apiVersion}/${userId}/${categoryIdHistorySites}/1234/objectData`
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postParams,
+        result.postData,
         { file: new Buffer([1, 2, 3]) }
       )
       request.post({
@@ -186,9 +196,6 @@ test('userAwsS3PostAuthenticator', (t) => {
           t.pass(t.name)
         }
       })
-      t.end()
     })
-
-    t.end()
   })
 })

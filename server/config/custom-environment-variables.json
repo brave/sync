@@ -9,6 +9,7 @@
   /*"categoryIdPreferences": "\u0003",*/
   "logLevel": "LOG_LEVEL",
   "port": "PORT",
+  "serverUrl": "SERVER_URL",
   "userAgent": "USER_AGENT",
   "userAwsCredentialTtl": "USER_AWS_CREDENTIAL_TTL"
 }

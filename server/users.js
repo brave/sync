@@ -1,24 +1,16 @@
 'use strict'
 
 const Express = require('express')
-var router = Express.Router()
+const requestVerifier = require('./lib/request-verifier.js')
+const router = Express.Router()
+const serializer = require('../lib/serializer.js')
+// TODO: This returns a Promise; we may want to block requests until it resolves
+serializer.init()
 
-var UserAwsCredentialGenerator = require('./lib/user-aws-credential-generator')
-var UserAwsS3PostAuthenticator = require('./lib/user-aws-s3-post-authenticator')
+const UserAwsCredentialGenerator = require('./lib/user-aws-credential-generator')
+const UserAwsS3PostAuthenticator = require('./lib/user-aws-s3-post-authenticator')
 
-// Shared
-// ===
-// Verify request signature with pubkey.
-function verifyRequest (request, response, next, userId) {
-  // TODO
-  request.userId = userId
-  next()
-}
-
-// Routes
-// ===
-
-router.param('userId', verifyRequest)
+router.param('userId', requestVerifier)
 
 // Generate temporary AWS credentials allowing user to access their Sync data.
 router.post('/:userId/credentials', (request, response) => {
@@ -33,8 +25,9 @@ router.post('/:userId/credentials', (request, response) => {
   })
 
   Promise.all([credentialPromise, postAuthenticatorPromise])
-    .then(([credentials, s3PostParams]) => {
-      response.send({credentials: credentials, s3PostParams: s3PostParams})
+    .then(([aws, s3Post]) => {
+      const serialized = serializer.serializer.credentialsToByteArray({aws, s3Post})
+      response.send(serialized)
     })
     .catch((error) => { response.send(error) })
 })
