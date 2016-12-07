@@ -6,6 +6,8 @@ const serializer = require('../../../lib/serializer.js')
 const Express = require('express')
 
 test('users router', (t) => {
+  t.plan(4)
+
   const app = Express()
   app.param('userId', requestVerifier)
   app.post('/:userId/', (_request, response) => { response.send('sweet') })
@@ -72,8 +74,6 @@ test('users router', (t) => {
         } else {
           t.fail('should work')
         }
-
-        t.end()
       })
     })
   })

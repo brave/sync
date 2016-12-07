@@ -9,6 +9,8 @@ const util = require('../../server/lib/util.js')
 const Express = require('express')
 
 test('users router', (t) => {
+  t.plan(1)
+
   const app = Express()
   app.use('/', usersRouter)
   const server = app.listen(0, 'localhost', () => {
@@ -33,6 +35,8 @@ test('users router', (t) => {
       }
 
       t.test('POST /:userId/credentials', (t) => {
+        t.plan(6)
+
         const sharedParams = {
           encoding: null,
           method: 'POST',
@@ -61,6 +65,8 @@ test('users router', (t) => {
           t.assert(s3PostData, 'response has s3 post params')
 
           t.test('aws credentials', (t) => {
+            t.plan(1)
+
             const s3 = new awsSdk.S3({
               credentials: new awsSdk.Credentials({
                 accessKeyId: credentials.accessKeyId,
@@ -69,15 +75,15 @@ test('users router', (t) => {
               })
             })
             t.test('allow: s3 listObjectsV2 {apiVersion}/{userId}/*', (t) => {
+              t.plan(1)
+
               s3.listObjectsV2({
                 Bucket: s3Bucket,
                 Prefix: `${apiVersion}/${userId}/`
               }).promise()
                 .then((data) => { t.assert(data.Contents, t.name) })
                 .catch((data) => { t.fail(t.name) })
-              t.end()
             })
-            t.end()
           })
 
           t.test('s3 post params', (t) => {
@@ -89,6 +95,8 @@ test('users router', (t) => {
             })
 
             t.test('works: uploading sync records (historySites)', (t) => {
+              t.plan(1)
+
               const objectKey = `${apiVersion}/${userId}/${categoryIdHistorySites}/1234/objectData`
               const formData = Object.assign(
                 {},
@@ -113,7 +121,6 @@ test('users router', (t) => {
                   Key: `${apiVersion}/${userId}`
                 })
               })
-              t.end()
             })
           })
         })
