@@ -129,7 +129,7 @@ test('userAwsS3PostAuthenticator', (t) => {
     t.test('deny: uploading sync records with expired signed params', (t) => {
       t.plan(1)
 
-      timekeeper.freeze(new Date().getTime() - config.userAwsCredentialTtl * 1000)
+      timekeeper.freeze(new Date().getTime() - config.userAwsCredentialTtl * 1000 - 60 * 1000)
       const result = new UserAwsS3PostAuthenticator(userId).perform()
       timekeeper.reset()
 
