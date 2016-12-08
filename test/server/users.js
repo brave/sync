@@ -58,7 +58,12 @@ test('users router', (t) => {
           if (error) { return t.fail(`${t.name} ${error} ${response}`) }
           t.equals(response.statusCode, 200, `${t.name} -> 200`)
 
-          const parsedBody = serializer.serializer.byteArrayToCredentials(response.body)
+          let parsedBody = null
+          try {
+            parsedBody = serializer.serializer.byteArrayToCredentials(response.body)
+          } catch (e) {
+            t.fail(`Couldn't deserialize body / ${e}: ${parsedBody}`)
+          }
           const credentials = parsedBody.aws
           t.assert(credentials, 'response has aws credentials')
           const s3PostData = parsedBody.s3Post
