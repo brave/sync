@@ -19,12 +19,33 @@ const mapValuesByKeys = (o) =>
 
 // Messages between webview and main browser process
 const messages = {
-  // Crypto registration
+  /**
+   * webview -> browser
+   * browser must respond with GOT_INIT_DATA
+   */
   GET_INIT_DATA: _,
-  GOT_INIT_DATA: _, /* @param {Uint8Array} seed, @param {Uint8Array} deviceId */
+  /**
+   * browser -> webview
+   * browser must send null if saved value does not exist
+   */
+  GOT_INIT_DATA: _, /* @param {Uint8Array|null} seed, @param {Uint8Array|null} deviceId */
+  /**
+   * webview -> browser
+   * browser must save values in persistent storage and then send GOT_INIT_DATA
+   * with the saved values
+   */
   SAVE_INIT_DATA: _, /* @param {Uint8Array} seed, @param {Uint8Array} deviceId */
-  // Sync data
+  /**
+   * webview -> browser
+   * browser must update its local values with the new sync records, performing
+   * conflict-resolution as necessary.
+   */
   RECEIVE_SYNC_RECORDS: _, /* @param {{bookmarks: [], historySites: [], siteSettings: []}} */
+  /**
+   * browser -> webview
+   * browser sends this to the webview with the data that needs to be synced
+   * to the sync server.
+   */
   SEND_SYNC_RECORDS: _ /* @param {{bookmarks: [], historySites: [], siteSettings: []}} */
 }
 
@@ -76,7 +97,6 @@ module.exports.getDeviceId = function (chrome/* : Object */) {
 }
 
 },{"../lib/crypto":5,"./constants/messages":2}],4:[function(require,module,exports){
-// @flow
 'use strict'
 
 const initializer = require('./init')
@@ -88,7 +108,27 @@ window.deviceId = null
 window.userId = null
 window.keys = {}
 
+// logging
+const DEBUG = 0
+const WARN = 1
+const ERROR = 2
+const logElement = document.querySelector('#output')
+
 var clientSerializer = null
+
+/**
+ * Logs stuff on the visible HTML page.
+ * @param {string} message
+ * @param {number} logLevel
+ */
+const logSync = (message, logLevel = DEBUG) => {
+  if (logLevel === WARN) {
+    message = `Warning: ${message}`
+  } else if (logLevel === ERROR) {
+    message = `ERROR: ${message}`
+  }
+  logElement.innerText = `${logElement.innerText}\r\n${message}`
+}
 
 /**
  * Gets AWS creds.
@@ -114,6 +154,7 @@ Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values
   window.keys = keys
   if (deviceId instanceof Uint8Array && deviceId.length === 1) {
     window.deviceId = deviceId
+    logSync(`initialized deviceId ${deviceId[0]}`)
   }
   if (keys.publicKey instanceof Uint8Array) {
     window.userId = window.encodeURIComponent(window.btoa(String.fromCharCode.apply(null, keys.publicKey)))
@@ -121,21 +162,22 @@ Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values
   if (!window.userId || !window.keys.secretKey) {
     throw new Error('Missing userID or keys')
   }
+  logSync(`initialized userId ${window.userId}`)
 })
-  .catch((e) => { console.log('could not init sync:', e) })
+  .catch((e) => { logSync('could not init sync: ' + e, ERROR) })
   .then(() => {
     return getAWSCredentials()
   })
   .then((response) => {
     if (response.ok) {
-      console.log('successfully authenticated', window.userId)
+      logSync('successfully authenticated userId ' + window.userId)
       // Do something
       Promise.resolve()
     } else {
       Promise.reject('Response code ' + response.status)
     }
   })
-  .catch((e) => { console.log('could not get AWS credentials:', e) })
+  .catch((e) => { logSync('could not get AWS credentials: ' + e, ERROR) })
 
 },{"../lib/crypto":5,"../lib/serializer":6,"./constants/config":1,"./init":3}],5:[function(require,module,exports){
 // @flow
