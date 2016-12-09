@@ -1,0 +1,23 @@
+# This is an appspec.yml template file for the sync server for use with
+# AWS CodeDeploy.
+# The lines in this template starting with the hashtag symbol are
+#   instructional comments and can be safely left in the file or
+#   ignored.
+# For help completing this file, see the "AppSpec File Reference" in the
+#   "AWS CodeDeploy User Guide" at
+#   http://docs.aws.amazon.com/codedeploy/latest/userguide/app-spec-ref.html
+version: 0.0
+os: linux
+files:
+  - source: .
+    destination: /opt/sync
+hooks:
+  ApplicationStop:
+    - location: server/bin/stop-server.sh
+      timeout: 20
+  ApplicationStart:
+    - location: server/bin/start-server.sh
+      timeout: 20
+  ValidateService:
+    - location: server/bin/validate-server.sh
+      timeout: 20
