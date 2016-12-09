@@ -5,6 +5,7 @@ const requestVerifier = require('./lib/request-verifier.js')
 const router = Express.Router()
 const serializer = require('../lib/serializer.js')
 const cors = require('cors')
+const clientConfig = require('../client/constants/config.js')
 // TODO: This returns a Promise; we may want to block requests until it resolves
 serializer.init()
 
@@ -14,7 +15,7 @@ const UserAwsS3PostAuthenticator = require('./lib/user-aws-s3-post-authenticator
 router.param('userId', requestVerifier)
 
 const corsOptions = {
-  origin: 'http://localhost:8000' // TODO: set this to the webview origins
+  origin: clientConfig.clientOrigin
 }
 
 // Generate temporary AWS credentials allowing user to access their Sync data.

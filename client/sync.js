@@ -17,7 +17,7 @@ var clientSerializer = null
  * @returns {Promise}
  */
 const getAWSCredentials = () => {
-  const serverUrl = config.serverHost || config.testHost
+  const serverUrl = config.serverOrigin
   const now = Math.floor(Date.now() / 1000).toString()
   if (clientSerializer === null) {
     throw new Error('Serializer not initialized.')
