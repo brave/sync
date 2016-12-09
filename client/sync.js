@@ -70,12 +70,11 @@ Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values
     return getAWSCredentials()
   })
   .then((response) => {
-    if (response.ok) {
-      logSync('successfully authenticated userId ' + window.userId)
-      // Do something
-      Promise.resolve()
-    } else {
-      Promise.reject('Response code ' + response.status)
+    if (!response.ok) {
+      throw new Error('server response ' + response.status)
     }
+  })
+  .then(() => {
+    logSync('successfully authenticated userId ' + window.userId)
   })
   .catch((e) => { logSync('could not get AWS credentials: ' + e, ERROR) })
