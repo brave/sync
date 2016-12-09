@@ -5,7 +5,7 @@ const requestVerifier = require('./lib/request-verifier.js')
 const router = Express.Router()
 const serializer = require('../lib/serializer.js')
 const cors = require('cors')
-const clientConfig = require('../client/constants/config.js')
+const clientConfig = require('../client/config.js')
 // TODO: This returns a Promise; we may want to block requests until it resolves
 serializer.init()
 

@@ -1,7 +1,7 @@
 'use strict'
 
 const initializer = require('./init')
-const config = require('./constants/config')
+const config = require('./config')
 const serializer = require('../lib/serializer')
 const crypto = require('../lib/crypto')
 

@@ -100,7 +100,7 @@ module.exports.getDeviceId = function (chrome/* : Object */) {
 'use strict'
 
 const initializer = require('./init')
-const config = require('./constants/config')
+const config = require('./config')
 const serializer = require('../lib/serializer')
 const crypto = require('../lib/crypto')
 
@@ -198,7 +198,7 @@ Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values
     startSync()
   })
 
-},{"../lib/crypto":5,"../lib/serializer":6,"./constants/config":1,"./init":3}],5:[function(require,module,exports){
+},{"../lib/crypto":5,"../lib/serializer":6,"./config":1,"./init":3}],5:[function(require,module,exports){
 // @flow
 
 'use strict'
