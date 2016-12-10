@@ -12,6 +12,9 @@ files:
   - source: .
     destination: /opt/sync
 hooks:
+  AfterInstall:
+    - location: server/bin/npm-install.sh
+      timeout: 180
   ApplicationStop:
     - location: server/bin/stop-server.sh
       timeout: 20
