@@ -50,8 +50,7 @@ deploy:
     local_dir: deploy_code_upload
     skip_cleanup: true
     on: &deploy_on_production
-      # FIXME to master
-      branch: feature/prod
+      branch: master
     bucket: &s3_bucket_production
       secure:  "Rpue8M7F8mHruJQhlBpAL9DMOQqd/O71XUXTVp5jGBvvv+pfM0to4eI6XpGNekRiSid2tiOY8+dG1OPAe4GFjQ/8B+wGnnIq37KzyQZUP4fGkfixaLmv6Fs5JS97Fs19DgWSt3P3Ov+k379Htd8+b1HkaDfOTBm9DMWbwbTfnrftS0q64kxP5pN/Xin+7x055zwa/YOrI182Ts70X2YQ56NMLFjAaXpvIln2VFYBOuEsXBVmwG1N+n2eZrvBCNfk5D8jgoffcHGVXhY1TvR9EnCzaPs9uZ+5YrI/H1NIjXXZ67Jn99dLY1XE+I0JsE2PjnbcLvhwPhD67RLu8orXir1cLeY2LZSW37j3tfjkoaS1dnvNVFVOL+l31teigbe8ZgxqNBQxyiQY/7Zr3Uu+0OtgIUQYv1PprJIcNfFFgukp6J5LgGrWbHH4AHyCQh13veWT4t3gRMWXWxFiPxmnR+1WkiosYEckAyN6wxOTHrMiFIFhfdFOBkhtQys/sTylUU1iCjMt0E5MKO3XVOEkfe5QG0UiZJYT7tbH1xByPlSWgFQ45dig+d+lBavH6HnhbwqrDltW/zSpYT+t1a+cG1caCXRk/4Po46HIXMkuPjxcFjujTSWKpUbcgzZcdtZ2SyCAYe7MNlgBNvkIjDFaZrURY28IGffG28XgA1p5MhE="
     region: us-west-2
