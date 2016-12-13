@@ -30,7 +30,8 @@ var aws = {
   expiration: null,
   s3: null,
   postData: null,
-  bucket: null
+  bucket: null,
+  region: null
 }
 
 /**
@@ -69,8 +70,7 @@ const getAWSCredentials = () => {
       return response.arrayBuffer()
     })
     .then((buffer) => {
-      aws = requestUtil.parseAWSResponse(clientSerializer,
-        new Uint8Array(buffer), config.awsRegion)
+      aws = requestUtil.parseAWSResponse(clientSerializer, new Uint8Array(buffer))
       if (!aws.s3) {
         throw new Error('could not initialize AWS SDK')
       }

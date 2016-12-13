@@ -8,11 +8,11 @@ const crypto = require('crypto')
 const util = require('../lib/util.js')
 
 class UserAwsS3PostAuthenticator {
-  constructor (userId) {
+  constructor (userId, s3Bucket) {
     this.userId = userId
     if (!userId) { throw new Error('Missing userId') }
-    this.s3Bucket = config.awsS3Bucket
-    if (!this.s3Bucket) { throw new Error('S3 bucket not configured; please set AWS_S3_BUCKET.') }
+    this.s3Bucket = s3Bucket
+    if (!this.s3Bucket) { throw new Error('Missing s3Bucket') }
     this.date = new Date()
   }
 
@@ -22,13 +22,10 @@ class UserAwsS3PostAuthenticator {
       .update(s3PostPolicy)
       .digest('base64')
     return {
-      bucket: this.s3Bucket,
-      postData: {
-        AWSAccessKeyId: config.awsAccessKeyId,
-        policy: s3PostPolicy,
-        signature: policySignature,
-        acl: 'private'
-      }
+      AWSAccessKeyId: config.awsAccessKeyId,
+      policy: s3PostPolicy,
+      signature: policySignature,
+      acl: 'private'
     }
   }
 
