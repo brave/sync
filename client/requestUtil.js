@@ -29,7 +29,7 @@ module.exports.parseAWSResponse = (serializer, bytes, region) => {
   }
   const s3 = new awsSdk.S3({
     credentials: new awsSdk.Credentials({
-      accessKeyId: credentials.acccessKeyId,
+      accessKeyId: credentials.accessKeyId,
       secretAccessKey: credentials.secretAccessKey,
       sessionToken: credentials.sessionToken
     })

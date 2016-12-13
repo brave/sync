@@ -81,7 +81,7 @@ test('users router', (t) => {
                 Prefix: `${apiVersion}/${userId}/`
               }).promise()
                 .then((data) => { t.assert(data.Contents, t.name) })
-                .catch((data) => { t.fail(t.name) })
+                .catch((data) => { t.fail(data) })
             })
           })
 
