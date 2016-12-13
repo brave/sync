@@ -11,11 +11,13 @@ const WARN = 1
 const ERROR = 2
 const logElement = document.querySelector('#output')
 
+/*
 const CATEGORY_IDS = {
   bookmarks: '\u0001',
   historySites: '\u0002',
   preferences: '\u0003'
 }
+*/
 
 var clientSerializer = null
 var clientDeviceId = null
