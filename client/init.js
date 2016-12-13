@@ -16,7 +16,7 @@ module.exports.init = function (chrome/* : Object */) {
       return
     }
     chrome.ipc.send(messages.GET_INIT_DATA)
-    chrome.ipc.on(messages.GOT_INIT_DATA, (e, seed, deviceId) => {
+    chrome.ipc.on(messages.GOT_INIT_DATA, (e, seed, deviceId, config) => {
       if (seed === null) {
         // Generate a new "persona"
         seed = crypto.getSeed()
@@ -29,7 +29,7 @@ module.exports.init = function (chrome/* : Object */) {
       if (!(seed instanceof Uint8Array) || seed.length !== crypto.SEED_SIZE) {
         reject('Invalid crypto seed')
       }
-      resolve({keys: crypto.deriveKeys(seed), deviceId})
+      resolve({keys: crypto.deriveKeys(seed), deviceId, config})
     })
   })
 }

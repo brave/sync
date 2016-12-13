@@ -17,9 +17,11 @@ const messages = {
   GET_INIT_DATA: _,
   /**
    * browser -> webview
-   * browser must send null if saved value does not exist
+   * browser must send null for seed or deviceId if a value has not yet been
+   * saved. 'config' contains awsRegion, apiVersion, serverUrl;
+   * see server/config/default.json
    */
-  GOT_INIT_DATA: _, /* @param {Uint8Array|null} seed, @param {Uint8Array|null} deviceId */
+  GOT_INIT_DATA: _, /* @param {Uint8Array|null} seed, @param {Uint8Array|null} deviceId, @param {Object} config */
   /**
    * webview -> browser
    * browser must save values in persistent storage and then send GOT_INIT_DATA

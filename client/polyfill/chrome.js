@@ -3,9 +3,17 @@
 (function(self) {
   'use strict'
 
-  var seed = null
-  var deviceId = null
   var initCb = () => {}
+  // Saved crypto seed; byteArray
+  var seed = null
+  // Saved deviceId; byteArray
+  var deviceId = null
+  // Fill this in using ex: server/config/default.json
+  const config = {
+    apiVersion: 0,
+    serverUrl: 'https://sync-staging.brave.com',
+    awsRegion: 'us-west-2' // TODO: API server should return this
+  }
 
   if (self.chrome && self.chrome.ipc) {
     return
@@ -17,7 +25,7 @@
       if (cb) {
         initCb = cb
       }
-      initCb(null, seed, deviceId)
+      initCb(null, seed, deviceId, config)
     }
   }
   ipc.send = (message, arg1, arg2) => {

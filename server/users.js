@@ -15,7 +15,7 @@ const UserAwsS3PostAuthenticator = require('./lib/user-aws-s3-post-authenticator
 router.param('userId', requestVerifier)
 
 const corsOptions = {
-  origin: clientConfig.clientOrigin
+  origin: clientConfig.clientOrigins
 }
 
 // Generate temporary AWS credentials allowing user to access their Sync data.

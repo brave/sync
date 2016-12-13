@@ -6,6 +6,7 @@ const request = require('request')
 const serializer = require('../../lib/serializer.js')
 const usersRouter = require('../../server/users.js')
 const util = require('../../server/lib/util.js')
+const requestUtil = require('../../client/requestUtil.js')
 const Express = require('express')
 
 test('users router', (t) => {
@@ -58,27 +59,20 @@ test('users router', (t) => {
           if (error) { return t.fail(`${t.name} ${error} ${response}`) }
           t.equals(response.statusCode, 200, `${t.name} -> 200`)
 
-          let parsedBody = null
+          let parsed = null
           try {
-            parsedBody = serializer.serializer.byteArrayToCredentials(response.body)
+            parsed = requestUtil.parseAWSResponse(serializer.serializer, response.body)
           } catch (e) {
-            t.fail(`Couldn't deserialize body / ${e}: ${parsedBody}`)
+            t.fail(`Couldn't parse body / ${e}: ${response.body}`)
           }
-          const credentials = parsedBody.aws
-          t.assert(credentials, 'response has aws credentials')
-          const s3PostData = parsedBody.s3Post
+          const s3 = parsed.s3
+          t.assert(s3, 'response has aws credentials')
+          const s3PostData = parsed.postData
           t.assert(s3PostData, 'response has s3 post params')
 
           t.test('aws credentials', (t) => {
             t.plan(1)
 
-            const s3 = new awsSdk.S3({
-              credentials: new awsSdk.Credentials({
-                accessKeyId: credentials.accessKeyId,
-                secretAccessKey: credentials.secretAccessKey,
-                sessionToken: credentials.sessionToken
-              })
-            })
             t.test('allow: s3 listObjectsV2 {apiVersion}/{userId}/*', (t) => {
               t.plan(1)
 
@@ -106,7 +100,7 @@ test('users router', (t) => {
               const formData = Object.assign(
                 {},
                 { key: objectKey },
-                s3PostData.postData,
+                s3PostData,
                 { file: new Buffer([]) }
               )
               request.post({
