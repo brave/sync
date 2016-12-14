@@ -66,7 +66,7 @@ test('users router', (t) => {
             t.fail(`Couldn't parse body / ${e}: ${response.body}`)
           }
           const s3 = parsed.s3
-          t.assert(s3, 'response has aws credentials')
+          t.assert(s3, 'can create S3 instance from response')
           const s3PostData = parsed.postData
           t.assert(s3PostData, 'response has s3 post params')
 
