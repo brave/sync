@@ -1,2 +1,3 @@
 #!/bin/sh
-npm install --production /opt/sync
+cd /opt/sync
+npm install --production
