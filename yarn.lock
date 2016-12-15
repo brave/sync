@@ -643,6 +643,12 @@ core-util-is@~1.0.0:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/core-util-is/-/core-util-is-1.0.2.tgz#b5fd54220aa2bc5ab57aab7140c940754503c1a7"
 
+cors@^2.8.1:
+  version "2.8.1"
+  resolved "https://registry.yarnpkg.com/cors/-/cors-2.8.1.tgz#6181aa56abb45a2825be3304703747ae4e9d2383"
+  dependencies:
+    vary "^1"
+
 create-ecdh@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/create-ecdh/-/create-ecdh-4.0.0.tgz#888c723596cdf7612f6498233eebd7a35301737d"
@@ -1836,7 +1842,7 @@ json-stable-stringify@~0.0.0:
   dependencies:
     jsonify "~0.0.0"
 
-json-stringify-safe@~5.0.1:
+json-stringify-safe@5.0.1, json-stringify-safe@~5.0.1:
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/json-stringify-safe/-/json-stringify-safe-5.0.1.tgz#1296a2d58fd45f19a0f6ce01d65701e2c735b6eb"
 
@@ -1997,6 +2003,10 @@ longest@^1.0.1:
 lowercase-keys@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/lowercase-keys/-/lowercase-keys-1.0.0.tgz#4e3366b39e7f5457e35f1324bdf6f88d0bfc7306"
+
+lsmod@1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/lsmod/-/lsmod-1.0.0.tgz#9a00f76dca36eb23fa05350afe1b585d4299e64b"
 
 map-stream@~0.1.0:
   version "0.1.0"
@@ -2416,12 +2426,11 @@ progress@^1.1.8:
   version "1.1.8"
   resolved "https://registry.yarnpkg.com/progress/-/progress-1.1.8.tgz#e260c78f6161cdd9b0e56cc3e0a85de17c7a57be"
 
-"protobufjs@github:dcodeio/protobuf.js":
-  version "6.0.0-dev"
-  resolved "https://codeload.github.com/dcodeio/protobuf.js/tar.gz/9645b28172a9e4e4645e3417a22c9aff178d3af7"
+protobufjs@6.0.1:
+  version "6.0.1"
+  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-6.0.1.tgz#b1fff4f09891e21152e6ba1f5c67ff398f847a63"
   optionalDependencies:
     long "^3.2.0"
-    minimist "^1.2.0"
 
 proxy-addr@~1.1.2:
   version "1.1.2"
@@ -2501,6 +2510,16 @@ randombytes@^2.0.0, randombytes@^2.0.1:
 range-parser@~1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/range-parser/-/range-parser-1.2.0.tgz#f49be6b487894ddc40dcc94a322f611092e00d5e"
+
+raven@^0.12.3:
+  version "0.12.3"
+  resolved "https://registry.yarnpkg.com/raven/-/raven-0.12.3.tgz#1a70f04a2240d291d83603b40162c4bada71325c"
+  dependencies:
+    cookie "0.3.1"
+    json-stringify-safe "5.0.1"
+    lsmod "1.0.0"
+    stack-trace "0.0.9"
+    uuid "3.0.0"
 
 rc@^1.0.1, rc@^1.1.2, rc@~1.1.6:
   version "1.1.6"
@@ -2846,7 +2865,7 @@ sshpk@^1.7.0:
     jsbn "~0.1.0"
     tweetnacl "~0.14.0"
 
-stack-trace@0.0.x:
+stack-trace@0.0.9, stack-trace@0.0.x:
   version "0.0.9"
   resolved "https://registry.yarnpkg.com/stack-trace/-/stack-trace-0.0.9.tgz#a8f6eaeca90674c333e7c43953f275b451510695"
 
@@ -3234,6 +3253,10 @@ utils-merge@1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/utils-merge/-/utils-merge-1.0.0.tgz#0294fb922bb9375153541c4f7096231f287c8af8"
 
+uuid@3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.0.0.tgz#6728fc0459c450d796a99c31837569bdf672d728"
+
 uuid@^2.0.1:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-2.0.3.tgz#67e2e863797215530dff318e5bf9dcebfd47b21a"
@@ -3242,7 +3265,7 @@ uuid@^3.0.0, uuid@^3.0.1:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.0.1.tgz#6544bba2dfda8c1cf17e629a3a305e2bb1fee6c1"
 
-vary@~1.1.0:
+vary@^1, vary@~1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/vary/-/vary-1.1.0.tgz#e1e5affbbd16ae768dd2674394b9ad3022653140"
 
