@@ -6,11 +6,11 @@
   "scripts": {
     "lint": "standard",
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
-    "build": "npm update && browserify client/sync.js -o client/bundle.js",
+    "build": "npm update && browserify client/sync.js -o bundles/bundle.js",
     "check": "nsp check",
     "client": "npm run build && python -m SimpleHTTPServer",
     "coverage": "NODE_CONFIG_DIR=server/config/ istanbul cover tape 'test/**/*.js' --report lcovonly -- -R spec",
-    "browsertest": "browserify test/*.js > testbundle.js && python -m SimpleHTTPServer",
+    "browsertest": "browserify test/*.js > bundles/testbundle.js && python -m SimpleHTTPServer",
     "start": "NODE_CONFIG_DIR=server/config/ node server/index.js",
     "start-dev": "NODE_CONFIG_DIR=server/config/ nodemon server/index.js",
     "tape": "NODE_CONFIG_DIR=server/config/ tape",
@@ -57,8 +57,7 @@
   "standard": {
     "ignore": [
       "test/crypto.js",
-      "testbundle.js",
-      "client/bundle.js",
+      "bundles/*.js",
       "client/polyfill/*.js"
     ]
   }

@@ -1,7 +1,9 @@
 'use strict'
 
 const initializer = require('./init')
-const requestUtil = require('./requestUtil')
+const RequestUtil = require('./requestUtil')
+const messages = require('./constants/messages')
+const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
 const crypto = require('../lib/crypto')
 
@@ -11,28 +13,14 @@ const WARN = 1
 const ERROR = 2
 const logElement = document.querySelector('#output')
 
-/*
-const CATEGORY_IDS = {
-  bookmarks: '\u0001',
-  historySites: '\u0002',
-  preferences: '\u0003'
-}
-*/
-
 var clientSerializer = null
 var clientDeviceId = null
 var clientUserId = null
 var clientKeys = {}
 var config = {}
 
-// Needed for aws sdk requests
-var aws = {
-  expiration: null,
-  s3: null,
-  postData: null,
-  bucket: null,
-  region: null
-}
+// aws sdk requests class
+var requester = {}
 
 /**
  * Logs stuff on the visible HTML page.
@@ -58,20 +46,22 @@ const getAWSCredentials = () => {
   if (clientSerializer === null) {
     throw new Error('Serializer not initialized.')
   }
-  const request = new window.Request(`${serverUrl}/${clientUserId}/credentials`, {
+  const userId = window.encodeURIComponent(clientUserId)
+  const request = new window.Request(`${serverUrl}/${userId}/credentials`, {
     method: 'POST',
     body: crypto.sign(clientSerializer.stringToByteArray(now), clientKeys.secretKey)
   })
   return window.fetch(request)
     .then((response) => {
       if (!response.ok) {
-        throw new Error('server response ' + response.status)
+        throw new Error('Credential server response ' + response.status)
       }
       return response.arrayBuffer()
     })
     .then((buffer) => {
-      aws = requestUtil.parseAWSResponse(clientSerializer, new Uint8Array(buffer))
-      if (!aws.s3) {
+      requester = new RequestUtil(clientSerializer, new Uint8Array(buffer),
+        config.apiVersion, clientUserId)
+      if (!requester.s3) {
         throw new Error('could not initialize AWS SDK')
       }
     })
@@ -85,12 +75,30 @@ const maybeSetDeviceId = () => {
   if (clientDeviceId !== null) {
     return
   }
+  if (!requester.s3) {
+    throw new Error('cannot set device ID because AWS SDK is not initialized.')
+  }
+  return requester.list(proto.categories.PREFERENCES)
+    .then((records) => {
+      let maxId = -1
+      if (records && records.length) {
+        records.forEach((record) => {
+          let device = (record.objectData || {}).device
+          if (device && device.deviceId && device.deviceId[0] > maxId) {
+            maxId = device.deviceId[0]
+          }
+        })
+      }
+      clientDeviceId = new Uint8Array([maxId + 1])
+      window.chrome.ipc.send(messages.SAVE_INIT_DATA, undefined, clientDeviceId)
+    })
 }
 
 /**
- * Starts the sync process.
+ * Starts the sync loop.
  */
 const startSync = () => {
+  logSync('success')
 }
 
 Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values) => {
@@ -104,27 +112,29 @@ Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values
     logSync(`initialized deviceId ${deviceId[0]}`)
   }
   if (keys.publicKey instanceof Uint8Array) {
-    clientUserId = window.encodeURIComponent(window.btoa(String.fromCharCode.apply(null, keys.publicKey)))
+    clientUserId = window.btoa(String.fromCharCode.apply(null, keys.publicKey))
   }
   if (!clientUserId || !clientKeys.secretKey) {
     throw new Error('Missing userID or keys')
   }
-  if (!config || !config.serverUrl) {
+  if (!config || !config.serverUrl || typeof config.apiVersion !== 'string') {
     throw new Error('Missing client env configuration')
   }
   logSync(`initialized userId ${clientUserId}`)
 })
-  .catch((e) => { logSync('could not init sync: ' + e, ERROR) })
   .then(() => {
     return getAWSCredentials()
   })
-  .catch((e) => { logSync('could not get AWS credentials: ' + e, ERROR) })
   .then(() => {
     logSync('successfully authenticated userId: ' + clientUserId)
-    logSync('using AWS bucket: ' + aws.bucket)
+    logSync('using AWS bucket: ' + requester.bucket)
     return maybeSetDeviceId()
   })
-  .catch((e) => { logSync('could not register device ID ' + e, ERROR) })
+  .catch((e) => { logSync('could not register device ID: ' + e, ERROR) })
   .then(() => {
-    startSync()
+    if (clientDeviceId !== null) {
+      logSync('set device ID: ' + clientDeviceId)
+      startSync()
+    }
   })
+  .catch((e) => { logSync('could not init sync: ' + e, ERROR) })

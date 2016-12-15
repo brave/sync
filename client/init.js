@@ -28,16 +28,10 @@ module.exports.init = function (chrome/* : Object */) {
       }
       if (!(seed instanceof Uint8Array) || seed.length !== crypto.SEED_SIZE) {
         reject('Invalid crypto seed')
+        return
       }
+      // TODO: remove this chrome.ipc listener once resolved
       resolve({keys: crypto.deriveKeys(seed), deviceId, config})
     })
   })
-}
-
-/**
- * Gets/sets the device ID
- * @param {Object} chrome window.chrome object or stub
- */
-module.exports.getDeviceId = function (chrome/* : Object */) {
-  // TODO
 }
