@@ -31,14 +31,13 @@ test('serializing aws and s3 credentials', (t) => {
       expiration: '2015-04-20T13:37:00.000Z'
     },
     s3Post: {
-      bucket: 'cool-bucket',
-      postData: {
-        AWSAccessKeyId: 'AKIAIOSFODNN7EXAMPL3',
-        policy: '{"expiration": "2015-04-20T13:37:00.000Z","conditions": [{"bucket": "cool-bucket"}',
-        signature: 'something really secret todo we could validate it',
-        acl: 'private'
-      }
-    }
+      AWSAccessKeyId: 'AKIAIOSFODNN7EXAMPL3',
+      policy: '{"expiration": "2015-04-20T13:37:00.000Z","conditions": [{"bucket": "cool-bucket"}',
+      signature: 'something really secret todo we could validate it',
+      acl: 'private'
+    },
+    bucket: 'cool-bucket',
+    region: 'us-west-2'
   }
 
   serializer.init().then((serializer) => {

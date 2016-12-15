@@ -9,17 +9,15 @@ message Credentials {
     string expiration = 4;
   }
   message S3Post {
-    message PostData {
-      string AWSAccessKeyId = 1;
-      string policy = 2;
-      string signature = 3;
-      string acl = 4;
-    }
-    PostData postData = 1;
-    string bucket = 2;
+    string AWSAccessKeyId = 1;
+    string policy = 2;
+    string signature = 3;
+    string acl = 4;
   }
   Aws aws = 1;
   S3Post s3Post = 2;
+  string bucket = 3;
+  string region = 4;
 }
 
 message SecretBoxRecord {

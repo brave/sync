@@ -27,7 +27,6 @@ test('users router', (t) => {
 
       const apiVersion = config.apiVersion
       const categoryIdHistorySites = config.categoryIdHistorySites
-      const s3Bucket = config.awsS3Bucket
 
       function signedTimestamp (secretKey, timestamp) {
         if (!timestamp) { timestamp = Math.floor(Date.now() / 1000) }
@@ -68,7 +67,8 @@ test('users router', (t) => {
           const s3 = parsed.s3
           t.assert(s3, 'can create S3 instance from response')
           const s3PostData = parsed.postData
-          t.assert(s3PostData, 'response has s3 post params')
+          t.assert(s3PostData, 'response has s3 bucket')
+          const s3Bucket = parsed.bucket
 
           t.test('aws credentials', (t) => {
             t.plan(1)
@@ -116,7 +116,7 @@ test('users router', (t) => {
 
               test.onFinish(() => {
                 adminS3.deleteObject({
-                  Bucket: config.awsS3Bucket,
+                  Bucket: s3Bucket,
                   Key: `${apiVersion}/${userId}`
                 })
               })

@@ -100,9 +100,9 @@ const awsSdk = require('aws-sdk')
  * @param {Object} serializer proto serializer object
  * @param {Uint8Array} bytes response body
  * @param {string|undefined} region optional AWS region
- * @return {{s3: Object, postData: Object, expiration: string, bucket: string}}
+ * @return {{s3: Object, postData: Object, expiration: string, bucket: string, region: string}}
  */
-module.exports.parseAWSResponse = (serializer, bytes, region) => {
+module.exports.parseAWSResponse = (serializer, bytes) => {
   if (!serializer) {
     throw new Error('Missing proto serializer object.')
   }
@@ -111,23 +111,28 @@ module.exports.parseAWSResponse = (serializer, bytes, region) => {
   if (!credentials) {
     throw new Error('AWS did not return credentials!')
   }
-  if (!parsedBody.s3Post) {
+  const postData = parsedBody.s3Post
+  if (!postData) {
     throw new Error('AWS did not return s3Post data!')
   }
-  const postData = parsedBody.s3Post.postData
-  const expiration = credentials.expiration
-  const bucket = parsedBody.s3Post.bucket
-  if (region) {
-    awsSdk.region = region
+  const region = parsedBody.region
+  if (!region) {
+    throw new Error('AWS did not return region!')
   }
+  const bucket = parsedBody.bucket
+  if (!bucket) {
+    throw new Error('AWS did not return bucket!')
+  }
+  const expiration = credentials.expiration
   const s3 = new awsSdk.S3({
     credentials: new awsSdk.Credentials({
       accessKeyId: credentials.accessKeyId,
       secretAccessKey: credentials.secretAccessKey,
       sessionToken: credentials.sessionToken
-    })
+    }),
+    region: region
   })
-  return {s3, postData, expiration, bucket}
+  return {s3, postData, expiration, bucket, region}
 }
 
 },{"aws-sdk":192}],4:[function(require,module,exports){
@@ -163,7 +168,8 @@ var aws = {
   expiration: null,
   s3: null,
   postData: null,
-  bucket: null
+  bucket: null,
+  region: null
 }
 
 /**
@@ -202,8 +208,7 @@ const getAWSCredentials = () => {
       return response.arrayBuffer()
     })
     .then((buffer) => {
-      aws = requestUtil.parseAWSResponse(clientSerializer,
-        new Uint8Array(buffer), config.awsRegion)
+      aws = requestUtil.parseAWSResponse(clientSerializer, new Uint8Array(buffer))
       if (!aws.s3) {
         throw new Error('could not initialize AWS SDK')
       }
@@ -523,13 +528,15 @@ Serializer.prototype.byteArrayToString = function (bytes/* : Uint8Array */) {
 
 /**
  * Serializes client sync credentials for accessing AWS and S3.
- * @param {{aws: {{accessKeyId: <string>, secretAccessKey: <string>, sessionToken: <string>, expiration: <string>}}}, s3Post: {{bucket: <string>, postData: {{accessKeyId: <string>, secretAccessKey: <string>, sessionToken: <string>, expiration: <string>}}}}}} credentials
+ * @param {{aws: {{accessKeyId: <string>, secretAccessKey: <string>, sessionToken: <string>, expiration: <string>}}}, s3Post: {{accessKeyId: <string>, secretAccessKey: <string>, sessionToken: <string>, expiration: <string>}}, bucket: <string>, region: <string>}} credentials
  * @returns {Uint8Array}
  */
 Serializer.prototype.credentialsToByteArray = function (credentials) {
   return this.api.Credentials.encode({
     aws: this.api.Credentials.lookup('Aws').create(credentials.aws),
-    s3Post: this.api.Credentials.lookup('S3Post').create(credentials.s3Post)
+    s3Post: this.api.Credentials.lookup('S3Post').create(credentials.s3Post),
+    bucket: credentials.bucket,
+    region: credentials.region
   }).finish()
 }
 
