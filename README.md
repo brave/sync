@@ -63,11 +63,11 @@ npm start-dev
 
 To integrate Brave sync on a platform (iOS, Android, Laptop):
 
-1. Fork this repo
+1. Make a new branch.
 2. Edit `client/config.js` and set `clientOrigin` to the origin where the sync
    webview will be running, if something other than `http://localhost:8000`.
 3. Edit `corsOptions` in `server/users.js` to add the origin from Step 2.
-   Open a PR in brave/sync with this change. Once accepted, the production sync
+   Open a PR on master with this change. Once accepted, the production sync
    server will be able to accept requests from your platform.
 4. In the main browser process, implement an IPC message handler as specified
    in `client/constants/messages.js`.
