@@ -101,22 +101,6 @@ const startSync = () => {
   logSync('success')
 }
 
-/**
- * Sets the device ID if one does not yet exist.
- * @returns {Promise}
- */
-const maybeSetDeviceId = () => {
-  if (clientDeviceId !== null) {
-    return
-  }
-}
-
-/**
- * Starts the sync process.
- */
-const startSync = () => {
-}
-
 Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values) => {
   clientSerializer = values[0]
   const keys = values[1].keys

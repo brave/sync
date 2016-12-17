@@ -11,7 +11,7 @@
   // Fill this in using ex: server/config/default.json
   const config = {
     apiVersion: '0',
-    serverUrl: 'https://sync-staging.brave.com'
+    serverUrl: 'https://sync.brave.com'
   }
 
   if (self.chrome && self.chrome.ipc) {
