@@ -6,11 +6,16 @@ const crypto = require('../../../lib/crypto')
 const UserAwsCredentialGenerator = require('../../../server/lib/user-aws-credential-generator.js')
 
 test('userAwsCredentialGenerator', (t) => {
-  t.plan(2)
+  t.plan(3)
 
   t.throws(
     () => { return new UserAwsCredentialGenerator() },
     'requires userId'
+  )
+
+  t.throws(
+    () => { return new UserAwsCredentialGenerator('userId') },
+    'requires s3Bucket'
   )
 
   t.test('perform()', (t) => {
@@ -25,7 +30,7 @@ test('userAwsCredentialGenerator', (t) => {
     const userId = Buffer.from(keys.publicKey).toString('base64')
     let credentialPromise = null
 
-    const generator = new UserAwsCredentialGenerator(userId)
+    const generator = new UserAwsCredentialGenerator(userId, config.awsS3Bucket)
     credentialPromise = generator.perform()
     t.equal(typeof credentialPromise.then, 'function', 'perform() returns a Promise')
     credentialPromise.then((data) => {

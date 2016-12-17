@@ -6,6 +6,7 @@ const request = require('request')
 const serializer = require('../../lib/serializer.js')
 const usersRouter = require('../../server/users.js')
 const util = require('../../server/lib/util.js')
+const RequestUtil = require('../../client/requestUtil.js')
 const Express = require('express')
 
 test('users router', (t) => {
@@ -18,15 +19,16 @@ test('users router', (t) => {
       const serverUrl = `http://localhost:${server.address().port}`
       console.log(`server up on ${serverUrl}`)
 
-      const keys = crypto.deriveKeys(crypto.getSeed())
+      const seed = new Uint8Array([243, 203, 185, 143, 101, 184, 134, 109, 69, 166, 218, 58, 63, 155, 158, 17, 31, 184, 175, 52, 73, 80, 190, 47, 45, 12, 59, 64, 130, 13, 146, 248])
+      const keys = crypto.deriveKeys(seed)
       const userId = Buffer.from(keys.publicKey).toString('base64')
+      console.log(`UserId: ${userId}`)
       const baseRequest = request.defaults({
         baseUrl: `${serverUrl}/${encodeURIComponent(userId)}`
       })
 
       const apiVersion = config.apiVersion
       const categoryIdHistorySites = config.categoryIdHistorySites
-      const s3Bucket = config.awsS3Bucket
 
       function signedTimestamp (secretKey, timestamp) {
         if (!timestamp) { timestamp = Math.floor(Date.now() / 1000) }
@@ -58,27 +60,21 @@ test('users router', (t) => {
           if (error) { return t.fail(`${t.name} ${error} ${response}`) }
           t.equals(response.statusCode, 200, `${t.name} -> 200`)
 
-          let parsedBody = null
+          let requester = null
           try {
-            parsedBody = serializer.serializer.byteArrayToCredentials(response.body)
+            requester = new RequestUtil(serializer.serializer, response.body)
           } catch (e) {
-            t.fail(`Couldn't deserialize body / ${e}: ${parsedBody}`)
+            t.fail(`Couldn't parse body / ${e}: ${response.body}`)
           }
-          const credentials = parsedBody.aws
-          t.assert(credentials, 'response has aws credentials')
-          const s3PostData = parsedBody.s3Post
-          t.assert(s3PostData, 'response has s3 post params')
+          const s3 = requester.s3
+          t.assert(s3, 'can create S3 instance from response')
+          const s3PostData = requester.postData
+          t.assert(s3PostData, 'response has s3 bucket')
+          const s3Bucket = requester.bucket
 
           t.test('aws credentials', (t) => {
             t.plan(1)
 
-            const s3 = new awsSdk.S3({
-              credentials: new awsSdk.Credentials({
-                accessKeyId: credentials.accessKeyId,
-                secretAccessKey: credentials.secretAccessKey,
-                sessionToken: credentials.sessionToken
-              })
-            })
             t.test('allow: s3 listObjectsV2 {apiVersion}/{userId}/*', (t) => {
               t.plan(1)
 
@@ -87,7 +83,7 @@ test('users router', (t) => {
                 Prefix: `${apiVersion}/${userId}/`
               }).promise()
                 .then((data) => { t.assert(data.Contents, t.name) })
-                .catch((data) => { t.fail(t.name) })
+                .catch((data) => { t.fail(data) })
             })
           })
 
@@ -106,7 +102,7 @@ test('users router', (t) => {
               const formData = Object.assign(
                 {},
                 { key: objectKey },
-                s3PostData.postData,
+                s3PostData,
                 { file: new Buffer([]) }
               )
               request.post({
@@ -122,7 +118,7 @@ test('users router', (t) => {
 
               test.onFinish(() => {
                 adminS3.deleteObject({
-                  Bucket: config.awsS3Bucket,
+                  Bucket: s3Bucket,
                   Key: `${apiVersion}/${userId}`
                 })
               })

@@ -9,15 +9,20 @@ const util = require('../../../server/lib/util.js')
 const UserAwsS3PostAuthenticator = require('../../../server/lib/user-aws-s3-post-authenticator.js')
 
 test('userAwsS3PostAuthenticator', (t) => {
-  t.plan(2)
+  t.plan(3)
 
   t.throws(
     () => { return new UserAwsS3PostAuthenticator() },
     'requires userId'
   )
 
+  t.throws(
+    () => { return new UserAwsS3PostAuthenticator('userId') },
+    'requires s3Bucket'
+  )
+
   t.test('perform()', (t) => {
-    t.plan(8)
+    t.plan(7)
 
     const adminS3 = new awsSdk.S3({
       credentials: new awsSdk.Credentials({
@@ -34,10 +39,13 @@ test('userAwsS3PostAuthenticator', (t) => {
     const userId = Buffer.from(keys.publicKey).toString('base64')
     let result = null
 
-    const service = new UserAwsS3PostAuthenticator(userId)
+    const service = new UserAwsS3PostAuthenticator(userId, config.awsS3Bucket)
+
     result = service.perform()
-    t.equals(result.bucket, config.awsS3Bucket, 'returns S3 bucket')
-    t.assert(result.postData, 'returns post params')
+    t.assert(
+      (result.AWSAccessKeyId && result.policy && result.signature && result.acl),
+      'returns post params'
+    )
 
     t.test('works: uploading sync records (historySites)', (t) => {
       t.plan(1)
@@ -46,7 +54,7 @@ test('userAwsS3PostAuthenticator', (t) => {
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postData,
+        result,
         { file: new Buffer([]) }
       )
       request.post({
@@ -75,7 +83,7 @@ test('userAwsS3PostAuthenticator', (t) => {
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postData,
+        result,
         { file: new Buffer([]) }
       )
       request.post({
@@ -104,7 +112,7 @@ test('userAwsS3PostAuthenticator', (t) => {
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postData,
+        result,
         { file: new Buffer([]) }
       )
       request.post({
@@ -130,14 +138,14 @@ test('userAwsS3PostAuthenticator', (t) => {
       t.plan(1)
 
       timekeeper.freeze(new Date().getTime() - config.userAwsCredentialTtl * 1000 - 60 * 1000)
-      const result = new UserAwsS3PostAuthenticator(userId).perform()
+      const result = new UserAwsS3PostAuthenticator(userId, config.awsS3Bucket).perform()
       timekeeper.reset()
 
       const objectKey = `${apiVersion}/${userId}/${categoryIdHistorySites}/1234/objectData`
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postData,
+        result,
         { file: new Buffer([]) }
       )
       request.post({
@@ -161,7 +169,7 @@ test('userAwsS3PostAuthenticator', (t) => {
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postData,
+        result,
         { file: new Buffer([1, 2, 3]) }
       )
       request.post({
@@ -183,7 +191,7 @@ test('userAwsS3PostAuthenticator', (t) => {
       const formData = Object.assign(
         {},
         { key: objectKey },
-        result.postData,
+        result,
         { file: new Buffer([1, 2, 3]) }
       )
       request.post({

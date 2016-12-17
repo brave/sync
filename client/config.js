@@ -1,6 +1,6 @@
 module.exports = {
-  // Set this to the sync server origin
-  serverOrigin: 'https://sync.brave.com',
-  // Set this to the origin where client.html is loaded
-  clientOrigin: 'http://localhost:8000'
+  // Set this to the origins where client.html may be loaded
+  clientOrigins: ['http://localhost:8000'],
+  // 2-byte encryption nonce counter, rotated periodically
+  nonceCounter: 0
 }
