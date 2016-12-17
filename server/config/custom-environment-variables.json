@@ -3,10 +3,10 @@
   "awsSecretAccessKey": "AWS_SECRET_ACCESS_KEY",
   "awsRegion": "AWS_REGION",
   "awsS3Bucket": "AWS_S3_BUCKET",
-  /*"apiVersion": "\u0001",*/
-  /*"categoryIdBookmarks": "\u0001",*/
-  /*"categoryIdHistorySites": "\u0002",*/
-  /*"categoryIdPreferences": "\u0003",*/
+  /*"apiVersion": "0",*/
+  /*"categoryIdBookmarks": "0",*/
+  /*"categoryIdHistorySites": "1",*/
+  /*"categoryIdPreferences": "2",*/
   "logLevel": "LOG_LEVEL",
   "port": "PORT",
   "sentryUrl": "SENTRY_URL",

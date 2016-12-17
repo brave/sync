@@ -3,13 +3,30 @@
 const awsSdk = require('aws-sdk')
 
 /**
+ * @param {Object} serializer
+ * @param {Uint8Array} bytes
+ * @param {string} apiVersion
+ * @param {string} userId
+ */
+const RequestUtil = function (serializer, bytes, apiVersion, userId) {
+  this.serializer = serializer
+  const response = this.parseAWSResponse(bytes)
+  this.s3 = response.s3
+  this.apiVersion = apiVersion
+  this.userId = userId
+  this.postData = response.postData
+  this.expiration = response.expiration
+  this.bucket = response.bucket
+  this.region = response.region
+}
+
+/**
  * Parses an AWS credentials endpoint response.
- * @param {Object} serializer proto serializer object
  * @param {Uint8Array} bytes response body
- * @param {string|undefined} region optional AWS region
  * @return {{s3: Object, postData: Object, expiration: string, bucket: string, region: string}}
  */
-module.exports.parseAWSResponse = (serializer, bytes) => {
+RequestUtil.prototype.parseAWSResponse = function (bytes) {
+  const serializer = this.serializer
   if (!serializer) {
     throw new Error('Missing proto serializer object.')
   }
@@ -41,3 +58,32 @@ module.exports.parseAWSResponse = (serializer, bytes) => {
   })
   return {s3, postData, expiration, bucket, region}
 }
+
+RequestUtil.prototype.list = function (category) {
+  const options = {
+    MaxKeys: 1000,
+    Bucket: this.bucket,
+    Prefix: `${this.apiVersion}/${this.userId}/${category}`
+  }
+  var contents = []
+  return new Promise((resolve, reject) => {
+    const getContents = (token) => {
+      options.ContinuationToken = token
+      this.s3.listObjectsV2(options, (err, data) => {
+        if (err) {
+          reject(err)
+          return
+        }
+        contents = contents.concat(data.Contents)
+        if (data.IsTruncated && data.NextContinuationToken) {
+          getContents(data.NextContinuationToken)
+        } else {
+          resolve(contents)
+        }
+      })
+    }
+    getContents()
+  })
+}
+
+module.exports = RequestUtil
