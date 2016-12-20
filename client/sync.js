@@ -46,7 +46,6 @@ const logSync = (message, logLevel = DEBUG) => {
  */
 const decrypt = (ciphertext) => {
   const d = clientSerializer.byteArrayToSecretBoxRecord(ciphertext)
-  const nonce = crypto.getNonce(d.counter, d.nonceRandom)
   const decrypted = crypto.decrypt(d.encryptedData,
     d.nonceRandom, clientKeys.secretboxKey)
   if (!decrypted) {
@@ -63,7 +62,7 @@ const decrypt = (ciphertext) => {
 const encrypt = (message) => {
   const s = clientSerializer.syncRecordToByteArray(message)
   const nonceRandom = crypto.randomBytes(20)
-  const encrypted = crypto.encrypt(message, clientKeys.secretboxKey,
+  const encrypted = crypto.encrypt(s, clientKeys.secretboxKey,
     conf.counter, nonceRandom)
   return clientSerializer.secretBoxRecordToBytes({
     nonceRandom,
@@ -146,9 +145,9 @@ const startSync = () => {
       if (!proto.categories[category]) {
         throw new Error(`Unsupported sync category: ${category}`)
       }
-    })
-    requester.list(category).then((records) => {
-      ipc.send(messages.RECEIVE_SYNC_RECORDS, category, records)
+      requester.list(category).then((records) => {
+        ipc.send(messages.RECEIVE_SYNC_RECORDS, category, records)
+      })
     })
   })
   ipc.on(messages.SEND_SYNC_RECORDS, (category, records) => {
