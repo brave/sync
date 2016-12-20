@@ -43,7 +43,9 @@
     "timekeeper": "^1.0.0"
   },
   "dependencies": {
+    "@protobufjs/utf8": "^1.0.4",
     "aws-sdk": "^2.7.7",
+    "buffer-crc32": "^0.2.13",
     "config": "^1.24.0",
     "cors": "^2.8.1",
     "express": "^4.14.0",

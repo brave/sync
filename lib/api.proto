@@ -20,7 +20,7 @@ message Credentials {
   string region = 4;
 }
 
-message SecretBoxRecord {
+message SecretboxRecord {
   bytes encryptedData = 1;
   int counter = 2;
   bytes nonceRandom = 3;

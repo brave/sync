@@ -34,10 +34,15 @@ function fromHex (hexString) {
 
 let previousNonces = []
 
+test('randomBytes', (t) => {
+  t.plan(1)
+  t.equal(crypto.randomBytes(666).length, 666)
+})
+
 test('getNonce', (t) => {
   t.test('gets a nonce with counter 0', (q) => {
     q.plan(5)
-    let nonce = crypto.getNonce(0)
+    let nonce = crypto.getNonce(0, crypto.randomBytes(20))
     previousNonces.push(toHex(nonce))
     q.equal(nonce.length, 24)
     q.equal(nonce[1], 0)
@@ -47,7 +52,7 @@ test('getNonce', (t) => {
   })
   t.test('gets a nonce with counter 1000', (q) => {
     q.plan(5)
-    let nonce = crypto.getNonce(1000)
+    let nonce = crypto.getNonce(1000, crypto.randomBytes(20))
     previousNonces.push(toHex(nonce))
     q.equal(nonce.length, 24)
     q.equal(nonce[1], 232)
@@ -60,7 +65,7 @@ test('getNonce', (t) => {
     var i = 0
     while (i < 100) {
       i++
-      let nonce = crypto.getNonce(1)
+      let nonce = crypto.getNonce(1, crypto.randomBytes(20))
       let nonceString = toHex(nonce)
       q.equal(nonce[1], 1)
       q.equal(nonce[0], 0)
@@ -73,7 +78,12 @@ test('getNonce', (t) => {
   t.test('throws if counter is too high', (q) => {
     q.plan(1)
     q.throws(
-      crypto.getNonce.bind(null, Math.pow(256, 2)), /Invalid counter/)
+      crypto.getNonce.bind(null, Math.pow(256, 2), crypto.randomBytes(20)), /Invalid counter/)
+  })
+  t.test('throws if nonce random is not length 20', (q) => {
+    q.plan(1)
+    q.throws(
+      crypto.getNonce.bind(null, 0, crypto.randomBytes(21)), /Invalid nonce/)
   })
 })
 
@@ -163,30 +173,33 @@ test('hkdf', (t) => {
   t.throws(crypto.getHKDF.bind(null, new Uint8Array(1), new Uint8Array(), 16321), /Invalid extract length/, 'error when extract length is too long')
 })
 
+const nonceBytes = crypto.randomBytes(20)
+
 test('encrypt and decrypt', (t) => {
   const key = new Uint8Array([149, 180, 182, 164, 238, 114, 52, 28, 87, 253, 230, 254, 239, 174, 160, 156, 180, 174, 143, 196, 59, 87, 148, 212, 179, 123, 187, 239, 251, 38, 96, 60])
   const message = '€ are my favorite moneys'
   t.test('encrypted data has the correct length', (q) => {
     q.plan(4)
-    const result = crypto.encrypt(new Uint8Array([]), key, 0)
+    const result = crypto.encrypt(new Uint8Array([]), key, 0, nonceBytes)
     q.equal(result.ciphertext.length, 16)
     q.equal(result.nonce.length, 24)
-    const result2 = crypto.encrypt(new Uint8Array(Array(128)), key, 0)
+    const result2 = crypto.encrypt(new Uint8Array(Array(128)), key, 0, nonceBytes)
     q.equal(result2.ciphertext.length, 144)
     q.equal(result2.nonce.length, 24)
   })
   t.test('decrypts to original message', (q) => {
     q.plan(1)
     init().then((testSerializer) => {
-      const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message), key, 0)
+      const bytes = testSerializer.stringToByteArray(message)
+      const encrypted = crypto.encrypt(bytes, key, 0, nonceBytes)
       const decrypted = crypto.decrypt(encrypted.ciphertext, encrypted.nonce, key)
-      q.equal(message, testSerializer.byteArrayToString(decrypted))
+      q.equal(message, testSerializer.byteArrayToString(decrypted), 'gets original message')
     })
   })
   t.test('decryption failures', (q) => {
     q.plan(3)
     init().then((testSerializer) => {
-      const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message), key, 0)
+      const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message), key, 0, nonceBytes)
       q.equal(crypto.decrypt(encrypted.ciphertext, new Uint8Array(24), key), false)
       q.equal(crypto.decrypt(encrypted.ciphertext, encrypted.nonce, new Uint8Array(32)), false)
       encrypted.ciphertext[0] = 255
@@ -209,7 +222,7 @@ test('key derivation', (t) => {
     q.plan(1)
     init().then((testSerializer) => {
       const encrypted = crypto.encrypt(testSerializer.stringToByteArray(message),
-        key.secretboxKey, 1)
+        key.secretboxKey, 1, nonceBytes)
       const decrypted = crypto.decrypt(encrypted.ciphertext, encrypted.nonce,
         key.secretboxKey)
       q.equal(testSerializer.byteArrayToString(decrypted), message)

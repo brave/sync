@@ -1,6 +1,14 @@
 'use strict'
 
 const awsSdk = require('aws-sdk')
+const crc32 = require('buffer-crc32')
+
+// Max size of a record in bytes. Limited by s3 key size.
+const MAX_RECORD_SIZE = 900
+
+function getTime () {
+  return Math.floor(Date.now() / 1000)
+}
 
 /**
  * @param {Object} serializer
@@ -59,6 +67,10 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
   return {s3, postData, expiration, bucket, region}
 }
 
+/**
+ * @param {string} category - the category ID
+ * @returns {Promise(Array.<Uint8Array>)}
+ */
 RequestUtil.prototype.list = function (category) {
   const options = {
     MaxKeys: 1000,
@@ -74,7 +86,18 @@ RequestUtil.prototype.list = function (category) {
           reject(err)
           return
         }
-        contents = contents.concat(data.Contents)
+        if (!data.Contents) {
+          reject('Missing object contents.')
+          return
+        }
+        data.Contents.forEach((content) => {
+          if (content && content.Key) {
+            // the 6th part of the AWS key is the encrypted sync data,
+            // which may itself contain the delimiter character
+            let record = content.Key.split('/').slice(6).join('/')
+            contents.push(this.serializer.stringToByteArray(record))
+          }
+        })
         if (data.IsTruncated && data.NextContinuationToken) {
           getContents(data.NextContinuationToken)
         } else {
@@ -84,6 +107,51 @@ RequestUtil.prototype.list = function (category) {
     }
     getContents()
   })
+}
+
+/**
+ * Puts a single record, splitting it into multiple objects if needed.
+ * @param {string} category - the category ID
+ * @param {Uint8Array} record - the object content, serialized and encrypted
+ */
+RequestUtil.prototype.put = function (category, record) {
+  let parts = []
+  if (record.length > MAX_RECORD_SIZE) {
+    let i = 0
+    while (parts.length < Math.ceil(record.length / MAX_RECORD_SIZE)) {
+      parts.push(record.slice(i, i + 900))
+      i++
+    }
+  } else {
+    parts.push(record)
+  }
+  // TODO: the prefix can be encoded to be shorter
+  let crc = crc32.unsigned(record)
+  parts.forEach((part, i) => {
+    let now = getTime()
+    let partString = this.serializer.byteArrayToString(part)
+    this.s3.putObject({
+      Bucket: this.bucket,
+      Prefix: `${this.apiVersion}/${this.userId}/${category}/${now}/${crc}/${i}/${partString}`
+    })
+  })
+}
+
+RequestUtil.prototype.deleteUser = function () {
+  return this.s3.deleteObject({
+    Bucket: this.bucket,
+    Prefix: `${this.apiVersion}/${this.userId}`
+  }).promise()
+}
+
+/**
+ * @param {string} category - the category ID
+ */
+RequestUtil.prototype.deleteCategory = function (category) {
+  return this.s3.deleteObject({
+    Bucket: this.bucket,
+    Prefix: `${this.apiVersion}/${this.userId}/${category}`
+  }).promise()
 }
 
 module.exports = RequestUtil

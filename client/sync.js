@@ -6,6 +6,9 @@ const messages = require('./constants/messages')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
 const crypto = require('../lib/crypto')
+const conf = require('./config')
+
+const ipc = window.chrome.ipc
 
 // logging
 const DEBUG = 0
@@ -34,6 +37,39 @@ const logSync = (message, logLevel = DEBUG) => {
     message = `ERROR: ${message}`
   }
   logElement.innerText = `${logElement.innerText}\r\n${message}`
+}
+
+/**
+ * decrypt then deserialize a message.
+ * @param {Uint8Array} ciphertext
+ * @returns {Object}
+ */
+const decrypt = (ciphertext) => {
+  const d = clientSerializer.byteArrayToSecretBoxRecord(ciphertext)
+  const nonce = crypto.getNonce(d.counter, d.nonceRandom)
+  const decrypted = crypto.decrypt(d.encryptedData,
+    d.nonceRandom, clientKeys.secretboxKey)
+  if (!decrypted) {
+    throw new Error('Decryption failed.')
+  }
+  return clientSerializer.byteArrayToSyncRecord(decrypted)
+}
+
+/**
+ * serialize then encrypts a sync record
+ * @param {Object} message
+ * @returns {Uint8Array}
+ */
+const encrypt = (message) => {
+  const s = clientSerializer.syncRecordToByteArray(message)
+  const nonceRandom = crypto.randomBytes(20)
+  const encrypted = crypto.encrypt(message, clientKeys.secretboxKey,
+    conf.counter, nonceRandom)
+  return clientSerializer.secretBoxRecordToBytes({
+    nonceRandom,
+    counter: conf.counter,
+    encryptedData: encrypted.ciphertext
+  })
 }
 
 /**
@@ -82,22 +118,47 @@ const maybeSetDeviceId = () => {
     .then((records) => {
       let maxId = -1
       if (records && records.length) {
-        records.forEach((record) => {
-          let device = (record.objectData || {}).device
+        records.forEach((bytes) => {
+          var record = {}
+          try {
+            record = decrypt(bytes)
+          } catch (e) {
+            return
+          }
+          const device = record.device
           if (device && device.deviceId && device.deviceId[0] > maxId) {
             maxId = device.deviceId[0]
           }
         })
       }
       clientDeviceId = new Uint8Array([maxId + 1])
-      window.chrome.ipc.send(messages.SAVE_INIT_DATA, undefined, clientDeviceId)
+      ipc.send(messages.SAVE_INIT_DATA, undefined, clientDeviceId)
     })
 }
 
 /**
- * Starts the sync loop.
+ * Starts the sync listeners.
  */
 const startSync = () => {
+  ipc.send(messages.SYNC_READY)
+  ipc.on(messages.FETCH_SYNC_RECORDS, (categoryNames) => {
+    categoryNames.forEach((category) => {
+      if (!proto.categories[category]) {
+        throw new Error(`Unsupported sync category: ${category}`)
+      }
+    })
+    requester.list(category).then((records) => {
+      ipc.send(messages.RECEIVE_SYNC_RECORDS, category, records)
+    })
+  })
+  ipc.on(messages.SEND_SYNC_RECORDS, (category, records) => {
+    if (!proto.categories[category]) {
+      throw new Error(`Unsupported sync category: ${category}`)
+    }
+    records.forEach((record) => {
+      requester.put(encrypt(record))
+    })
+  })
   logSync('success')
 }
 
