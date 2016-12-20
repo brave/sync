@@ -6,7 +6,7 @@
   "scripts": {
     "lint": "standard",
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
-    "build": "npm update && browserify client/sync.js -o bundles/bundle.js",
+    "build": "yarn upgrade && browserify client/sync.js -o bundles/bundle.js",
     "check": "nsp check",
     "client": "npm run build && python -m SimpleHTTPServer",
     "coverage": "NODE_CONFIG_DIR=server/config/ istanbul cover tape 'test/**/*.js' --report lcovonly -- -R spec",
