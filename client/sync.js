@@ -8,7 +8,7 @@ const serializer = require('../lib/serializer')
 const crypto = require('../lib/crypto')
 const conf = require('./config')
 
-const ipc = window.chrome.ipc
+const ipc = window.chrome.ipcRenderer
 
 // logging
 const DEBUG = 0
@@ -25,6 +25,8 @@ var config = {}
 // aws sdk requests class
 var requester = {}
 
+console.log('in sync script')
+
 /**
  * Logs stuff on the visible HTML page.
  * @param {string} message
@@ -36,7 +38,11 @@ const logSync = (message, logLevel = DEBUG) => {
   } else if (logLevel === ERROR) {
     message = `ERROR: ${message}`
   }
-  logElement.innerText = `${logElement.innerText}\r\n${message}`
+  if (logElement) {
+    logElement.innerText = `${logElement.innerText}\r\n${message}`
+  } else {
+    console.log(message)
+  }
 }
 
 /**
@@ -140,7 +146,8 @@ const maybeSetDeviceId = () => {
  */
 const startSync = () => {
   ipc.send(messages.SYNC_READY)
-  ipc.on(messages.FETCH_SYNC_RECORDS, (categoryNames) => {
+  ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames) => {
+    logSync('getting sync records')
     categoryNames.forEach((category) => {
       if (!proto.categories[category]) {
         throw new Error(`Unsupported sync category: ${category}`)
@@ -150,7 +157,8 @@ const startSync = () => {
       })
     })
   })
-  ipc.on(messages.SEND_SYNC_RECORDS, (category, records) => {
+  ipc.on(messages.SEND_SYNC_RECORDS, (e, category, records) => {
+    logSync('sending sync records')
     if (!proto.categories[category]) {
       throw new Error(`Unsupported sync category: ${category}`)
     }
@@ -192,7 +200,7 @@ Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values
   })
   .catch((e) => { logSync('could not register device ID: ' + e, ERROR) })
   .then(() => {
-    if (clientDeviceId !== null) {
+    if (clientDeviceId !== null && requester.s3) {
       logSync('set device ID: ' + clientDeviceId)
       startSync()
     }

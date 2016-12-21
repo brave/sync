@@ -11,26 +11,25 @@ const messages = require('./constants/messages')
  */
 module.exports.init = function (chrome/* : Object */) {
   return new Promise((resolve, reject) => {
-    if (!chrome || !chrome.ipc) {
-      reject('Browser does not support chrome.ipc')
+    if (!chrome || !chrome.ipcRenderer) {
+      reject('Browser does not support chrome.ipcRenderer')
       return
     }
-    chrome.ipc.send(messages.GET_INIT_DATA)
-    chrome.ipc.on(messages.GOT_INIT_DATA, (e, seed, deviceId, config) => {
+    chrome.ipcRenderer.send(messages.GET_INIT_DATA)
+    chrome.ipcRenderer.on(messages.GOT_INIT_DATA, (e, seed, deviceId, config) => {
       if (seed === null) {
         // Generate a new "persona"
         seed = crypto.getSeed()
         deviceId = new Uint8Array([0])
-        chrome.ipc.send(messages.SAVE_INIT_DATA, seed, deviceId)
-        // XXX: The background process must listen for SAVE_INIT_DATA and emit
+        chrome.ipcRenderer.send(messages.SAVE_INIT_DATA, seed, deviceId)
+        // TODO: The background process should listen for SAVE_INIT_DATA and emit
         // GOT_INIT_DATA once the save is successful
-        return
       }
       if (!(seed instanceof Uint8Array) || seed.length !== crypto.SEED_SIZE) {
         reject('Invalid crypto seed')
         return
       }
-      // TODO: remove this chrome.ipc listener once resolved
+      // TODO: remove this chrome.ipcRenderer listener once resolved
       resolve({keys: crypto.deriveKeys(seed), deviceId, config})
     })
   })
