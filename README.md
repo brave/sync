@@ -30,9 +30,9 @@ npm start
 ## Testing
 
 The sync client uses Browserify to transform Node js into browser js. To unittest
-the library in your browser, run `npm run browsertest`, navigate to the
-local address printed in the terminal (default `http://localhost:8000/`),
-and open the page console to see test output.
+the library in a browser (default: electron), run `yarn browsertest`.
+To test in a different browser run `yarn browsertest -- --browser chrome`.
+Results appear in both the browser inspector and your terminal.
 
 To run tests in Node, just do `npm test`.
 
