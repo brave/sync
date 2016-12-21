@@ -25,6 +25,9 @@ module.exports.init = function (chrome/* : Object */) {
         // TODO: The background process should listen for SAVE_INIT_DATA and emit
         // GOT_INIT_DATA once the save is successful
       }
+      // XXX: browser-laptop ipc does not support sending Uint8Arrays
+      seed = seed instanceof Array ? new Uint8Array(seed) : seed
+      deviceId = deviceId instanceof Array ? new Uint8Array(deviceId) : deviceId
       if (!(seed instanceof Uint8Array) || seed.length !== crypto.SEED_SIZE) {
         reject('Invalid crypto seed')
         return

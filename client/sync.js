@@ -177,7 +177,7 @@ Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values
   config = values[1].config
   if (deviceId instanceof Uint8Array && deviceId.length === 1) {
     clientDeviceId = deviceId
-    logSync(`initialized deviceId ${deviceId[0]}`)
+    logSync(`initialized deviceId ${clientDeviceId}`)
   }
   if (keys.publicKey instanceof Uint8Array) {
     clientUserId = window.btoa(String.fromCharCode.apply(null, keys.publicKey))

@@ -21,7 +21,7 @@ const messages = {
    * saved. 'config' contains apiVersion, serverUrl;
    * see server/config/default.json
    */
-  GOT_INIT_DATA: _, /* @param {Uint8Array|null} seed, @param {Uint8Array|null} deviceId, @param {Object} config */
+  GOT_INIT_DATA: _, /* @param {Array} seed, @param {Array} deviceId, @param {Object} config */
   /**
    * webview -> browser
    * browser must save values in persistent storage if non-empty
