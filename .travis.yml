@@ -3,10 +3,17 @@ language: node_js
 node_js:
 - node
 script:
-- npm run lint && npm run flow && npm run check && npm run coverage
+- npm run lint && npm run flow && npm run check && npm run browsertest && npm run coverage
 group: stable
 dist: precise
 os: linux
+addons:
+  apt:
+    packages:
+      - xvfb
+before_script:
+  - export DISPLAY=':99.0'
+  - Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
 env:
   matrix:
     secure: pu+Ia+KRh9CdjXwCYNQ2/2uXoUoZ6k8uMNIgJ39+Qr5FSrhvlzuoHjNjuXrm/gRz4pO7vsXr7Fmr68X9oeMoDm8L8tb7dEIuoL7ti1dlVUt/PvdFcSadyIt/+xCpMjv6oA3rKulQfJbXQSahwciqWCt1zhXVXn6PLRFS2hdh/IeZWLjDrzLHDK0Qk/+PUfe5Wk6S9m8h5vt3RiVCCpAuJJz6UuOCfvrYegb0DhvxuIuDtKA5uC9LOkFsXYSX1RZoVStxikAZaPYrYN1R7FK8PlC/4+TiCvD4NVhcqPBL2CyLtCV6S12TMB2O26b8ROYATlSEB1O7snJf+BB3NJWrTAAqWWW6KveqZa1THJwK5gXj7pkSkBIVp6A2I0zb/vlnNiWVAleTgT8EVtTyGbtlFk8BQjIL+ou7ucTNhi2GGP7kyPxrDiLTGzQVb0wW9MaQDYtkFp1Ji2ijF6/3B09fwFG1ShBB4Tqokxr+eRB53h8UXl0pfQyIduIHNg/ucqD242uGoP8fqt+PFHTcFexLM2/6W8NS/fIqXnDkdy4WZsPHT45Dz1iPEVKQ6qJw/vmSrz1qCGqga22ShecuLhsJOYs4LrH1Hi0/2tCmZ36T2G77CviI+tKjzp307X52tEUmRbPcqGwoR58/6bM7ClQaUeE2J3Dm7DxhOr4bcT6TGgA=
