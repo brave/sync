@@ -6,11 +6,12 @@
   "scripts": {
     "lint": "standard",
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
-    "build": "npm update && browserify client/sync.js -o bundles/bundle.js",
+    "build": "yarn upgrade && browserify client/sync.js -o bundles/bundle.js",
     "check": "nsp check",
     "client": "npm run build && python -m SimpleHTTPServer",
     "coverage": "NODE_CONFIG_DIR=server/config/ istanbul cover tape 'test/**/*.js' --report lcovonly -- -R spec",
-    "browsertest": "browserify test/*.js > bundles/testbundle.js && python -m SimpleHTTPServer",
+    "browsertest": "browserify test/*.js | tape-run",
+    "dist": "npm run build && cp bundles/bundle.js ../browser-laptop/app/extensions/brave/content/scripts/sync.js",
     "start": "NODE_CONFIG_DIR=server/config/ node server/index.js",
     "start-dev": "NODE_CONFIG_DIR=server/config/ nodemon server/index.js",
     "tape": "NODE_CONFIG_DIR=server/config/ tape",
@@ -32,6 +33,7 @@
   },
   "homepage": "https://github.com/brave/sync#readme",
   "devDependencies": {
+    "brfs": "^1.4.3",
     "browserify": "^13.1.1",
     "flow-bin": "^0.35.0",
     "istanbul": "^0.4.5",
@@ -40,10 +42,13 @@
     "pryjs": "^1.0.3",
     "standard": "^8.5.0",
     "tape": "^4.6.3",
+    "tape-run": "^2.1.5",
     "timekeeper": "^1.0.0"
   },
   "dependencies": {
+    "@protobufjs/utf8": "^1.0.4",
     "aws-sdk": "^2.7.7",
+    "buffer-crc32": "^0.2.13",
     "config": "^1.24.0",
     "cors": "^2.8.1",
     "express": "^4.14.0",
@@ -53,6 +58,11 @@
     "tweetnacl": "^0.14.3",
     "uuid": "^3.0.1",
     "winston": "^2.3.0"
+  },
+  "browserify": {
+    "transform": [
+      "brfs"
+    ]
   },
   "standard": {
     "ignore": [

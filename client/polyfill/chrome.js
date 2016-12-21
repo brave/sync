@@ -14,7 +14,7 @@
     serverUrl: 'https://sync-staging.brave.com'
   }
 
-  if (self.chrome && self.chrome.ipc) {
+  if (self.chrome && self.chrome.ipcRenderer) {
     return
   }
   self.chrome = {}
@@ -34,6 +34,6 @@
       ipc.on('got-init-data')
     }
   }
-  self.chrome.ipc = ipc
+  self.chrome.ipcRenderer = ipc
 })(typeof self !== 'undefined' ? self : this)
 

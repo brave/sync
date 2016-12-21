@@ -30,9 +30,9 @@ npm start
 ## Testing
 
 The sync client uses Browserify to transform Node js into browser js. To unittest
-the library in your browser, run `npm run browsertest`, navigate to the
-local address printed in the terminal (default `http://localhost:8000/`),
-and open the page console to see test output.
+the library in a browser (default: electron), run `yarn browsertest`.
+To test in a different browser run `yarn browsertest -- --browser chrome`.
+Results appear in both the browser inspector and your terminal.
 
 To run tests in Node, just do `npm test`.
 
@@ -71,5 +71,14 @@ To integrate Brave sync on a platform (iOS, Android, Laptop):
    server will be able to accept requests from your platform.
 4. In the main browser process, implement an IPC message handler as specified
    in `client/constants/messages.js`.
-5. If webviews on your platform do not support `chrome.ipc.{send, on}`,
+5. If webviews on your platform do not support `chrome.ipcRenderer.{send, on}`,
    edit `client/polyfill/chrome.js` as needed to polyfill this functionality.
+
+#### Building for browser-laptop
+
+1. Make sure this repo is checked out next to `browser-laptop/`
+2. Checkout the `feature/syncing` branch in browser-laptop
+3. `npm run dist`
+4. If developing, do `npm start` in browser-laptop. Console messages from the
+   sync client will be logged in `Library/Application
+   Support/brave-development/chrome-debug.log`.

@@ -12,7 +12,6 @@ const mapValuesByKeys = (o) =>
 const messages = {
   /**
    * webview -> browser
-   * browser must respond with GOT_INIT_DATA
    */
   GET_INIT_DATA: _,
   /**
@@ -30,16 +29,26 @@ const messages = {
   SAVE_INIT_DATA: _, /* @param {Uint8Array} seed, @param {Uint8Array} deviceId */
   /**
    * webview -> browser
+   * sent when sync has finished initialization
+   */
+  SYNC_READY: _,
+  /**
+   * browser -> webview
+   * sent when it's time to fetch sync records from the sync server.
+   */
+  FETCH_SYNC_RECORDS: _, /* @param Array.<string> categoryNames */
+  /**
+   * webview -> browser
    * browser must update its local values with the new sync records, performing
    * conflict-resolution as necessary.
    */
-  RECEIVE_SYNC_RECORDS: _, /* @param {{bookmarks: [], historySites: [], siteSettings: []}} */
+  RECEIVE_SYNC_RECORDS: _, /* @param {string} categoryName, @param {Array.<Object>} records */
   /**
    * browser -> webview
    * browser sends this to the webview with the data that needs to be synced
    * to the sync server.
    */
-  SEND_SYNC_RECORDS: _ /* @param {{bookmarks: [], historySites: [], siteSettings: []}} */
+  SEND_SYNC_RECORDS: _ /* @param {string} categoryName, @param {Array.<Object>} records */
 }
 
 module.exports = mapValuesByKeys(messages)
