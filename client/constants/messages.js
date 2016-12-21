@@ -12,7 +12,6 @@ const mapValuesByKeys = (o) =>
 const messages = {
   /**
    * webview -> browser
-   * browser must respond with GOT_INIT_DATA
    */
   GET_INIT_DATA: _,
   /**
