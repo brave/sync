@@ -12,6 +12,7 @@ const mapValuesByKeys = (o) =>
 const messages = {
   /**
    * webview -> browser
+   * browser sends GOT_INIT_DATA with the saved values
    */
   GET_INIT_DATA: _,
   /**
@@ -23,8 +24,7 @@ const messages = {
   GOT_INIT_DATA: _, /* @param {Uint8Array|null} seed, @param {Uint8Array|null} deviceId, @param {Object} config */
   /**
    * webview -> browser
-   * browser must save values in persistent storage if non-empty and then send
-   * GOT_INIT_DATA with the saved values
+   * browser must save values in persistent storage if non-empty
    */
   SAVE_INIT_DATA: _, /* @param {Uint8Array} seed, @param {Uint8Array} deviceId */
   /**

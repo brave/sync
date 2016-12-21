@@ -72,15 +72,17 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
  * @returns {Promise(Array.<Uint8Array>)}
  */
 RequestUtil.prototype.list = function (category) {
+  const prefix = `${this.apiVersion}/${this.userId}/${category}`
   const options = {
     MaxKeys: 1000,
     Bucket: this.bucket,
-    Prefix: `${this.apiVersion}/${this.userId}/${category}`
+    Prefix: prefix
   }
   var contents = []
   return new Promise((resolve, reject) => {
     const getContents = (token) => {
       options.ContinuationToken = token
+      console.log(`LIST ${prefix}`)
       this.s3.listObjectsV2(options, (err, data) => {
         if (err) {
           reject(err)
@@ -115,7 +117,7 @@ RequestUtil.prototype.list = function (category) {
  * @param {Uint8Array} record - the object content, serialized and encrypted
  */
 RequestUtil.prototype.put = function (category, record) {
-  let parts = []
+  const parts = []
   if (record.length > MAX_RECORD_SIZE) {
     let i = 0
     while (parts.length < Math.ceil(record.length / MAX_RECORD_SIZE)) {
@@ -126,13 +128,15 @@ RequestUtil.prototype.put = function (category, record) {
     parts.push(record)
   }
   // TODO: the prefix can be encoded to be shorter
-  let crc = crc32.unsigned(record)
+  const crc = crc32.unsigned(record)
   parts.forEach((part, i) => {
-    let now = getTime()
-    let partString = this.serializer.byteArrayToString(part)
+    const now = getTime()
+    const partString = this.serializer.byteArrayToString(part)
+    const prefix = `${this.apiVersion}/${this.userId}/${category}/${now}/${crc}/${i}/${partString}`
+    console.log(`PUT ${prefix}`)
     this.s3.putObject({
       Bucket: this.bucket,
-      Prefix: `${this.apiVersion}/${this.userId}/${category}/${now}/${crc}/${i}/${partString}`
+      Prefix: prefix
     })
   })
 }

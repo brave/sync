@@ -152,7 +152,7 @@ const startSync = () => {
       if (!proto.categories[category]) {
         throw new Error(`Unsupported sync category: ${category}`)
       }
-      requester.list(category).then((records) => {
+      requester.list(proto.categories[category]).then((records) => {
         ipc.send(messages.RECEIVE_SYNC_RECORDS, category, records)
       })
     })
@@ -163,7 +163,7 @@ const startSync = () => {
       throw new Error(`Unsupported sync category: ${category}`)
     }
     records.forEach((record) => {
-      requester.put(encrypt(record))
+      requester.put(proto.categories[category], encrypt(record))
     })
   })
   logSync('success')
