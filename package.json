@@ -32,6 +32,7 @@
   },
   "homepage": "https://github.com/brave/sync#readme",
   "devDependencies": {
+    "brfs": "^1.4.3",
     "browserify": "^13.1.1",
     "flow-bin": "^0.35.0",
     "istanbul": "^0.4.5",
@@ -55,6 +56,11 @@
     "tweetnacl": "^0.14.3",
     "uuid": "^3.0.1",
     "winston": "^2.3.0"
+  },
+  "browserify": {
+    "transform": [
+      "brfs"
+    ]
   },
   "standard": {
     "ignore": [
