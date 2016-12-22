@@ -1,4 +1,5 @@
 const test = require('tape')
+const testHelper = require('../testHelper.js')
 const awsSdk = require('aws-sdk')
 const config = require('config')
 const crypto = require('../../lib/crypto')
@@ -18,9 +19,7 @@ test('users router', (t) => {
     serializer.init().then(() => {
       const serverUrl = `http://localhost:${server.address().port}`
       console.log(`server up on ${serverUrl}`)
-
-      const seed = new Uint8Array([243, 203, 185, 143, 101, 184, 134, 109, 69, 166, 218, 58, 63, 155, 158, 17, 31, 184, 175, 52, 73, 80, 190, 47, 45, 12, 59, 64, 130, 13, 146, 248])
-      const keys = crypto.deriveKeys(seed)
+      const keys = crypto.deriveKeys(testHelper.cryptoSeed())
       const userId = Buffer.from(keys.publicKey).toString('base64')
       console.log(`UserId: ${userId}`)
       const baseRequest = request.defaults({

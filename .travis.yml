@@ -3,7 +3,11 @@ language: node_js
 node_js:
 - node
 script:
-- npm run lint && npm run flow && npm run check && npm run browsertest && npm run coverage
+- yarn lint
+- yarn flow
+- yarn check
+- yarn browsertest
+- yarn coverage
 group: stable
 dist: precise
 os: linux
