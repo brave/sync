@@ -7,6 +7,7 @@
   /*"categoryIdBookmarks": "0",*/
   /*"categoryIdHistorySites": "1",*/
   /*"categoryIdPreferences": "2",*/
+  "corsAllowLocalhost": "CORS_ALLOW_LOCALHOST",
   "logLevel": "LOG_LEVEL",
   "port": "PORT",
   "sentryUrl": "SENTRY_URL",

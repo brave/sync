@@ -12,16 +12,19 @@ function getTime () {
 
 /**
  * @param {Object} serializer
- * @param {Uint8Array} bytes
+ * @param {Uint8Array} credentialsBytes
  * @param {string} apiVersion
  * @param {string} userId
  */
-const RequestUtil = function (serializer, bytes, apiVersion, userId) {
-  this.serializer = serializer
-  const response = this.parseAWSResponse(bytes)
-  this.s3 = response.s3
+const RequestUtil = function (serializer, credentialsBytes, apiVersion, userId) {
+  if (!apiVersion) { throw new Error('Missing apiVersion.') }
   this.apiVersion = apiVersion
+  if (!userId) { throw new Error('Missing userId.') }
   this.userId = userId
+
+  this.serializer = serializer
+  const response = this.parseAWSResponse(credentialsBytes)
+  this.s3 = response.s3
   this.postData = response.postData
   this.expiration = response.expiration
   this.bucket = response.bucket

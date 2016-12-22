@@ -18,8 +18,12 @@ const REGION = config.awsRegion
 
 router.param('userId', requestVerifier)
 
+// corsAllowLocalhost is set when NODE_ENV=test.
+const corsOrigin = config.corsAllowLocalhost
+  ? /^https?:\/\/localhost(?::\d+)?$/
+  : clientConfig.clientOrigins
 const corsOptions = {
-  origin: clientConfig.clientOrigins
+  origin: corsOrigin
 }
 
 // Generate temporary AWS credentials allowing user to access their Sync data.
