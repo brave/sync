@@ -62,7 +62,11 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
       secretAccessKey: credentials.secretAccessKey,
       sessionToken: credentials.sessionToken
     }),
-    region: region
+    // The bucket name is prepended to the endpoint to build the actual request URL, e.g.
+    // https://brave-sync-staging.s3.dualstack.us-west-2.amazonaws.com
+    endpoint: `https://s3.dualstack.${region}.amazonaws.com`,
+    region: region,
+    useDualstack: true
   })
   return {s3, postData, expiration, bucket, region}
 }
