@@ -69,8 +69,7 @@ message SyncRecord {
     bool ledgerPaymentsShown = 11;
   }
   message Device {
-    bytes deviceId = 1;
-    string name = 2;
+    string name = 1;
   }
   Action action = 1;
   bytes deviceId = 2;
