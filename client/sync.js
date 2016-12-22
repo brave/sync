@@ -133,8 +133,8 @@ const maybeSetDeviceId = () => {
             return
           }
           const device = record.device
-          if (device && device.deviceId && device.deviceId[0] > maxId) {
-            maxId = device.deviceId[0]
+          if (device && record.deviceId[0] > maxId) {
+            maxId = record.deviceId[0]
           }
         })
       }
@@ -165,6 +165,10 @@ const startSync = () => {
       throw new Error(`Unsupported sync category: ${category}`)
     }
     records.forEach((record) => {
+      // Workaround #17
+      record.deviceId = new Uint8Array(record.deviceId)
+      record.objectId = new Uint8Array(record.objectId)
+
       requester.put(proto.categories[category], encrypt(record))
     })
   })

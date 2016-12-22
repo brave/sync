@@ -26,10 +26,6 @@ message SecretboxRecord {
   bytes nonceRandom = 3;
 }
 
-message GenericMessage {
-  string message = 1;
-}
-
 message SyncRecord {
   enum Action {
     CREATE = 0;
