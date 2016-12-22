@@ -12,13 +12,19 @@ const mapValuesByKeys = (o) =>
 const messages = {
   /**
    * webview -> browser
+   * used for debugging in environments where the webview console output is not
+   * easily accessible, such as in browser-laptop.
+   */
+  SYNC_DEBUG: _, /* @param {string} message */
+  /**
+   * webview -> browser
    * browser sends GOT_INIT_DATA with the saved values
    */
   GET_INIT_DATA: _,
   /**
    * browser -> webview
    * browser must send null for seed or deviceId if a value has not yet been
-   * saved. 'config' contains apiVersion, serverUrl;
+   * saved. 'config' contains apiVersion, serverUrl, debug;
    * see server/config/default.json
    */
   GOT_INIT_DATA: _, /* @param {Array} seed, @param {Array} deviceId, @param {Object} config */

@@ -40,6 +40,8 @@ const logSync = (message, logLevel = DEBUG) => {
   }
   if (logElement) {
     logElement.innerText = `${logElement.innerText}\r\n${message}`
+  } else if (config.debug) {
+    ipc.send(messages.SYNC_DEBUG, message)
   } else {
     console.log(message)
   }
@@ -147,7 +149,7 @@ const maybeSetDeviceId = () => {
 const startSync = () => {
   ipc.send(messages.SYNC_READY)
   ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames) => {
-    logSync('getting sync records')
+    logSync(`fetching ${categoryNames} records`)
     categoryNames.forEach((category) => {
       if (!proto.categories[category]) {
         throw new Error(`Unsupported sync category: ${category}`)
@@ -158,7 +160,7 @@ const startSync = () => {
     })
   })
   ipc.on(messages.SEND_SYNC_RECORDS, (e, category, records) => {
-    logSync('sending sync records')
+    logSync(`sending ${category} records`)
     if (!proto.categories[category]) {
       throw new Error(`Unsupported sync category: ${category}`)
     }
