@@ -8,6 +8,7 @@
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
     "build": "yarn upgrade && browserify client/sync.js -o bundles/bundle.js",
     "browsertest": "yarn start-test; browserify test/client/*.js test/*.js | tape-run; yarn stop-test",
+    "browsertest-client": "yarn start-test; browserify test/client/*.js | tape-run --browser chrome; yarn stop-test",
     "check": "nsp check",
     "client": "npm run build && python -m SimpleHTTPServer",
     "coverage": "NODE_CONFIG_DIR=server/config/ istanbul cover tape test/*.js test/server/**/*.js --report lcovonly -- -R spec",
@@ -50,9 +51,9 @@
   "dependencies": {
     "@protobufjs/utf8": "^1.0.4",
     "aws-sdk": "^2.7.7",
-    "buffer-crc32": "^0.2.13",
     "config": "^1.24.0",
     "cors": "^2.8.1",
+    "crc": "^3.4.4",
     "express": "^4.14.0",
     "protobufjs": "6.0.1",
     "raven": "^0.12.3",

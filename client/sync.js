@@ -53,7 +53,7 @@ const logSync = (message, logLevel = DEBUG) => {
  * @returns {Object}
  */
 const decrypt = (ciphertext) => {
-  const d = clientSerializer.byteArrayToSecretBoxRecord(ciphertext)
+  const d = clientSerializer.byteArrayToSecretboxRecord(ciphertext)
   const decrypted = crypto.decrypt(d.encryptedData,
     d.nonceRandom, clientKeys.secretboxKey)
   if (!decrypted) {
@@ -72,7 +72,7 @@ const encrypt = (message) => {
   const nonceRandom = crypto.randomBytes(20)
   const encrypted = crypto.encrypt(s, clientKeys.secretboxKey,
     conf.counter, nonceRandom)
-  return clientSerializer.secretBoxRecordToBytes({
+  return clientSerializer.SecretboxRecordToByteArray({
     nonceRandom,
     counter: conf.counter,
     encryptedData: encrypted.ciphertext
@@ -121,7 +121,7 @@ const maybeSetDeviceId = () => {
   if (!requester.s3) {
     throw new Error('cannot set device ID because AWS SDK is not initialized.')
   }
-  return requester.list(proto.categories.PREFERENCES)
+  return requester.list(proto.categories.wS)
     .then((records) => {
       let maxId = -1
       if (records && records.length) {

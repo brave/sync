@@ -1,7 +1,8 @@
 'use strict'
 
 const awsSdk = require('aws-sdk')
-const crc32 = require('buffer-crc32')
+const crc = require('crc')
+const s3Helper = require('../lib/s3Helper')
 
 // Max size of a record in bytes. Limited by s3 key size.
 const MAX_RECORD_SIZE = 900
@@ -29,6 +30,7 @@ const RequestUtil = function (serializer, credentialsBytes, apiVersion, userId) 
   this.expiration = response.expiration
   this.bucket = response.bucket
   this.region = response.region
+  this.s3PostEndpoint = `https://${this.bucket}.s3.dualstack.${this.region}.amazonaws.com`
 }
 
 /**
@@ -60,6 +62,7 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
   }
   const expiration = credentials.expiration
   const s3 = new awsSdk.S3({
+    convertResponseTypes: false,
     credentials: new awsSdk.Credentials({
       accessKeyId: credentials.accessKeyId,
       secretAccessKey: credentials.secretAccessKey,
@@ -69,6 +72,7 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
     // https://brave-sync-staging.s3.dualstack.us-west-2.amazonaws.com
     endpoint: `https://s3.dualstack.${region}.amazonaws.com`,
     region: region,
+    sslEnabled: true,
     useDualstack: true
   })
   return {s3, postData, expiration, bucket, region}
@@ -89,7 +93,6 @@ RequestUtil.prototype.list = function (category) {
   return new Promise((resolve, reject) => {
     const getContents = (token) => {
       options.ContinuationToken = token
-      console.log(`LIST ${prefix}`)
       this.s3.listObjectsV2(options, (err, data) => {
         if (err) {
           reject(err)
@@ -101,10 +104,9 @@ RequestUtil.prototype.list = function (category) {
         }
         data.Contents.forEach((content) => {
           if (content && content.Key) {
-            // the 6th part of the AWS key is the encrypted sync data,
-            // which may itself contain the delimiter character
-            let record = content.Key.split('/').slice(6).join('/')
-            contents.push(this.serializer.stringToByteArray(record))
+            const object = s3Helper.parseS3Key(data.Contents[0].Key)
+            // TODO: Join multiple part records
+            contents.push(object.recordPartData)
           }
         })
         if (data.IsTruncated && data.NextContinuationToken) {
@@ -134,35 +136,58 @@ RequestUtil.prototype.put = function (category, record) {
   } else {
     parts.push(record)
   }
-  // TODO: the prefix can be encoded to be shorter
-  const crc = crc32.unsigned(record)
-  parts.forEach((part, i) => {
+  const recordCrc = crc.crc32.unsigned(record.buffer).toString(36)
+  const partPromises = parts.map((part, i) => {
     const now = getTime()
-    const partString = this.serializer.byteArrayToString(part)
-    const prefix = `${this.apiVersion}/${this.userId}/${category}/${now}/${crc}/${i}/${partString}`
-    console.log(`PUT ${prefix}`)
-    this.s3.putObject({
-      Bucket: this.bucket,
-      Prefix: prefix
-    })
+    const partString = s3Helper.byteArrayToS3String(part)
+    const key = `${this.apiVersion}/${this.userId}/${category}/${now}/${recordCrc}/${i}/${partString}`
+    const params = {
+      method: 'POST',
+      body: this.s3PostFormData(key)
+    }
+    return window.fetch(this.s3PostEndpoint, params).then(this.checkFetchStatus)
   })
+  return Promise.all(partPromises)
+}
+
+RequestUtil.prototype.s3PostFormData = function (objectKey) {
+  let formData = new FormData() // eslint-disable-line
+  formData.append('key', objectKey)
+  for (let key of Object.keys(this.postData)) {
+    formData.append(key, this.postData[key])
+  }
+  formData.append('file', new Uint8Array([]))
+  return formData
+}
+
+RequestUtil.prototype.checkFetchStatus = function (response) {
+  if (response.status >= 200 && response.status < 300) {
+    return response
+  } else {
+    var error = new Error(response.statusText)
+    error.response = response
+    throw error
+  }
+}
+
+/**
+ * In S3 you can't delete all keys matching a prefix, so you need to list by
+ * prefix then delete them all.
+ * @param {string} prefix
+ */
+RequestUtil.prototype.s3DeletePrefix = function (prefix) {
+  return s3Helper.deletePrefix(this.s3, this.bucket, prefix)
 }
 
 RequestUtil.prototype.deleteUser = function () {
-  return this.s3.deleteObject({
-    Bucket: this.bucket,
-    Prefix: `${this.apiVersion}/${this.userId}`
-  }).promise()
+  return this.s3DeletePrefix(`${this.apiVersion}/${this.userId}`)
 }
 
 /**
  * @param {string} category - the category ID
  */
 RequestUtil.prototype.deleteCategory = function (category) {
-  return this.s3.deleteObject({
-    Bucket: this.bucket,
-    Prefix: `${this.apiVersion}/${this.userId}/${category}`
-  }).promise()
+  return this.s3DeletePrefix(`${this.apiVersion}/${this.userId}/${category}`)
 }
 
 module.exports = RequestUtil

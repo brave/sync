@@ -67,5 +67,5 @@ exports.dateToAmzDate = (date) => {
 }
 
 exports.awsS3Endpoint = () => {
-  return `https://${config.awsS3Bucket}.s3.amazonaws.com/`
+  return `https://${config.awsS3Bucket}.s3.dualstack.${config.awsRegion}.amazonaws.com`
 }

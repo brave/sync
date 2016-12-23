@@ -26,6 +26,8 @@ const corsOptions = {
   origin: corsOrigin
 }
 
+console.log(`cors origin: ${corsOrigin}`)
+
 // Generate temporary AWS credentials allowing user to access their Sync data.
 router.post('/:userId/credentials', cors(corsOptions), (request, response) => {
   const credentialPromise = new UserAwsCredentialGenerator(request.userId, BUCKET).perform()

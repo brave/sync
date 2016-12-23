@@ -61,7 +61,7 @@ test('users router', (t) => {
 
           let requester = null
           try {
-            requester = new RequestUtil(serializer.serializer, response.body)
+            requester = new RequestUtil(serializer.serializer, response.body, config.apiVersion, userId)
           } catch (e) {
             t.fail(`Couldn't parse body / ${e}: ${response.body}`)
           }
