@@ -71,7 +71,7 @@ const encrypt = (message) => {
   const s = clientSerializer.syncRecordToByteArray(message)
   const nonceRandom = crypto.randomBytes(20)
   const encrypted = crypto.encrypt(s, clientKeys.secretboxKey,
-    conf.counter, nonceRandom)
+    conf.nonceCounter, nonceRandom)
   return clientSerializer.SecretboxRecordToByteArray({
     nonceRandom,
     counter: conf.counter,
@@ -121,7 +121,7 @@ const maybeSetDeviceId = () => {
   if (!requester.s3) {
     throw new Error('cannot set device ID because AWS SDK is not initialized.')
   }
-  return requester.list(proto.categories.wS)
+  return requester.list(proto.categories.PREFERENCES)
     .then((records) => {
       let maxId = -1
       if (records && records.length) {
@@ -160,7 +160,6 @@ const startSync = () => {
     })
   })
   ipc.on(messages.SEND_SYNC_RECORDS, (e, category, records) => {
-    logSync(`sending ${category} records`)
     if (!proto.categories[category]) {
       throw new Error(`Unsupported sync category: ${category}`)
     }
@@ -168,7 +167,7 @@ const startSync = () => {
       // Workaround #17
       record.deviceId = new Uint8Array(record.deviceId)
       record.objectId = new Uint8Array(record.objectId)
-
+      logSync(`sending record: ${JSON.stringify(record)}`)
       requester.put(proto.categories[category], encrypt(record))
     })
   })

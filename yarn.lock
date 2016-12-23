@@ -54,12 +54,12 @@ agent-base@2:
     semver "~5.0.1"
 
 ajv-keywords@^1.0.0:
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/ajv-keywords/-/ajv-keywords-1.2.1.tgz#2e1cbda5f82b2466f9fbcc8c6d6986d8b44df27e"
+  version "1.4.1"
+  resolved "https://registry.yarnpkg.com/ajv-keywords/-/ajv-keywords-1.4.1.tgz#f080e635e230baae26537ce727f260ae62b43802"
 
 ajv@^4.7.0:
-  version "4.10.0"
-  resolved "https://registry.yarnpkg.com/ajv/-/ajv-4.10.0.tgz#7ae6169180eb199192a8b9a19fd0f47fc9ac8764"
+  version "4.10.1"
+  resolved "https://registry.yarnpkg.com/ajv/-/ajv-4.10.1.tgz#6e1669b62d752424a73da9175901d0327adfc2a5"
   dependencies:
     co "^4.6.0"
     json-stable-stringify "^1.0.1"
@@ -225,8 +225,8 @@ asynckit@^0.4.0:
   resolved "https://registry.yarnpkg.com/asynckit/-/asynckit-0.4.0.tgz#c79ed97f7f34cb8f2ba1bc9790bcc366474b4b79"
 
 aws-sdk@^2.7.7:
-  version "2.7.18"
-  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.7.18.tgz#7cd17fb8f583ef2d3d7d995ff1b7108634a507be"
+  version "2.7.19"
+  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.7.19.tgz#63a0dfae44e7aab182cad05d5e60277f755ad80e"
   dependencies:
     buffer "4.9.1"
     crypto-browserify "1.0.9"
@@ -2669,11 +2669,11 @@ object-assign@^4.0.1, object-assign@^4.1.0:
 
 object-inspect@~0.4.0:
   version "0.4.0"
-  resolved "https://registry.yarnpkg.com/object-inspect/-/object-inspect-0.4.0.tgz#f5157c116c1455b243b06ee97703392c5ad89fec"
+  resolved "http://registry.npmjs.org/object-inspect/-/object-inspect-0.4.0.tgz#f5157c116c1455b243b06ee97703392c5ad89fec"
 
 object-inspect@~1.2.1:
   version "1.2.1"
-  resolved "https://registry.yarnpkg.com/object-inspect/-/object-inspect-1.2.1.tgz#3b62226eb8f6d441751c7d8f22a20ff80ac9dc3f"
+  resolved "http://registry.npmjs.org/object-inspect/-/object-inspect-1.2.1.tgz#3b62226eb8f6d441751c7d8f22a20ff80ac9dc3f"
 
 object-keys@^1.0.6, object-keys@^1.0.8:
   version "1.0.11"
@@ -3230,13 +3230,9 @@ resolve-from@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/resolve-from/-/resolve-from-1.0.1.tgz#26cbfe935d1aeeeabb29bc3fe5aeb01e93d44226"
 
-resolve@1.1.7, resolve@1.1.x, resolve@~1.1.7:
+resolve@1.1.7, resolve@1.1.x, resolve@^1.1.3, resolve@^1.1.4, resolve@^1.1.5, resolve@^1.1.6, resolve@~1.1.7:
   version "1.1.7"
   resolved "https://registry.yarnpkg.com/resolve/-/resolve-1.1.7.tgz#203114d82ad2c5ed9e8e0411b3932875e889e97b"
-
-resolve@^1.1.3, resolve@^1.1.4, resolve@^1.1.5, resolve@^1.1.6:
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/resolve/-/resolve-1.2.0.tgz#9589c3f2f6149d1417a40becc1663db6ec6bc26c"
 
 restore-cursor@^1.0.1:
   version "1.0.1"
@@ -3410,11 +3406,9 @@ source-map-support@^0.4.0:
   dependencies:
     source-map "^0.5.3"
 
-"source-map@>= 0.1.2", source-map@~0.2.0:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.2.0.tgz#dab73fbcfc2ba819b4de03bd6f6eaa48164b3f9d"
-  dependencies:
-    amdefine ">=0.0.4"
+"source-map@>= 0.1.2", source-map@^0.5.3, source-map@~0.5.1, source-map@~0.5.3:
+  version "0.5.6"
+  resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.5.6.tgz#75ce38f52bf0733c5a7f0c118d81334a2bb5f412"
 
 source-map@^0.4.4:
   version "0.4.4"
@@ -3422,13 +3416,15 @@ source-map@^0.4.4:
   dependencies:
     amdefine ">=0.0.4"
 
-source-map@^0.5.3, source-map@~0.5.1, source-map@~0.5.3:
-  version "0.5.6"
-  resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.5.6.tgz#75ce38f52bf0733c5a7f0c118d81334a2bb5f412"
-
 source-map@~0.1.33:
   version "0.1.43"
   resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.1.43.tgz#c24bc146ca517c1471f5dacbe2571b2b7f9e3346"
+  dependencies:
+    amdefine ">=0.0.4"
+
+source-map@~0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.2.0.tgz#dab73fbcfc2ba819b4de03bd6f6eaa48164b3f9d"
   dependencies:
     amdefine ">=0.0.4"
 
