@@ -15,7 +15,7 @@ test('serializing strings', (t) => {
   serializer.init().then((s) => {
     messages.forEach((msg) => {
       const bytes = s.stringToByteArray(msg)
-      t.equal(msg, s.byteArrayToString(bytes))
+      t.equal(s.byteArrayToString(bytes), msg)
     })
   })
 })

@@ -65,6 +65,14 @@ class UserAwsCredentialGenerator {
           "Action": "s3:ListBucket",
           "Resource": "arn:aws:s3:::${this.s3Bucket}",
           "Condition": {
+            "StringLike": {"s3:prefix": "${this.s3Prefix()}"}
+          }
+        },
+        {
+          "Effect": "Allow",
+          "Action": "s3:ListBucket",
+          "Resource": "arn:aws:s3:::${this.s3Bucket}",
+          "Condition": {
             "StringLike": {"s3:prefix": "${this.s3Prefix()}/*"}
           }
         },

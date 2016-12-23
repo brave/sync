@@ -22,7 +22,7 @@ message Credentials {
 
 message SecretboxRecord {
   bytes encryptedData = 1;
-  int counter = 2;
+  int32 counter = 2;
   bytes nonceRandom = 3;
 }
 
