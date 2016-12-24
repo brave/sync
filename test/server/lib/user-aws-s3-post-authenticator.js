@@ -102,7 +102,8 @@ test('userAwsS3PostAuthenticator', (t) => {
             adminS3.listObjectsV2(listParams).promise()
               .then((data) => {
                 const object = s3Helper.parseS3Key(data.Contents[0].Key)
-                const s3Record = decrypt(object.recordPartData)
+                const recordBytes = s3Helper.s3StringToByteArray(object.recordPartString)
+                const s3Record = decrypt(recordBytes)
                 // FIXME: Should this deserialize to 'CREATE' ?
                 t.equals(s3Record.action, 0, `${t.name}: action`)
                 t.deepEquals(s3Record.deviceId, record.deviceId, `${t.name}: deviceId`)

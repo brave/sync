@@ -1,15 +1,7 @@
 'use strict'
 
 const awsSdk = require('aws-sdk')
-const crc = require('crc')
 const s3Helper = require('../lib/s3Helper')
-
-// Max size of a record in bytes. Limited by s3 key size.
-const MAX_RECORD_SIZE = 900
-
-function getTime () {
-  return Math.floor(Date.now() / 1000)
-}
 
 /**
  * @param {Object} serializer
@@ -89,35 +81,24 @@ RequestUtil.prototype.list = function (category) {
     Bucket: this.bucket,
     Prefix: prefix
   }
-  var contents = []
-  return new Promise((resolve, reject) => {
-    const getContents = (token) => {
-      options.ContinuationToken = token
-      this.s3.listObjectsV2(options, (err, data) => {
-        if (err) {
-          reject(err)
-          return
-        }
-        if (!data.Contents) {
-          reject('Missing object contents.')
-          return
-        }
-        data.Contents.forEach((content) => {
-          if (content && content.Key) {
-            const object = s3Helper.parseS3Key(data.Contents[0].Key)
-            // TODO: Join multiple part records
-            contents.push(object.recordPartData)
-          }
-        })
-        if (data.IsTruncated && data.NextContinuationToken) {
-          getContents(data.NextContinuationToken)
-        } else {
-          resolve(contents)
-        }
+  return s3Helper.listObjects(this.s3, options)
+    .then((data) => {
+      return data.map((s3Object) => {
+        const parsedKey = s3Helper.parseS3Key(s3Object.Key)
+        // TODO: Recombine split records
+        const decodedData = s3Helper.s3StringToByteArray(parsedKey.recordPartString)
+        return decodedData
       })
-    }
-    getContents()
-  })
+    })
+}
+
+/**
+ * Record S3 prefix with current timestamp.
+ * {apiVersion}/{userId}/{category}/{timestamp}/
+ * @returns {string}
+ */
+RequestUtil.prototype.currentRecordPrefix = function (category) {
+  return `${this.apiVersion}/${this.userId}/${category}/${getTime()}/`
 }
 
 /**
@@ -126,28 +107,17 @@ RequestUtil.prototype.list = function (category) {
  * @param {Uint8Array} record - the object content, serialized and encrypted
  */
 RequestUtil.prototype.put = function (category, record) {
-  const parts = []
-  if (record.length > MAX_RECORD_SIZE) {
-    let i = 0
-    while (parts.length < Math.ceil(record.length / MAX_RECORD_SIZE)) {
-      parts.push(record.slice(i, i + 900))
-      i++
-    }
-  } else {
-    parts.push(record)
-  }
-  const recordCrc = crc.crc32.unsigned(record.buffer).toString(36)
-  const partPromises = parts.map((part, i) => {
-    const now = getTime()
-    const partString = s3Helper.byteArrayToS3String(part)
-    const key = `${this.apiVersion}/${this.userId}/${category}/${now}/${recordCrc}/${i}/${partString}`
+  const s3Prefix = this.currentRecordPrefix(category)
+  const s3Keys = s3Helper.encodeDataToS3KeyArray(s3Prefix, record)
+  const fetchPromises = s3Keys.map((key, _i) => {
     const params = {
       method: 'POST',
       body: this.s3PostFormData(key)
     }
-    return window.fetch(this.s3PostEndpoint, params).then(this.checkFetchStatus)
+    return window.fetch(this.s3PostEndpoint, params)
+      .then(checkFetchStatus)
   })
-  return Promise.all(partPromises)
+  return Promise.all(fetchPromises)
 }
 
 RequestUtil.prototype.s3PostFormData = function (objectKey) {
@@ -158,16 +128,6 @@ RequestUtil.prototype.s3PostFormData = function (objectKey) {
   }
   formData.append('file', new Uint8Array([]))
   return formData
-}
-
-RequestUtil.prototype.checkFetchStatus = function (response) {
-  if (response.status >= 200 && response.status < 300) {
-    return response
-  } else {
-    var error = new Error(response.statusText)
-    error.response = response
-    throw error
-  }
 }
 
 /**
@@ -188,6 +148,20 @@ RequestUtil.prototype.deleteUser = function () {
  */
 RequestUtil.prototype.deleteCategory = function (category) {
   return this.s3DeletePrefix(`${this.apiVersion}/${this.userId}/${category}`)
+}
+
+function checkFetchStatus (response) {
+  if (response.status >= 200 && response.status < 300) {
+    return response
+  } else {
+    var error = new Error(response.statusText)
+    error.response = response
+    throw error
+  }
+}
+
+function getTime () {
+  return Math.floor(Date.now() / 1000)
 }
 
 module.exports = RequestUtil
