@@ -22,7 +22,7 @@ message Credentials {
 
 message SecretboxRecord {
   bytes encryptedData = 1;
-  int32 counter = 2;
+  uint32 counter = 2;
   bytes nonceRandom = 3;
 }
 
@@ -37,18 +37,18 @@ message SyncRecord {
     string title = 2;
     string customTitle = 3;
     string favicon = 4;
-    number lastAccessedTime = 5;
-    number creationTime = 6;
+    uint64 lastAccessedTime = 5;
+    uint64 creationTime = 6;
   }
   message Bookmark {
     Site site = 1;
     bool isFolder = 2;
-    number folderId = 3;
-    number parentFolderId = 4;
+    uint32 folderId = 3;
+    uint32 parentFolderId = 4;
   }
   message SiteSetting {
     string hostPattern = 1;
-    number zoomLevel = 2;
+    int32 zoomLevel = 2;
     bool shieldsUp = 3;
     enum AdControl {
       SHOW_BRAVE_ADS = 0;
