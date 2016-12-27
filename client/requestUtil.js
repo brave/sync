@@ -72,14 +72,18 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
 
 /**
  * @param {string} category - the category ID
+ * @param {number=} startAt return records with timestamp >= startAt (e.g. 1482435340)
  * @returns {Promise(Array.<Uint8Array>)}
  */
-RequestUtil.prototype.list = function (category) {
+RequestUtil.prototype.list = function (category, startAt) {
   const prefix = `${this.apiVersion}/${this.userId}/${category}`
-  const options = {
+  let options = {
     MaxKeys: 1000,
     Bucket: this.bucket,
     Prefix: prefix
+  }
+  if (startAt) {
+    options.StartAfter = `${prefix}/${startAt}`
   }
   return s3Helper.listObjects(this.s3, options)
     .then((data) => {
