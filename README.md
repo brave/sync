@@ -82,3 +82,12 @@ To integrate Brave sync on a platform (iOS, Android, Laptop):
 4. If developing, do `npm start` in browser-laptop. Console messages from the
    sync client will be logged in `Library/Application
    Support/brave-development/chrome-debug.log`.
+
+### Tests
+
+To run tests you need to configure these environment variables:
+
+- AWS_REGION
+- AWS_S3_BUCKET
+- AWS_ACCESS_KEY_ID
+- AWS_SECRET_ACCESS_KEY

@@ -9,7 +9,7 @@ const proto = require('../../client/constants/proto')
 test('client RequestUtil', (t) => {
   t.plan(1)
   t.test('constructor', (t) => {
-    t.plan(5)
+    t.plan(6)
 
     Serializer.init().then((serializer) => {
       clientTestHelper.getSerializedCredentials(serializer).then((data) => {
@@ -17,7 +17,7 @@ test('client RequestUtil', (t) => {
         const args = [
           serializer,
           data.serializedCredentials,
-          clientTestHelper.config.apiVersion,
+          clientTestHelper.CONFIG.apiVersion,
           data.userId
         ]
         t.throws(() => { return new RequestUtil() }, 'requires arguments')
@@ -29,6 +29,14 @@ test('client RequestUtil', (t) => {
         t.test('prototype', (t) => {
           testPrototype(t, requestUtil, keys)
         })
+
+        const expiredCredentials = {
+          aws: clientTestHelper.EXPIRED_CREDENTIALS.aws,
+          s3Post: clientTestHelper.EXPIRED_CREDENTIALS.s3Post,
+          bucket: requestUtil.bucket,
+          region: requestUtil.region
+        }
+        testExpiredCredentials(t, expiredCredentials, keys, serializer)
       }).catch((error) => { t.end(error) })
     })
   })
@@ -147,5 +155,23 @@ test('client RequestUtil', (t) => {
           .catch((error) => { t.fail(error) })
       })
     }
+  }
+
+  const testExpiredCredentials = (t, expiredCredentials, keys, serializer) => {
+    t.test('RequestUtil with expired credentials', (t) => {
+      t.plan(1)
+      const userId = Buffer.from(keys.publicKey).toString('base64')
+      const args = [
+        serializer,
+        serializer.credentialsToByteArray(expiredCredentials),
+        clientTestHelper.CONFIG.apiVersion,
+        userId
+      ]
+      let requestUtil
+      t.doesNotThrow(
+        () => { requestUtil = new RequestUtil(...args) },
+        `${t.name} instantiates without error`
+      )
+    })
   }
 })
