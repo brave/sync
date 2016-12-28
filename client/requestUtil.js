@@ -1,27 +1,91 @@
 'use strict'
 
+const NONCE_COUNTER = 0
+
 const awsSdk = require('aws-sdk')
+const cryptoUtil = require('./cryptoUtil')
 const s3Helper = require('../lib/s3Helper')
 
-/**
- * @param {Object} serializer
- * @param {Uint8Array} credentialsBytes
- * @param {string} apiVersion
- * @param {string} userId
- */
-const RequestUtil = function (serializer, credentialsBytes, apiVersion, userId) {
-  if (!apiVersion) { throw new Error('Missing apiVersion.') }
-  this.apiVersion = apiVersion
-  if (!userId) { throw new Error('Missing userId.') }
-  this.userId = userId
+const checkFetchStatus = (response) => {
+  if (response.status >= 200 && response.status < 300) {
+    return response
+  } else {
+    var error = new Error(response.statusText)
+    error.response = response
+    throw error
+  }
+}
 
-  this.serializer = serializer
-  const response = this.parseAWSResponse(credentialsBytes)
-  this.s3 = response.s3
-  this.postData = response.postData
-  this.expiration = response.expiration
-  this.bucket = response.bucket
-  this.region = response.region
+const getTime = () => {
+  return Math.floor(Date.now() / 1000)
+}
+
+/**
+ * @param {{
+ *   apiVersion: <string>,
+ *   credentialsBytes: <Uint8Array=>, // If missing, will be requested
+ *   keys: {{ // User's encryption keys
+ *     publicKey: <Uint8Array>, secretKey: <Uint8Array>,
+ *     fingerprint: <string=>, secretboxKey: <Uint8Array>}},
+ *   serializer: <Object>,
+ *   serverUrl: <string>
+ * }} opts
+ */
+const RequestUtil = function (opts = {}) {
+  if (!opts.apiVersion) { throw new Error('Missing apiVersion.') }
+  if (!opts.keys) { throw new Error('Missing keys.') }
+  if (!opts.serializer) { throw new Error('Missing serializer.') }
+  if (!opts.serverUrl) { throw new Error('Missing serverUrl.') }
+  this.apiVersion = opts.apiVersion
+  this.serializer = opts.serializer
+  this.serverUrl = opts.serverUrl
+  this.userId = Buffer.from(opts.keys.publicKey).toString('base64')
+  this.encrypt = cryptoUtil.Encrypt(this.serializer, opts.keys.secretboxKey, NONCE_COUNTER)
+  this.decrypt = cryptoUtil.Decrypt(this.serializer, opts.keys.secretboxKey)
+  this.sign = cryptoUtil.Sign(opts.keys.secretKey)
+  if (opts.credentialsBytes) {
+    const credentials = this.parseAWSResponse(opts.credentialsBytes)
+    this.saveAWSCredentials(credentials)
+  }
+}
+
+/**
+ * Save parsed AWS credential response to be used with AWS requests.
+ * @param {{s3: Object, postData: Object, expiration: string, bucket: string, region: string}}
+ * @return {Promise} After it resolves, the object is ready to make requests.
+ */
+RequestUtil.prototype.refreshAWSCredentials = function () {
+  const timestampString = getTime().toString()
+  const userId = window.encodeURIComponent(this.userId)
+  const url = `${this.serverUrl}/${userId}/credentials`
+  const bytes = this.serializer.stringToByteArray(timestampString)
+  const params = {
+    method: 'POST',
+    body: this.sign(bytes)
+  }
+  return window.fetch(url, params)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Credential server response ${response.status}`)
+      }
+      return response.arrayBuffer()
+    })
+    .then((buffer) => {
+      const credentials = this.parseAWSResponse(new Uint8Array(buffer))
+      this.saveAWSCredentials(credentials)
+    })
+}
+
+/**
+ * Save parsed AWS credential response to be used with AWS requests.
+ * @param {{s3: Object, postData: Object, expiration: string, bucket: string, region: string}}
+ */
+RequestUtil.prototype.saveAWSCredentials = function (parsedResponse) {
+  this.s3 = parsedResponse.s3
+  this.postData = parsedResponse.postData
+  this.expiration = parsedResponse.expiration
+  this.bucket = parsedResponse.bucket
+  this.region = parsedResponse.region
   this.s3PostEndpoint = `https://${this.bucket}.s3.dualstack.${this.region}.amazonaws.com`
 }
 
@@ -152,20 +216,6 @@ RequestUtil.prototype.deleteUser = function () {
  */
 RequestUtil.prototype.deleteCategory = function (category) {
   return this.s3DeletePrefix(`${this.apiVersion}/${this.userId}/${category}`)
-}
-
-function checkFetchStatus (response) {
-  if (response.status >= 200 && response.status < 300) {
-    return response
-  } else {
-    var error = new Error(response.statusText)
-    error.response = response
-    throw error
-  }
-}
-
-function getTime () {
-  return Math.floor(Date.now() / 1000)
 }
 
 module.exports = RequestUtil
