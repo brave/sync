@@ -148,13 +148,13 @@ const maybeSetDeviceId = () => {
  */
 const startSync = () => {
   ipc.send(messages.SYNC_READY)
-  ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames) => {
-    logSync(`fetching ${categoryNames} records`)
+  ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames, startAt) => {
+    logSync(`fetching ${categoryNames} records after ${startAt}`)
     categoryNames.forEach((category) => {
       if (!proto.categories[category]) {
         throw new Error(`Unsupported sync category: ${category}`)
       }
-      requester.list(proto.categories[category]).then((records) => {
+      requester.list(proto.categories[category], startAt).then((records) => {
         ipc.send(messages.RECEIVE_SYNC_RECORDS, category, records)
       })
     })

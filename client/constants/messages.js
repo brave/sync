@@ -40,9 +40,9 @@ const messages = {
   SYNC_READY: _,
   /**
    * browser -> webview
-   * sent when it's time to fetch sync records from the sync server.
+   * sent to fetch sync records after a given start time from the sync server.
    */
-  FETCH_SYNC_RECORDS: _, /* @param Array.<string> categoryNames */
+  FETCH_SYNC_RECORDS: _, /* @param Array.<string> categoryNames, @param {number} startAt (in seconds) */
   /**
    * webview -> browser
    * browser must update its local values with the new sync records, performing
