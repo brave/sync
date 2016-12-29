@@ -85,6 +85,7 @@ RequestUtil.prototype.refreshAWSCredentials = function () {
       console.log('Refreshed credentials.')
       const credentials = this.parseAWSResponse(new Uint8Array(buffer))
       this.saveAWSCredentials(credentials)
+      return Promise.resolve(this)
     })
 }
 

@@ -54,7 +54,17 @@ const messages = {
    * browser sends this to the webview with the data that needs to be synced
    * to the sync server.
    */
-  SEND_SYNC_RECORDS: _ /* @param {string} categoryName, @param {Array.<Object>} records */
+  SEND_SYNC_RECORDS: _, /* @param {string} categoryName, @param {Array.<Object>} records */
+  /**
+   * browser -> webview
+   * browser sends this to delete the current user.
+   */
+  DELETE_SYNC_USER: _,
+  /**
+   * browser -> webview
+   * browser sends this to delete all records in a category.
+   */
+  DELETE_SYNC_CATEGORY: _ /* @param {string} categoryName */
 }
 
 module.exports = mapValuesByKeys(messages)

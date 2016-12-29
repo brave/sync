@@ -14,14 +14,10 @@ const WARN = 1
 const ERROR = 2
 const logElement = document.querySelector('#output')
 
-var clientSerializer = null
 var clientDeviceId = null
 var clientUserId = null
 var clientKeys = {}
 var config = {}
-
-// RequestUtil which makes AWS requests
-var requester = {}
 
 console.log('in sync script')
 
@@ -47,13 +43,14 @@ const logSync = (message, logLevel = DEBUG) => {
 
 /**
  * Sets the device ID if one does not yet exist.
+ * @param {RequestUtil} requester
  * @returns {Promise}
  */
-const maybeSetDeviceId = () => {
+const maybeSetDeviceId = (requester) => {
   if (clientDeviceId !== null) {
-    return
+    return Promise.resolve(requester)
   }
-  if (!requester.s3) {
+  if (!requester || !requester.s3) {
     throw new Error('cannot set device ID because AWS SDK is not initialized.')
   }
   return requester.list(proto.categories.PREFERENCES)
@@ -75,13 +72,15 @@ const maybeSetDeviceId = () => {
       }
       clientDeviceId = new Uint8Array([maxId + 1])
       ipc.send(messages.SAVE_INIT_DATA, undefined, clientDeviceId)
+      return Promise.resolve(requester)
     })
 }
 
 /**
  * Starts the sync listeners.
+ * @param {RequestUtil} requester
  */
-const startSync = () => {
+const startSync = (requester) => {
   ipc.send(messages.SYNC_READY)
   ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames, startAt) => {
     logSync(`fetching ${categoryNames} records after ${startAt}`)
@@ -106,11 +105,22 @@ const startSync = () => {
       requester.put(proto.categories[category], requester.encrypt(record))
     })
   })
+  ipc.on(messages.DELETE_SYNC_USER, (e) => {
+    logSync(`Deleting user!!`)
+    requester.deleteUser()
+  })
+  ipc.on(messages.DELETE_SYNC_CATEGORY, (e, category) => {
+    if (!proto.categories[category]) {
+      throw new Error(`Unsupported sync category: ${category}`)
+    }
+    logSync(`Deleting category: ${category}`)
+    requester.deleteCategory(proto.categories[category])
+  })
   logSync('success')
 }
 
 Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values) => {
-  clientSerializer = values[0]
+  const clientSerializer = values[0]
   const keys = values[1].keys
   const deviceId = values[1].deviceId
   clientKeys = keys
@@ -129,9 +139,10 @@ Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values
     throw new Error('Missing client env configuration')
   }
   logSync(`initialized userId ${clientUserId}`)
+  return clientSerializer
 })
-  .then(() => {
-    requester = new RequestUtil({
+  .then((clientSerializer) => {
+    const requester = new RequestUtil({
       apiVersion: config.apiVersion,
       credentialsBytes: null, // TODO: Start with previous session's credentials
       keys: clientKeys,
@@ -140,16 +151,15 @@ Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values
     })
     return requester.refreshAWSCredentials()
   })
-  .then(() => {
+  .then((requester) => {
     logSync('successfully authenticated userId: ' + clientUserId)
     logSync('using AWS bucket: ' + requester.bucket)
-    return maybeSetDeviceId()
+    return maybeSetDeviceId(requester)
   })
-  .catch((e) => { logSync('could not register device ID: ' + e, ERROR) })
-  .then(() => {
-    if (clientDeviceId !== null && requester.s3) {
+  .then((requester) => {
+    if (clientDeviceId !== null && requester && requester.s3) {
       logSync('set device ID: ' + clientDeviceId)
-      startSync()
+      startSync(requester)
     }
   })
   .catch((e) => { logSync('could not init sync: ' + e, ERROR) })
