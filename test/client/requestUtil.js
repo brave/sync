@@ -161,9 +161,9 @@ test('client RequestUtil', (t) => {
       region: requestUtil.region
     }
     t.test('RequestUtil with expired credentials', (t) => {
-      t.plan(2)
+      t.plan(3)
 
-      const args = {
+      const expiredArgs = {
         apiVersion: clientTestHelper.CONFIG.apiVersion,
         credentialsBytes: serializer.credentialsToByteArray(expiredCredentials),
         keys,
@@ -171,9 +171,9 @@ test('client RequestUtil', (t) => {
         serverUrl: clientTestHelper.CONFIG.serverUrl
       }
 
-      t.doesNotThrow(() => { return new RequestUtil(args) }, `${t.name} instantiates without error`)
+      t.doesNotThrow(() => { return new RequestUtil(expiredArgs) }, `${t.name} instantiates without error`)
 
-      t.test('#refreshAWSCredentials', (t) => {
+      t.test('#refreshAWSCredentials()', (t) => {
         t.plan(2)
         const args = {
           apiVersion: clientTestHelper.CONFIG.apiVersion,
@@ -192,6 +192,45 @@ test('client RequestUtil', (t) => {
               .catch((error) => { t.fail(error) })
           })
           .catch((error) => { t.fail(error) })
+      })
+
+      t.test('automatic credential refresh', (t) => {
+        t.plan(2)
+
+        t.test(`${t.name} list()`, (t) => {
+          t.plan(1)
+          const requestUtil = new RequestUtil(expiredArgs)
+          requestUtil.list(proto.categories.PREFERENCES)
+            .then((response) => { t.equals(response.length, 0, t.name) })
+            .catch((error) => { t.fail(error) })
+        })
+
+        t.test(`${t.name} put()`, (t) => {
+          t.plan(2)
+          const record = {
+            action: 'CREATE',
+            deviceId: new Uint8Array([1]),
+            objectId: testHelper.uuid(),
+            device: {name: 'sweet'}
+          }
+          const requestUtil = new RequestUtil(expiredArgs)
+          requestUtil.put(proto.categories.PREFERENCES, encrypt(record))
+            .then((response) => {
+              t.pass(t.name)
+              testCredentialRefreshDelete(t)
+            })
+            .catch((error) => { t.fail(error) })
+        })
+
+        const testCredentialRefreshDelete = (t) => {
+          t.test(`${t.name} deleteCategory()`, (t) => {
+            t.plan(1)
+            const requestUtil = new RequestUtil(expiredArgs)
+            requestUtil.deleteCategory(proto.categories.PREFERENCES)
+              .then((response) => { t.pass(t.name) })
+              .catch((error) => { t.fail(error) })
+          })
+        }
       })
     })
   }

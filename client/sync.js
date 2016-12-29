@@ -1,12 +1,10 @@
 'use strict'
 
 const initializer = require('./init')
-const cryptoUtil = require('./cryptoUtil')
 const RequestUtil = require('./requestUtil')
 const messages = require('./constants/messages')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
-const conf = require('./config')
 
 const ipc = window.chrome.ipcRenderer
 
@@ -22,7 +20,7 @@ var clientUserId = null
 var clientKeys = {}
 var config = {}
 
-// aws sdk requests class
+// RequestUtil which makes AWS requests
 var requester = {}
 
 console.log('in sync script')
@@ -47,9 +45,6 @@ const logSync = (message, logLevel = DEBUG) => {
   }
 }
 
-const decrypt = cryptoUtil.Decrypt(clientSerializer, clientKeys.secretboxKey)
-const encrypt = cryptoUtil.Encrypt(clientSerializer, clientKeys.secretboxKey, conf.nonceCounter)
-
 /**
  * Sets the device ID if one does not yet exist.
  * @returns {Promise}
@@ -68,7 +63,7 @@ const maybeSetDeviceId = () => {
         records.forEach((bytes) => {
           var record = {}
           try {
-            record = decrypt(bytes)
+            record = requester.decrypt(bytes)
           } catch (e) {
             return
           }
@@ -108,7 +103,7 @@ const startSync = () => {
       record.deviceId = new Uint8Array(record.deviceId)
       record.objectId = new Uint8Array(record.objectId)
       logSync(`sending record: ${JSON.stringify(record)}`)
-      requester.put(proto.categories[category], encrypt(record))
+      requester.put(proto.categories[category], requester.encrypt(record))
     })
   })
   logSync('success')
@@ -141,7 +136,7 @@ Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values
       credentialsBytes: null, // TODO: Start with previous session's credentials
       keys: clientKeys,
       serializer: clientSerializer,
-      syncServerUrl: config.serverUrl
+      serverUrl: config.serverUrl
     })
     return requester.refreshAWSCredentials()
   })

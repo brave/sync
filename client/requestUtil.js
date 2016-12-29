@@ -1,10 +1,15 @@
 'use strict'
 
-const NONCE_COUNTER = 0
-
 const awsSdk = require('aws-sdk')
 const cryptoUtil = require('./cryptoUtil')
 const s3Helper = require('../lib/s3Helper')
+
+const CONFIG = require('./config')
+const S3_MAX_RETRIES = 1
+const EXPIRED_CREDENTIAL_ERRORS = [
+  /The provided token has expired\./,
+  /Invalid according to Policy: Policy expired\./
+]
 
 const checkFetchStatus = (response) => {
   if (response.status >= 200 && response.status < 300) {
@@ -14,6 +19,12 @@ const checkFetchStatus = (response) => {
     error.response = response
     throw error
   }
+}
+
+const isExpiredCredentialError = (error) => {
+  return EXPIRED_CREDENTIAL_ERRORS.some((message) => {
+    return error.message.match(message)
+  })
 }
 
 const getTime = () => {
@@ -40,7 +51,7 @@ const RequestUtil = function (opts = {}) {
   this.serializer = opts.serializer
   this.serverUrl = opts.serverUrl
   this.userId = Buffer.from(opts.keys.publicKey).toString('base64')
-  this.encrypt = cryptoUtil.Encrypt(this.serializer, opts.keys.secretboxKey, NONCE_COUNTER)
+  this.encrypt = cryptoUtil.Encrypt(this.serializer, opts.keys.secretboxKey, CONFIG.nonceCounter)
   this.decrypt = cryptoUtil.Decrypt(this.serializer, opts.keys.secretboxKey)
   this.sign = cryptoUtil.Sign(opts.keys.secretKey)
   if (opts.credentialsBytes) {
@@ -71,6 +82,7 @@ RequestUtil.prototype.refreshAWSCredentials = function () {
       return response.arrayBuffer()
     })
     .then((buffer) => {
+      console.log('Refreshed credentials.')
       const credentials = this.parseAWSResponse(new Uint8Array(buffer))
       this.saveAWSCredentials(credentials)
     })
@@ -127,6 +139,7 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
     // The bucket name is prepended to the endpoint to build the actual request URL, e.g.
     // https://brave-sync-staging.s3.dualstack.us-west-2.amazonaws.com
     endpoint: `https://s3.dualstack.${region}.amazonaws.com`,
+    maxRetries: S3_MAX_RETRIES,
     region: region,
     sslEnabled: true,
     useDualstack: true
@@ -146,18 +159,17 @@ RequestUtil.prototype.list = function (category, startAt) {
     Bucket: this.bucket,
     Prefix: prefix
   }
-  if (startAt) {
-    options.StartAfter = `${prefix}/${startAt}`
-  }
-  return s3Helper.listObjects(this.s3, options)
-    .then((data) => {
-      return data.map((s3Object) => {
-        const parsedKey = s3Helper.parseS3Key(s3Object.Key)
-        // TODO: Recombine split records
-        const decodedData = s3Helper.s3StringToByteArray(parsedKey.recordPartString)
-        return decodedData
-      })
+  if (startAt) { options.StartAfter = `${prefix}/${startAt}` }
+  return this.withRetry(() => {
+    return s3Helper.listObjects(this.s3, options)
+  }).then((data) => {
+    return data.map((s3Object) => {
+      const parsedKey = s3Helper.parseS3Key(s3Object.Key)
+      // TODO: Recombine split records
+      const decodedData = s3Helper.s3StringToByteArray(parsedKey.recordPartString)
+      return decodedData
     })
+  })
 }
 
 /**
@@ -177,15 +189,17 @@ RequestUtil.prototype.currentRecordPrefix = function (category) {
 RequestUtil.prototype.put = function (category, record) {
   const s3Prefix = this.currentRecordPrefix(category)
   const s3Keys = s3Helper.encodeDataToS3KeyArray(s3Prefix, record)
-  const fetchPromises = s3Keys.map((key, _i) => {
-    const params = {
-      method: 'POST',
-      body: this.s3PostFormData(key)
-    }
-    return window.fetch(this.s3PostEndpoint, params)
-      .then(checkFetchStatus)
+  return this.withRetry(() => {
+    const fetchPromises = s3Keys.map((key, _i) => {
+      const params = {
+        method: 'POST',
+        body: this.s3PostFormData(key)
+      }
+      return window.fetch(this.s3PostEndpoint, params)
+        .then(checkFetchStatus)
+    })
+    return Promise.all(fetchPromises)
   })
-  return Promise.all(fetchPromises)
 }
 
 RequestUtil.prototype.s3PostFormData = function (objectKey) {
@@ -204,7 +218,9 @@ RequestUtil.prototype.s3PostFormData = function (objectKey) {
  * @param {string} prefix
  */
 RequestUtil.prototype.s3DeletePrefix = function (prefix) {
-  return s3Helper.deletePrefix(this.s3, this.bucket, prefix)
+  return this.withRetry(() => {
+    return s3Helper.deletePrefix(this.s3, this.bucket, prefix)
+  })
 }
 
 RequestUtil.prototype.deleteUser = function () {
@@ -216,6 +232,49 @@ RequestUtil.prototype.deleteUser = function () {
  */
 RequestUtil.prototype.deleteCategory = function (category) {
   return this.s3DeletePrefix(`${this.apiVersion}/${this.userId}/${category}`)
+}
+
+/**
+ * Wrapper to call a function and refresh credentials if needed.
+ * @param {Function(Promise)} Function which returns a Promise.
+ * @param {number} retries Retries left. You probably don't need to change this.
+ * @param {Error=} previousError Buffer with the previous error, for internal use.
+ */
+RequestUtil.prototype.withRetry = function (myFun, retries = 1, previousError) {
+  if (retries < 0) { throw previousError }
+
+  return new Promise((resolve, reject) => {
+    const callMyFun = () => {
+      myFun()
+        .then((...args) => { resolve(...args) })
+        .catch((error) => {
+          const retry = () => {
+            try {
+              this.withRetry(myFun, retries - 1, error)
+                .then((...args) => { resolve(...args) })
+                .catch((error) => { reject(error) })
+            } catch (error) {
+              reject(error)
+            }
+          }
+          // window.fetch() requests. checkFetchStatus() appends responses.
+          if (error.response) {
+            error.response.text().then((body) => {
+              error.message = error.message.concat(body)
+              retry()
+            })
+          } else {
+            retry()
+          }
+        })
+    }
+    if (previousError) {
+      if (!isExpiredCredentialError(previousError)) { throw previousError }
+      this.refreshAWSCredentials().then(callMyFun)
+    } else {
+      callMyFun()
+    }
+  })
 }
 
 module.exports = RequestUtil
