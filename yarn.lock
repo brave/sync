@@ -225,8 +225,8 @@ asynckit@^0.4.0:
   resolved "https://registry.yarnpkg.com/asynckit/-/asynckit-0.4.0.tgz#c79ed97f7f34cb8f2ba1bc9790bcc366474b4b79"
 
 aws-sdk@^2.7.7:
-  version "2.7.19"
-  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.7.19.tgz#63a0dfae44e7aab182cad05d5e60277f755ad80e"
+  version "2.7.20"
+  resolved "https://registry.yarnpkg.com/aws-sdk/-/aws-sdk-2.7.20.tgz#ab41e74661a49cbf1b4211e8de7a86b94369d313"
   dependencies:
     buffer "4.9.1"
     crypto-browserify "1.0.9"
@@ -3410,7 +3410,13 @@ source-map-support@^0.4.0:
   dependencies:
     source-map "^0.5.3"
 
-"source-map@>= 0.1.2", source-map@^0.4.4:
+"source-map@>= 0.1.2", source-map@~0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.2.0.tgz#dab73fbcfc2ba819b4de03bd6f6eaa48164b3f9d"
+  dependencies:
+    amdefine ">=0.0.4"
+
+source-map@^0.4.4:
   version "0.4.4"
   resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.4.4.tgz#eba4f5da9c0dc999de68032d8b4f76173652036b"
   dependencies:
@@ -3423,12 +3429,6 @@ source-map@^0.5.3, source-map@~0.5.1, source-map@~0.5.3:
 source-map@~0.1.33:
   version "0.1.43"
   resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.1.43.tgz#c24bc146ca517c1471f5dacbe2571b2b7f9e3346"
-  dependencies:
-    amdefine ">=0.0.4"
-
-source-map@~0.2.0:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.2.0.tgz#dab73fbcfc2ba819b4de03bd6f6eaa48164b3f9d"
   dependencies:
     amdefine ">=0.0.4"
 
@@ -3915,6 +3915,15 @@ typedarray@~0.0.5:
 uglify-js@^2.6:
   version "2.7.5"
   resolved "https://registry.yarnpkg.com/uglify-js/-/uglify-js-2.7.5.tgz#4612c0c7baaee2ba7c487de4904ae122079f2ca8"
+  dependencies:
+    async "~0.2.6"
+    source-map "~0.5.1"
+    uglify-to-browserify "~1.0.0"
+    yargs "~3.10.0"
+
+uglify-js@mishoo/UglifyJS2#harmony:
+  version "2.7.5"
+  resolved "https://codeload.github.com/mishoo/UglifyJS2/tar.gz/962b1f3d409934e1c1603c730d574ce56eaa2a58"
   dependencies:
     async "~0.2.6"
     source-map "~0.5.1"
