@@ -55,7 +55,7 @@
     "cors": "^2.8.1",
     "crc": "^3.4.4",
     "express": "^4.14.0",
-    "protobufjs": "6.2.1",
+    "protobufjs": "6.0.1",
     "raven": "^0.12.3",
     "request": "^2.79.0",
     "tweetnacl": "^0.14.3",
