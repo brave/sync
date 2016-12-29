@@ -16,7 +16,7 @@ test('users router', (t) => {
   const app = Express()
   app.use('/', usersRouter)
   const server = app.listen(0, 'localhost', () => {
-    serializer.init().then(() => {
+    serializer.init().then((serializer) => {
       const serverUrl = `http://localhost:${server.address().port}`
       console.log(`server up on ${serverUrl}`)
       const keys = crypto.deriveKeys(testHelper.cryptoSeed())
@@ -32,7 +32,7 @@ test('users router', (t) => {
       function signedTimestamp (secretKey, timestamp) {
         if (!timestamp) { timestamp = Math.floor(Date.now() / 1000) }
         const message = timestamp.toString()
-        return crypto.sign(serializer.serializer.stringToByteArray(message), secretKey)
+        return crypto.sign(serializer.stringToByteArray(message), secretKey)
       }
 
       t.test('POST /:userId/credentials', (t) => {
@@ -61,7 +61,13 @@ test('users router', (t) => {
 
           let requester = null
           try {
-            requester = new RequestUtil(serializer.serializer, response.body, config.apiVersion, userId)
+            requester = new RequestUtil({
+              apiVersion: config.apiVersion,
+              credentialsBytes: response.body,
+              keys,
+              serializer,
+              serverUrl: config.serverUrl
+            })
           } catch (e) {
             t.fail(`Couldn't parse body / ${e}: ${response.body}`)
           }

@@ -5,8 +5,6 @@ const RequestUtil = require('./requestUtil')
 const messages = require('./constants/messages')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
-const crypto = require('../lib/crypto')
-const conf = require('./config')
 
 const ipc = window.chrome.ipcRenderer
 
@@ -22,7 +20,7 @@ var clientUserId = null
 var clientKeys = {}
 var config = {}
 
-// aws sdk requests class
+// RequestUtil which makes AWS requests
 var requester = {}
 
 console.log('in sync script')
@@ -48,69 +46,6 @@ const logSync = (message, logLevel = DEBUG) => {
 }
 
 /**
- * decrypt then deserialize a message.
- * @param {Uint8Array} ciphertext
- * @returns {Object}
- */
-const decrypt = (ciphertext) => {
-  const d = clientSerializer.byteArrayToSecretboxRecord(ciphertext)
-  const decrypted = crypto.decrypt(d.encryptedData,
-    d.nonceRandom, clientKeys.secretboxKey)
-  if (!decrypted) {
-    throw new Error('Decryption failed.')
-  }
-  return clientSerializer.byteArrayToSyncRecord(decrypted)
-}
-
-/**
- * serialize then encrypts a sync record
- * @param {Object} message
- * @returns {Uint8Array}
- */
-const encrypt = (message) => {
-  const s = clientSerializer.syncRecordToByteArray(message)
-  const nonceRandom = crypto.randomBytes(20)
-  const encrypted = crypto.encrypt(s, clientKeys.secretboxKey,
-    conf.nonceCounter, nonceRandom)
-  return clientSerializer.SecretboxRecordToByteArray({
-    nonceRandom,
-    counter: conf.counter,
-    encryptedData: encrypted.ciphertext
-  })
-}
-
-/**
- * Gets AWS creds.
- * @returns {Promise}
- */
-const getAWSCredentials = () => {
-  const serverUrl = config.serverUrl
-  const now = Math.floor(Date.now() / 1000).toString()
-  if (clientSerializer === null) {
-    throw new Error('Serializer not initialized.')
-  }
-  const userId = window.encodeURIComponent(clientUserId)
-  const request = new window.Request(`${serverUrl}/${userId}/credentials`, {
-    method: 'POST',
-    body: crypto.sign(clientSerializer.stringToByteArray(now), clientKeys.secretKey)
-  })
-  return window.fetch(request)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error('Credential server response ' + response.status)
-      }
-      return response.arrayBuffer()
-    })
-    .then((buffer) => {
-      requester = new RequestUtil(clientSerializer, new Uint8Array(buffer),
-        config.apiVersion, clientUserId)
-      if (!requester.s3) {
-        throw new Error('could not initialize AWS SDK')
-      }
-    })
-}
-
-/**
  * Sets the device ID if one does not yet exist.
  * @returns {Promise}
  */
@@ -128,7 +63,7 @@ const maybeSetDeviceId = () => {
         records.forEach((bytes) => {
           var record = {}
           try {
-            record = decrypt(bytes)
+            record = requester.decrypt(bytes)
           } catch (e) {
             return
           }
@@ -168,7 +103,7 @@ const startSync = () => {
       record.deviceId = new Uint8Array(record.deviceId)
       record.objectId = new Uint8Array(record.objectId)
       logSync(`sending record: ${JSON.stringify(record)}`)
-      requester.put(proto.categories[category], encrypt(record))
+      requester.put(proto.categories[category], requester.encrypt(record))
     })
   })
   logSync('success')
@@ -196,7 +131,14 @@ Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values
   logSync(`initialized userId ${clientUserId}`)
 })
   .then(() => {
-    return getAWSCredentials()
+    requester = new RequestUtil({
+      apiVersion: config.apiVersion,
+      credentialsBytes: null, // TODO: Start with previous session's credentials
+      keys: clientKeys,
+      serializer: clientSerializer,
+      serverUrl: config.serverUrl
+    })
+    return requester.refreshAWSCredentials()
   })
   .then(() => {
     logSync('successfully authenticated userId: ' + clientUserId)

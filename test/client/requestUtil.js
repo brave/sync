@@ -2,6 +2,7 @@ const test = require('tape')
 const testHelper = require('../testHelper')
 const timekeeper = require('timekeeper')
 const clientTestHelper = require('./testHelper')
+const cryptoUtil = require('../../client/cryptoUtil')
 const Serializer = require('../../lib/serializer')
 const RequestUtil = require('../../client/requestUtil')
 const proto = require('../../client/constants/proto')
@@ -9,25 +10,30 @@ const proto = require('../../client/constants/proto')
 test('client RequestUtil', (t) => {
   t.plan(1)
   t.test('constructor', (t) => {
-    t.plan(5)
+    t.plan(7)
 
     Serializer.init().then((serializer) => {
       clientTestHelper.getSerializedCredentials(serializer).then((data) => {
-        const keys = data.keys
-        const args = [
+        const args = {
+          apiVersion: clientTestHelper.CONFIG.apiVersion,
+          credentialsBytes: data.serializedCredentials,
+          keys: data.keys,
           serializer,
-          data.serializedCredentials,
-          clientTestHelper.config.apiVersion,
-          data.userId
-        ]
-        t.throws(() => { return new RequestUtil() }, 'requires arguments')
-        t.throws(() => { return new RequestUtil(...args.slice(0, 2)) }, 'requires apiVersion')
-        t.throws(() => { return new RequestUtil(...args.slice(0, 3)) }, 'requires userId')
+          serverUrl: clientTestHelper.CONFIG.serverUrl
+        }
 
-        const requestUtil = new RequestUtil(...args)
+        t.throws(() => { return new RequestUtil() }, 'requires arguments')
+        const requiredArgs = ['apiVersion', 'keys', 'serializer', 'serverUrl']
+        for (let arg of requiredArgs) {
+          let lessArgs = Object.assign({}, args)
+          lessArgs[arg] = undefined
+          t.throws(() => { return new RequestUtil(lessArgs) }, `requires ${arg}`)
+        }
+
+        const requestUtil = new RequestUtil(args)
         t.pass('can instantiate requestUtil')
         t.test('prototype', (t) => {
-          testPrototype(t, requestUtil, keys)
+          testPrototype(t, requestUtil, data.keys)
         })
       }).catch((error) => { t.end(error) })
     })
@@ -40,9 +46,9 @@ test('client RequestUtil', (t) => {
     })
     const serializer = requestUtil.serializer
     const decrypt = testHelper.Decrypt(serializer, keys.secretboxKey)
-    const encrypt = clientTestHelper.Encrypt(serializer, keys.secretboxKey)
+    const encrypt = cryptoUtil.Encrypt(serializer, keys.secretboxKey, 0)
 
-    t.plan(1)
+    t.plan(2)
     t.test('#put preference: device', (t) => {
       t.plan(2)
       const deviceId = new Uint8Array([0])
@@ -147,5 +153,85 @@ test('client RequestUtil', (t) => {
           .catch((error) => { t.fail(error) })
       })
     }
+
+    const expiredCredentials = {
+      aws: clientTestHelper.EXPIRED_CREDENTIALS.aws,
+      s3Post: clientTestHelper.EXPIRED_CREDENTIALS.s3Post,
+      bucket: requestUtil.bucket,
+      region: requestUtil.region
+    }
+    t.test('RequestUtil with expired credentials', (t) => {
+      t.plan(3)
+
+      const expiredArgs = {
+        apiVersion: clientTestHelper.CONFIG.apiVersion,
+        credentialsBytes: serializer.credentialsToByteArray(expiredCredentials),
+        keys,
+        serializer,
+        serverUrl: clientTestHelper.CONFIG.serverUrl
+      }
+
+      t.doesNotThrow(() => { return new RequestUtil(expiredArgs) }, `${t.name} instantiates without error`)
+
+      t.test('#refreshAWSCredentials()', (t) => {
+        t.plan(2)
+        const args = {
+          apiVersion: clientTestHelper.CONFIG.apiVersion,
+          keys,
+          serializer,
+          serverUrl: clientTestHelper.CONFIG.serverUrl
+        }
+        const requestUtil = new RequestUtil(args)
+        t.equals(requestUtil.s3, undefined, `${t.name} s3 is undefined`)
+        requestUtil.refreshAWSCredentials()
+          .then(() => {
+            requestUtil.list(proto.categories.PREFERENCES)
+              .then((response) => {
+                t.equals(response.length, 0, `${t.name} works`)
+              })
+              .catch((error) => { t.fail(error) })
+          })
+          .catch((error) => { t.fail(error) })
+      })
+
+      t.test('automatic credential refresh', (t) => {
+        t.plan(2)
+
+        t.test(`${t.name} list()`, (t) => {
+          t.plan(1)
+          const requestUtil = new RequestUtil(expiredArgs)
+          requestUtil.list(proto.categories.PREFERENCES)
+            .then((response) => { t.equals(response.length, 0, t.name) })
+            .catch((error) => { t.fail(error) })
+        })
+
+        t.test(`${t.name} put()`, (t) => {
+          t.plan(2)
+          const record = {
+            action: 'CREATE',
+            deviceId: new Uint8Array([1]),
+            objectId: testHelper.uuid(),
+            device: {name: 'sweet'}
+          }
+          const requestUtil = new RequestUtil(expiredArgs)
+          requestUtil.put(proto.categories.PREFERENCES, encrypt(record))
+            .then((response) => {
+              t.pass(t.name)
+              testCredentialRefreshDelete(t)
+            })
+            .catch((error) => { t.fail(error) })
+        })
+
+        const testCredentialRefreshDelete = (t) => {
+          t.test(`${t.name} deleteCategory()`, (t) => {
+            t.plan(1)
+            const requestUtil = new RequestUtil(expiredArgs)
+            requestUtil.deleteCategory(proto.categories.PREFERENCES)
+              .then((response) => { t.pass(t.name) })
+              .catch((error) => { t.fail(error) })
+          })
+        }
+      })
+    })
   }
 })
