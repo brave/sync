@@ -12,7 +12,7 @@
     "check": "nsp check",
     "client": "yarn build && python -m SimpleHTTPServer",
     "coverage": "NODE_CONFIG_DIR=server/config/ istanbul cover tape test/*.js test/server/**/*.js --report lcovonly -- -R spec",
-    "dist": "npm run build && cp bundles/bundle.js ../browser-laptop/app/extensions/brave/content/scripts/sync.js && cp client/constants/*.js ../browser-laptop/js/constants/sync/",
+    "dist": "yarn build && cp bundles/bundle.js ../browser-laptop/app/extensions/brave/content/scripts/sync.js && cp client/constants/*.js ../browser-laptop/js/constants/sync/",
     "start": "NODE_CONFIG_DIR=server/config/ node server/index.js",
     "start-dev": "NODE_CONFIG_DIR=server/config/ nodemon server/index.js",
     "start-test": "NODE_CONFIG_DIR=server/config/ NODE_ENV=test nohup node server/index.js > /dev/null 2>&1 & echo $! > start-test.pid",
