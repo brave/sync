@@ -6,11 +6,11 @@
   "scripts": {
     "lint": "standard",
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
-    "build": "yarn upgrade && browserify client/sync.js -o bundles/bundle.js",
-    "browsertest": "yarn start-test; browserify test/client/*.js test/*.js | tape-run; yarn stop-test",
-    "browsertest-client": "yarn start-test; browserify test/client/*.js | tape-run --browser chrome; yarn stop-test",
+    "build": "yarn upgrade && browserify client/sync.js | uglifyjs - > bundles/bundle.js",
+    "browsertest": "yarn start-test; browserify test/client/*.js test/*.js | uglifyjs - | tape-run; yarn stop-test",
+    "browsertest-client": "yarn start-test; browserify test/client/*.js | uglifyjs - | tape-run --browser chrome; yarn stop-test",
     "check": "nsp check",
-    "client": "npm run build && python -m SimpleHTTPServer",
+    "client": "yarn build && python -m SimpleHTTPServer",
     "coverage": "NODE_CONFIG_DIR=server/config/ istanbul cover tape test/*.js test/server/**/*.js --report lcovonly -- -R spec",
     "dist": "npm run build && cp bundles/bundle.js ../browser-laptop/app/extensions/brave/content/scripts/sync.js && cp client/constants/*.js ../browser-laptop/js/constants/sync/",
     "start": "NODE_CONFIG_DIR=server/config/ node server/index.js",
@@ -46,7 +46,8 @@
     "standard": "^8.5.0",
     "tape": "^4.6.3",
     "tape-run": "^2.1.5",
-    "timekeeper": "^1.0.0"
+    "timekeeper": "^1.0.0",
+    "uglify-js": "mishoo/UglifyJS2#harmony"
   },
   "dependencies": {
     "@protobufjs/utf8": "^1.0.4",
