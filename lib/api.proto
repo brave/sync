@@ -47,7 +47,7 @@ message SyncRecord {
   }
   message SiteSetting {
     string hostPattern = 1;
-    int32 zoomLevel = 2;
+    float zoomLevel = 2;
     bool shieldsUp = 3;
     enum AdControl {
       SHOW_BRAVE_ADS = 0;
