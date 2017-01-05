@@ -2,6 +2,7 @@
 
 const initializer = require('./init')
 const RequestUtil = require('./requestUtil')
+const recordUtil = require('./recordUtil')
 const messages = require('./constants/messages')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
@@ -89,9 +90,20 @@ const startSync = (requester) => {
         throw new Error(`Unsupported sync category: ${category}`)
       }
       requester.list(proto.categories[category], startAt).then((records) => {
-        ipc.send(messages.RECEIVE_SYNC_RECORDS, category, records)
+        ipc.send(messages.GET_EXISTING_OBJECTS, category, records)
       })
     })
+  })
+  ipc.on(messages.RESOLVE_SYNC_RECORDS, (e, category, recordsAndExistingObjects) => {
+    let resolvedRecords = []
+    logSync(`resolving ${recordsAndExistingObjects.length} records`)
+    recordsAndExistingObjects.forEach(([record, existingObject]) => {
+      const resolved = recordUtil.resolve(record, existingObject)
+      if (resolved) { resolvedRecords.push(resolved) }
+    })
+    if (resolvedRecords.length > 0) {
+      ipc.send(messages.RESOLVED_SYNC_RECORDS, category, resolvedRecords)
+    }
   })
   ipc.on(messages.SEND_SYNC_RECORDS, (e, category, records) => {
     if (!proto.categories[category]) {
