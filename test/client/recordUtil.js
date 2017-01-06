@@ -91,8 +91,6 @@ test('recordUtil.resolve', (t) => {
     t.plan(6)
     const time = 1480000000 * 1000
     const url = 'https://jisho.org'
-    timekeeper.freeze(time)
-    test.onFinish(() => { timekeeper.reset() })
 
     const resolveToNull = (t, recordProps, message) => {
       t.plan(1)
@@ -117,7 +115,10 @@ test('recordUtil.resolve', (t) => {
           objectId: record.objectId
         }
       ))
+
+      timekeeper.freeze(time)
       const resolvedRecord = recordUtil.resolve(record)
+      timekeeper.reset()
       t.deepEquals(resolvedRecord, expectedRecord, message)
     }
 
