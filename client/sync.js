@@ -90,7 +90,13 @@ const startSync = (requester) => {
         throw new Error(`Unsupported sync category: ${category}`)
       }
       requester.list(proto.categories[category], startAt).then((records) => {
-        ipc.send(messages.GET_EXISTING_OBJECTS, category, records)
+        if (records.length === 0) { return }
+        logSync(`fetched ${records.length} ${category} after ${startAt}`)
+        const jsRecords = records.map((record) => {
+          const decrypted = requester.decrypt(record)
+          return recordUtil.syncRecordAsJS(decrypted)
+        })
+        ipc.send(messages.GET_EXISTING_OBJECTS, category, jsRecords)
       })
     })
   })
@@ -102,6 +108,7 @@ const startSync = (requester) => {
       if (resolved) { resolvedRecords.push(resolved) }
     })
     if (resolvedRecords.length > 0) {
+      logSync(`resolved to ${resolvedRecords.length} ${category}`)
       ipc.send(messages.RESOLVED_SYNC_RECORDS, category, resolvedRecords)
     }
   })
