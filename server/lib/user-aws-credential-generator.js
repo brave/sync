@@ -18,7 +18,7 @@ class UserAwsCredentialGenerator {
     /* {
          ResponseMetadata: { RequestId: '...' },
          Credentials: {
-           AccessKeyId: '...', SecretAccessKey: '...', SessionToken: '...', Expiration: 2016-12-04T01:23:45.000Z
+           AccessKeyId: '...', SecretAccessKey: '...', SessionToken: '...', Expiration: 2016-12-04T01:23:45.000Z // <Date>
          },
          FederatedUser: { FederatedUserId: '012345678900:{specified below}',
          Arn: 'arn:aws:sts::012345678900:federated-user/{specified below}' },
@@ -39,7 +39,7 @@ class UserAwsCredentialGenerator {
           accessKeyId: data.Credentials.AccessKeyId,
           secretAccessKey: data.Credentials.SecretAccessKey,
           sessionToken: data.Credentials.SessionToken,
-          expiration: data.Credentials.Expiration
+          expiration: data.Credentials.Expiration.toJSON()
         }
         resolve(returnData)
       })
