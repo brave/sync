@@ -131,7 +131,7 @@ const startSync = (requester) => {
   logSync('success')
 }
 
-Promise.all([serializer.init(''), initializer.init(window.chrome)]).then((values) => {
+Promise.all([serializer.init(), initializer.init(window.chrome)]).then((values) => {
   const clientSerializer = values[0]
   const keys = values[1].keys
   const deviceId = values[1].deviceId
