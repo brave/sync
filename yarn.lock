@@ -2,9 +2,56 @@
 # yarn lockfile v1
 
 
+"@protobufjs/aspromise@^1.0.5":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@protobufjs/aspromise/-/aspromise-1.0.5.tgz#6aff4b003db2ad3fdba193d679116bb8600ffbb9"
+
+"@protobufjs/base64@^1.0.5":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@protobufjs/base64/-/base64-1.0.5.tgz#a3e7ea0ab94067225c8255ba2da667137cf01802"
+
+"@protobufjs/codegen@^1.0.5":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@protobufjs/codegen/-/codegen-1.0.5.tgz#692e8f1c7fb48bdb2f5b234368ff41b82e4e9bc1"
+
+"@protobufjs/eventemitter@^1.0.5":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@protobufjs/eventemitter/-/eventemitter-1.0.5.tgz#f3702db33b418b681a9123a10b035173fcba31dc"
+
+"@protobufjs/extend@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@protobufjs/extend/-/extend-1.0.2.tgz#cb7fe9d374bda82f719fe8ca050078c55e9e17d6"
+
+"@protobufjs/fetch@^1.0.4":
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/@protobufjs/fetch/-/fetch-1.0.4.tgz#9f48faa1f9fc01ea4c6d61133ef5af75491f8298"
+  dependencies:
+    "@protobufjs/aspromise" "^1.0.5"
+    "@protobufjs/inquire" "^1.0.2"
+
+"@protobufjs/inquire@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@protobufjs/inquire/-/inquire-1.0.2.tgz#0e7b553558270c10a63117452c21ef61ca4a5b43"
+
+"@protobufjs/path@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@protobufjs/path/-/path-1.0.2.tgz#9dadc91acd8503a6f18021d1278f70bc92c34d2c"
+
+"@protobufjs/pool@^1.0.5":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@protobufjs/pool/-/pool-1.0.5.tgz#c08a7ac8b703bc2532e15542ecb6d84ad3662366"
+
 "@protobufjs/utf8@^1.0.4":
   version "1.0.6"
   resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.0.6.tgz#09a56b5715b3767fc50d6005928309db13b491ff"
+
+"@protobufjs/utf8@^1.0.7":
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.0.7.tgz#827e0393275a4eef808ce3345ae7a470c4d1749d"
+
+"@types/long@^3.0.31":
+  version "3.0.31"
+  resolved "https://registry.yarnpkg.com/@types/long/-/long-3.0.31.tgz#08635b0d0d322676940c1a88a7a9cef661c6f34a"
 
 JSONStream@^1.0.3:
   version "1.3.0"
@@ -845,13 +892,7 @@ debug@0.7.4:
   version "0.7.4"
   resolved "https://registry.yarnpkg.com/debug/-/debug-0.7.4.tgz#06e1ea8082c2cb14e39806e22e2f6f757f92af39"
 
-debug@2, debug@^2.1.1, debug@^2.1.3, debug@^2.2.0:
-  version "2.6.0"
-  resolved "https://registry.yarnpkg.com/debug/-/debug-2.6.0.tgz#bc596bcabe7617f11d9fa15361eded5608b8499b"
-  dependencies:
-    ms "0.7.2"
-
-debug@~2.2.0:
+debug@2, debug@^2.1.1, debug@^2.1.3, debug@^2.2.0, debug@~2.2.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/debug/-/debug-2.2.0.tgz#f87057e995b1a1f6ae6a4960664137bc56f039da"
   dependencies:
@@ -2531,10 +2572,6 @@ ms@0.7.1:
   version "0.7.1"
   resolved "https://registry.yarnpkg.com/ms/-/ms-0.7.1.tgz#9cd13c03adbff25b65effde7ce864ee952017098"
 
-ms@0.7.2:
-  version "0.7.2"
-  resolved "https://registry.yarnpkg.com/ms/-/ms-0.7.2.tgz#ae25cf2512b3885a1d95d7f037868d8431124765"
-
 mute-stream@0.0.5:
   version "0.0.5"
   resolved "https://registry.yarnpkg.com/mute-stream/-/mute-stream-0.0.5.tgz#8fbfabb0a98a253d3184331f9e8deb7372fac6c0"
@@ -2925,10 +2962,22 @@ progress@^1.1.8:
   version "1.1.8"
   resolved "https://registry.yarnpkg.com/progress/-/progress-1.1.8.tgz#e260c78f6161cdd9b0e56cc3e0a85de17c7a57be"
 
-protobufjs@6.0.1:
-  version "6.0.1"
-  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-6.0.1.tgz#b1fff4f09891e21152e6ba1f5c67ff398f847a63"
+protobufjs@6.4.5:
+  version "6.4.5"
+  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-6.4.5.tgz#9d0186970e7c7a44e72d755efabb502ea7dece97"
+  dependencies:
+    "@protobufjs/aspromise" "^1.0.5"
+    "@protobufjs/base64" "^1.0.5"
+    "@protobufjs/codegen" "^1.0.5"
+    "@protobufjs/eventemitter" "^1.0.5"
+    "@protobufjs/extend" "^1.0.2"
+    "@protobufjs/fetch" "^1.0.4"
+    "@protobufjs/inquire" "^1.0.2"
+    "@protobufjs/path" "^1.0.2"
+    "@protobufjs/pool" "^1.0.5"
+    "@protobufjs/utf8" "^1.0.7"
   optionalDependencies:
+    "@types/long" "^3.0.31"
     long "^3.2.0"
 
 proxy-addr@~1.1.2:
@@ -3410,11 +3459,9 @@ source-map-support@^0.4.0:
   dependencies:
     source-map "^0.5.3"
 
-"source-map@>= 0.1.2", source-map@~0.2.0:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.2.0.tgz#dab73fbcfc2ba819b4de03bd6f6eaa48164b3f9d"
-  dependencies:
-    amdefine ">=0.0.4"
+"source-map@>= 0.1.2", source-map@^0.5.3, source-map@~0.5.1, source-map@~0.5.3:
+  version "0.5.6"
+  resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.5.6.tgz#75ce38f52bf0733c5a7f0c118d81334a2bb5f412"
 
 source-map@^0.4.4:
   version "0.4.4"
@@ -3422,13 +3469,15 @@ source-map@^0.4.4:
   dependencies:
     amdefine ">=0.0.4"
 
-source-map@^0.5.3, source-map@~0.5.1, source-map@~0.5.3:
-  version "0.5.6"
-  resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.5.6.tgz#75ce38f52bf0733c5a7f0c118d81334a2bb5f412"
-
 source-map@~0.1.33:
   version "0.1.43"
   resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.1.43.tgz#c24bc146ca517c1471f5dacbe2571b2b7f9e3346"
+  dependencies:
+    amdefine ">=0.0.4"
+
+source-map@~0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.2.0.tgz#dab73fbcfc2ba819b4de03bd6f6eaa48164b3f9d"
   dependencies:
     amdefine ">=0.0.4"
 
