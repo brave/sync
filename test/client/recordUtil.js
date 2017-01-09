@@ -3,6 +3,7 @@ const testHelper = require('../testHelper')
 const timekeeper = require('timekeeper')
 const proto = require('../../client/constants/proto')
 const recordUtil = require('../../client/recordUtil')
+const Serializer = require('../../lib/serializer')
 
 test('recordUtil.resolve', (t) => {
   t.plan(6)
@@ -47,7 +48,6 @@ test('recordUtil.resolve', (t) => {
     for (let record of baseRecords) {
       record.action = action
       const existingObject = Object.assign({}, record, {action: proto.actions.CREATE})
-      // const existingObject = props[record.objectData]
       callback(record, existingObject)
     }
   }
@@ -193,5 +193,52 @@ test('recordUtil.resolve', (t) => {
       }
       resolveToCreate(t, recordProps, resolvedProps, t.name)
     })
+  })
+})
+
+test('recordUtil.syncRecordAsJS()', (t) => {
+  t.plan(4)
+  Serializer.init().then((serializer) => {
+    const time = 1480000000 * 1000
+    const baseProps = {
+      action: proto.actions.CREATE,
+      deviceId: new Uint8Array([0]),
+      objectId: testHelper.uuid()
+    }
+    const conversionEquals = (recordProps) => {
+      const props = Object.assign({}, baseProps, recordProps)
+      const encodedRecord = serializer.api.SyncRecord.encode(props).finish()
+      const decodedRecord = serializer.api.SyncRecord.decode(encodedRecord)
+      const recordJS = recordUtil.syncRecordAsJS(decodedRecord)
+      t.deepEquals(recordJS, props, `${t.name} ${recordProps.objectData}`)
+    }
+
+    const site = serializer.api.SyncRecord.Site.create({
+      creationTime: time,
+      customTitle: 'cool',
+      lastAccessedTime: time,
+      location: 'https://jisho.org',
+      title: 'jisho'
+    })
+    conversionEquals({ objectData: 'historySite', historySite: site })
+
+    const bookmark = serializer.api.SyncRecord.Bookmark.create({
+      site,
+      isFolder: false,
+      folderId: 0,
+      parentFolderId: 0
+    })
+    conversionEquals({ objectData: 'bookmark', bookmark })
+
+    // All params are required because protobufs assume undefined == default value
+    const siteSetting = serializer.api.SyncRecord.SiteSetting.create({
+      adControl: 0, cookieControl: 0, fingerprintingProtection: false, hostPattern: 'https://jisho.org', httpsEverywhere: false, ledgerPayments: false, ledgerPaymentsShown: false, noScript: false, safeBrowsing: false, shieldsUp: false, zoomLevel: 0.5
+    })
+    conversionEquals({ objectData: 'siteSetting', siteSetting })
+
+    const device = serializer.api.SyncRecord.Device.create({
+      name: 'mobile pyramid'
+    })
+    conversionEquals({ objectData: 'device', device })
   })
 })

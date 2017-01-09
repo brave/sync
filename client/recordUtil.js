@@ -1,6 +1,7 @@
 'use strict'
 
 const proto = require('./constants/proto')
+const serializer = require('../lib/serializer')
 
 /**
  * @param {string} type e.g. 'historySite'
@@ -108,4 +109,23 @@ module.exports.resolve = (record, existingObject) => {
     default:
       throw new Error(`Invalid record action: ${record.action}`)
   }
+}
+
+/**
+ * Given a SyncRecord protobuf object, convert to a basic JS object.
+ * @param {Serializer.api.SyncRecord}
+ * @returns {Object}
+ */
+module.exports.syncRecordAsJS = (record) => {
+  /* We should be able to call asJSON({defaults: true}) but it doesn't work.
+   * I think it's because objectData is a oneof.
+   * .asJSON() options:
+   * http://dcode.io/protobuf.js/global.html#JSONConversionOptions
+   */
+  let object = record.asJSON()
+  object.action = record.action
+  const objectData = serializer.getSyncRecordObjectData(record)
+  object.objectData = objectData
+  object[objectData] = record[objectData].asJSON({defaults: true, enums: Number, longs: Number})
+  return object
 }

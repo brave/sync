@@ -1,13 +1,6 @@
 const test = require('tape')
 const serializer = require('../lib/serializer')
 
-test('init', (t) => {
-  t.plan(1)
-  serializer.init('nonexistent').catch((e) => {
-    t.equal('Proto file could not be loaded.', e.message)
-  })
-})
-
 test('serializing strings', (t) => {
   const messages = ['€ are my favorite moneys', 'hello world',
     'test abc     ', '']
@@ -47,18 +40,18 @@ test('serializing aws and s3 credentials', (t) => {
 
     const deserialized = serializer.byteArrayToCredentials(serialized)
     t.equal(
-      deserialized.$type,
+      deserialized.constructor,
       serializer.api.Credentials,
       'deserializes to api.Credentials protobuf type'
     )
     t.equal(
-      deserialized.aws.$type,
-      serializer.api.Credentials.lookup('Aws'),
+      deserialized.aws.constructor,
+      serializer.api.Credentials.Aws,
       'credentials include api.Credentials.Aws protobuf type'
     )
     t.equal(
-      deserialized.s3Post.$type,
-      serializer.api.Credentials.lookup('S3Post'),
+      deserialized.s3Post.constructor,
+      serializer.api.Credentials.S3Post,
       'credentials include api.Credentials.S3Post protobuf type'
     )
   })
