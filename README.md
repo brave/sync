@@ -37,7 +37,7 @@ Results appear in both the browser inspector and your terminal.
 To run tests in Node, just do `npm test`.
 
 To do a basic client/server integration test against the production server, run
-`npm run client` and navigate to `http://localhost:8000/client.html`). The page
+`npm run client` and navigate to `http://localhost:8000/`). The page
 should not show any 'ERROR' messages and should end with 'success'.
 
 ## Development
