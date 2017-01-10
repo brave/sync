@@ -68,7 +68,8 @@
       "test/crypto.js",
       "bundles/*.js",
       "client/polyfill/*.js",
-      "lib/api.proto.js"
+      "lib/api.proto.js",
+      "lib/valueEquals.js"
     ]
   }
 }

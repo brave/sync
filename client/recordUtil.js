@@ -2,6 +2,7 @@
 
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
+const valueEquals = require('../lib/valueEquals')
 
 /**
  * @param {string} type e.g. 'historySite'
@@ -70,6 +71,7 @@ module.exports.createFromUpdate = (record) => {
     case 'siteSetting':
       return createFromUpdateSiteSetting(record)
     default:
+      console.log(`Warning: invalid objectData ${record.objectData}`)
       return null
   }
 }
@@ -96,6 +98,10 @@ module.exports.resolve = (record, existingObject) => {
       }
     case proto.actions.UPDATE:
       if (existingObject) {
+        if (valueEquals(record[record.objectData],
+          existingObject[existingObject.objectData])) {
+          return nullIgnore()
+        }
         return record
       } else {
         return this.createFromUpdate(record) || nullIgnore()
