@@ -37,13 +37,22 @@ const createSitePropsFromUpdateSite = (site) => {
 
 const createFromUpdateBookmark = CreateFromUpdate(
   'bookmark',
-  (record) => { return (record.bookmark.site && record.bookmark.site.location) },
+  (record) => {
+    return (record.bookmark.site && (
+      record.bookmark.site.location ||
+      (record.bookmark.site.customTitle && record.bookmark.folderId && record.bookmark.folderId > 0)
+    ))
+  },
   (bookmark) => {
-    const defaultProps = {
-      isFolder: false
+    if (bookmark.folderId && bookmark.folderId > 0) {
+      return Object.assign({isFolder: true}, bookmark)
+    } else {
+      const defaultProps = {
+        isFolder: false
+      }
+      const site = createSitePropsFromUpdateSite(bookmark.site)
+      return Object.assign({}, defaultProps, bookmark, {site})
     }
-    const site = createSitePropsFromUpdateSite(bookmark.site)
-    return Object.assign({}, defaultProps, bookmark, {site})
   }
 )
 
