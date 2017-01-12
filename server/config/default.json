@@ -8,7 +8,6 @@
   "categoryIdHistorySites": "1",
   "categoryIdPreferences": "2",
   "clientTimestampOffsetMax": 120,
-  "corsAllowLocalhost": false,
   "logLevel": "debug",
   "port": 4000,
   "sentryUrl": null,
