@@ -5,52 +5,53 @@ const proto = require('../../client/constants/proto')
 const recordUtil = require('../../client/recordUtil')
 const Serializer = require('../../lib/serializer')
 
+const Record = (props) => {
+  const baseProps = {
+    action: proto.actions.CREATE,
+    deviceId: new Uint8Array([0]),
+    objectId: testHelper.uuid()
+  }
+  return Object.assign({}, baseProps, props)
+}
+const UpdateRecord = (props) => {
+  return Record(Object.assign({action: proto.actions.UPDATE}, props))
+}
+
+const timestampMs = 1480004209001
+const siteProps = {
+  location: 'https://www.jisho.org',
+  title: 'jisho',
+  customTitle: '辞書',
+  lastAccessedTime: timestampMs,
+  creationTime: timestampMs
+}
+const props = {
+  bookmark: {
+    isFolder: false,
+    site: siteProps
+  },
+  historySite: siteProps,
+  siteSetting: {
+    fingerprintingProtection: false,
+    hostPattern: 'https?://soundcloud.com',
+    shieldsUp: false, // yolo
+    noScript: false,
+    zoomLevel: 2.5
+  }
+}
+const updateSiteProps = {customTitle: 'a ball pit filled with plush coconuts'}
+
+const recordBookmark = Record({objectData: 'bookmark', bookmark: props.bookmark})
+const recordHistorySite = Record({objectData: 'historySite', historySite: siteProps})
+const recordSiteSetting = Record({objectData: 'siteSetting', siteSetting: props.siteSetting})
+const baseRecords = [recordBookmark, recordHistorySite, recordSiteSetting]
+
+const updateBookmark = UpdateRecord({objectData: 'bookmark', bookmark: {site: updateSiteProps}})
+const updateHistorySite = UpdateRecord({objectData: 'historySite', historySite: updateSiteProps})
+const updateSiteSetting = UpdateRecord({objectData: 'siteSetting', siteSetting: {shieldsUp: true}})
+
 test('recordUtil.resolve', (t) => {
   t.plan(7)
-  const Record = (props) => {
-    const baseProps = {
-      action: proto.actions.CREATE,
-      deviceId: new Uint8Array([0]),
-      objectId: testHelper.uuid()
-    }
-    return Object.assign({}, baseProps, props)
-  }
-  const UpdateRecord = (props) => {
-    return Record(Object.assign({action: proto.actions.UPDATE}, props))
-  }
-
-  const timestampMs = 1480004209001
-  const siteProps = {
-    location: 'https://www.jisho.org',
-    title: 'jisho',
-    customTitle: '辞書',
-    lastAccessedTime: timestampMs,
-    creationTime: timestampMs
-  }
-  const props = {
-    bookmark: {
-      isFolder: false,
-      site: siteProps
-    },
-    historySite: siteProps,
-    siteSetting: {
-      fingerprintingProtection: false,
-      hostPattern: 'https?://soundcloud.com',
-      shieldsUp: false, // yolo
-      noScript: false,
-      zoomLevel: 2.5
-    }
-  }
-  const updateSiteProps = {customTitle: 'a ball pit filled with plush coconuts'}
-
-  const recordBookmark = Record({objectData: 'bookmark', bookmark: props.bookmark})
-  const recordHistorySite = Record({objectData: 'historySite', historySite: siteProps})
-  const recordSiteSetting = Record({objectData: 'siteSetting', siteSetting: props.siteSetting})
-  const baseRecords = [recordBookmark, recordHistorySite, recordSiteSetting]
-
-  const updateBookmark = UpdateRecord({objectData: 'bookmark', bookmark: {site: updateSiteProps}})
-  const updateHistorySite = UpdateRecord({objectData: 'historySite', historySite: updateSiteProps})
-  const updateSiteSetting = UpdateRecord({objectData: 'siteSetting', siteSetting: {shieldsUp: true}})
 
   const forRecordsWithAction = (t, action, callback) => {
     t.plan(baseRecords.length)
@@ -228,6 +229,21 @@ test('recordUtil.resolve', (t) => {
       }
       resolveToCreate(t, recordProps, resolvedProps, t.name)
     })
+  })
+})
+
+test('recordUtil.resolveRecords()', (t) => {
+  t.plan(1)
+
+  t.test(`${t.name} takes [ [{syncRecord}, {existingObject || null}], ... ] and returns [{syncRecord}, ...]`, (t) => {
+    t.plan(1)
+    const input = [
+      [updateBookmark, recordBookmark],
+      [recordSiteSetting, null]
+    ]
+    const resolved = recordUtil.resolveRecords(input)
+    const expected = [updateBookmark, recordSiteSetting]
+    t.deepEquals(resolved, expected, t.name)
   })
 })
 

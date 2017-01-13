@@ -127,6 +127,21 @@ module.exports.resolve = (record, existingObject) => {
 }
 
 /**
+ * Given a list of new SyncRecords and matching browser objects, resolve
+ * writes to perform on the browser's data.
+ * @param {Array} recordsAndExistingObjects
+ * @returns {Array.<Object>} Resolved syncRecords to apply to browser data.
+ */
+module.exports.resolveRecords = (recordsAndExistingObjects) => {
+  let resolvedRecords = []
+  recordsAndExistingObjects.forEach(([record, existingObject]) => {
+    const resolved = this.resolve(record, existingObject)
+    if (resolved) { resolvedRecords.push(resolved) }
+  })
+  return resolvedRecords
+}
+
+/**
  * Given a SyncRecord protobuf object, convert to a basic JS object.
  * @param {Serializer.api.SyncRecord}
  * @returns {Object}

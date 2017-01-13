@@ -101,11 +101,7 @@ const startSync = (requester) => {
     })
   })
   ipc.on(messages.RESOLVE_SYNC_RECORDS, (e, category, recordsAndExistingObjects) => {
-    let resolvedRecords = []
-    recordsAndExistingObjects.forEach(([record, existingObject]) => {
-      const resolved = recordUtil.resolve(record, existingObject)
-      if (resolved) { resolvedRecords.push(resolved) }
-    })
+    const resolvedRecords = recordUtil.resolveRecords(recordsAndExistingObjects)
     logSync(`resolved ${recordsAndExistingObjects.length} ${category} -> ${resolvedRecords.length}`)
     if (resolvedRecords.length === 0) { return }
     ipc.send(messages.RESOLVED_SYNC_RECORDS, category, resolvedRecords)
