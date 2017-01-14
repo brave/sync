@@ -9,7 +9,7 @@ const Record = (props) => {
   const baseProps = {
     action: proto.actions.CREATE,
     deviceId: new Uint8Array([0]),
-    objectId: testHelper.uuid()
+    objectId: testHelper.newUuid()
   }
   return Object.assign({}, baseProps, props)
 }
@@ -46,9 +46,21 @@ const recordHistorySite = Record({objectData: 'historySite', historySite: sitePr
 const recordSiteSetting = Record({objectData: 'siteSetting', siteSetting: props.siteSetting})
 const baseRecords = [recordBookmark, recordHistorySite, recordSiteSetting]
 
-const updateBookmark = UpdateRecord({objectData: 'bookmark', bookmark: {site: updateSiteProps}})
-const updateHistorySite = UpdateRecord({objectData: 'historySite', historySite: updateSiteProps})
-const updateSiteSetting = UpdateRecord({objectData: 'siteSetting', siteSetting: {shieldsUp: true}})
+const updateBookmark = UpdateRecord({
+  objectId: recordBookmark.objectId,
+  objectData: 'bookmark',
+  bookmark: {site: updateSiteProps}
+})
+const updateHistorySite = UpdateRecord({
+  objectId: recordHistorySite.objectId,
+  objectData: 'historySite',
+  historySite: updateSiteProps
+})
+const updateSiteSetting = UpdateRecord({
+  objectId: recordSiteSetting.objectId,
+  objectData: 'siteSetting',
+  siteSetting: {shieldsUp: true}
+})
 
 test('recordUtil.resolve', (t) => {
   t.plan(7)
@@ -233,9 +245,9 @@ test('recordUtil.resolve', (t) => {
 })
 
 test('recordUtil.resolveRecords()', (t) => {
-  t.plan(1)
+  t.plan(2)
 
-  t.test(`${t.name} takes [ [{syncRecord}, {existingObject || null}], ... ] and returns [{syncRecord}, ...]`, (t) => {
+  t.test(`${t.name} takes [ [{syncRecord}, {existingObject || null}], ... ] and returns resolved records [{syncRecord}, ...]`, (t) => {
     t.plan(1)
     const input = [
       [updateBookmark, recordBookmark],
@@ -244,6 +256,27 @@ test('recordUtil.resolveRecords()', (t) => {
     const resolved = recordUtil.resolveRecords(input)
     const expected = [updateBookmark, recordSiteSetting]
     t.deepEquals(resolved, expected, t.name)
+  })
+
+  t.test(`${t.name} sequential Updates should become no op`, (t) => {
+    t.plan(1)
+    const update1 = UpdateRecord({
+      objectId: recordHistorySite.objectId,
+      objectData: 'historySite',
+      historySite: siteProps
+    })
+    const update2 = updateHistorySite
+    const existingObject = Record({
+      objectId: recordHistorySite.objectId,
+      objectData: 'historySite',
+      historySite: Object.assign({}, siteProps, updateSiteProps)
+    })
+    const input = [
+      [update1, existingObject],
+      [update2, existingObject]
+    ]
+    const resolved = recordUtil.resolveRecords(input)
+    t.deepEquals(resolved, [], t.name)
   })
 })
 
@@ -254,7 +287,7 @@ test('recordUtil.syncRecordAsJS()', (t) => {
     const baseProps = {
       action: proto.actions.CREATE,
       deviceId: new Uint8Array([0]),
-      objectId: testHelper.uuid()
+      objectId: testHelper.newUuid()
     }
     const conversionEquals = (recordProps) => {
       const props = Object.assign({}, baseProps, recordProps)

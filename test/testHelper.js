@@ -17,6 +17,15 @@ module.exports.uuid = () => {
 }
 
 /**
+ * A random uuid
+ * @returns {Uint8Array}
+ */
+module.exports.newUuid = () => {
+  const crypto = require('../lib/crypto')
+  return new Uint8Array(crypto.randomBytes(16))
+}
+
+/**
  * This is the node.js version, wherein protobuf js records which take
  * bytes require Buffer.
  * For the browser version, see client/testHelper.js.

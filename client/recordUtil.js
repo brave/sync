@@ -127,6 +127,48 @@ module.exports.resolve = (record, existingObject) => {
 }
 
 /**
+ * Given two SyncRecords, merge objectData of record2 into record1.
+ * @param {Object} record1
+ * @param {Object} record2
+ * @returns {Object} merged record
+ */
+const mergeRecord = (record1, record2) => {
+  if (record1.objectData !== record2.objectData) {
+    throw new Error('Records with same objectId have mismatched objectData!')
+  }
+  const type = record1.objectData
+  const typeData = Object.assign({}, record1[type], record2[type])
+  return Object.assign({}, record1, record2, {[type]: typeData})
+}
+
+/**
+ * Within an array of [record, object], merge items whose records have the
+ * same objectId.
+ * @param {Array} recordsAndObjects Same format as input to resolveRecords().
+ * @returns {Array}
+ */
+const mergeRecords = (recordsAndObjects) => {
+  let idsAndIndices = {}
+  let outputList = []
+  for (let n = 0; n < recordsAndObjects.length; n++) {
+    const recordAndObject = recordsAndObjects[n]
+    const record = recordAndObject[0]
+    const object = recordAndObject[1]
+    const id = JSON.stringify(record.objectId)
+    const previousIndex = idsAndIndices[id]
+    if (previousIndex >= 0) {
+      const previousRecord = recordsAndObjects[previousIndex][0]
+      const mergedRecord = mergeRecord(previousRecord, record)
+      outputList[previousIndex] = [mergedRecord, object]
+    } else {
+      idsAndIndices[id] = outputList.length
+      outputList.push(recordAndObject)
+    }
+  }
+  return outputList
+}
+
+/**
  * Given a list of new SyncRecords and matching browser objects, resolve
  * writes to perform on the browser's data.
  * @param {Array} recordsAndExistingObjects
@@ -134,7 +176,8 @@ module.exports.resolve = (record, existingObject) => {
  */
 module.exports.resolveRecords = (recordsAndExistingObjects) => {
   let resolvedRecords = []
-  recordsAndExistingObjects.forEach(([record, existingObject]) => {
+  const merged = mergeRecords(recordsAndExistingObjects)
+  merged.forEach(([record, existingObject]) => {
     const resolved = this.resolve(record, existingObject)
     if (resolved) { resolvedRecords.push(resolved) }
   })
