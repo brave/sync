@@ -261,15 +261,15 @@ test('recordUtil.resolveRecords()', (t) => {
   t.test(`${t.name} sequential Updates should become no op`, (t) => {
     t.plan(1)
     const update1 = UpdateRecord({
-      objectId: recordHistorySite.objectId,
-      objectData: 'historySite',
-      historySite: siteProps
+      objectId: recordBookmark.objectId,
+      objectData: 'bookmark',
+      bookmark: { site: siteProps }
     })
-    const update2 = updateHistorySite
+    const update2 = updateBookmark
     const existingObject = Record({
-      objectId: recordHistorySite.objectId,
-      objectData: 'historySite',
-      historySite: Object.assign({}, siteProps, updateSiteProps)
+      objectId: recordBookmark.objectId,
+      objectData: 'bookmark',
+      bookmark: { site: Object.assign({}, siteProps, updateSiteProps) }
     })
     const input = [
       [update1, existingObject],

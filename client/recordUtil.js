@@ -1,5 +1,6 @@
 'use strict'
 
+const merge = require('lodash.merge')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
 const valueEquals = require('../lib/valueEquals')
@@ -136,9 +137,7 @@ const mergeRecord = (record1, record2) => {
   if (record1.objectData !== record2.objectData) {
     throw new Error('Records with same objectId have mismatched objectData!')
   }
-  const type = record1.objectData
-  const typeData = Object.assign({}, record1[type], record2[type])
-  return Object.assign({}, record1, record2, {[type]: typeData})
+  return merge(record1, record2)
 }
 
 /**
