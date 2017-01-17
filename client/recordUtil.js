@@ -189,15 +189,15 @@ module.exports.resolveRecords = (recordsAndExistingObjects) => {
  * @returns {Object}
  */
 module.exports.syncRecordAsJS = (record) => {
-  /* We should be able to call asJSON({defaults: true}) but it doesn't work.
+  /* We should be able to call toObject({defaults: true}) but it doesn't work.
    * I think it's because objectData is a oneof.
-   * .asJSON() options:
-   * http://dcode.io/protobuf.js/global.html#JSONConversionOptions
+   * .toObject() options:
+   * http://dcode.io/protobuf.js/global.html#ConversionOptions
    */
-  let object = record.asJSON()
+  let object = record.toObject()
   object.action = record.action
   const objectData = serializer.getSyncRecordObjectData(record)
   object.objectData = objectData
-  object[objectData] = record[objectData].asJSON({defaults: true, enums: Number, longs: Number})
+  object[objectData] = record[objectData].toObject({defaults: true, enums: Number, longs: Number})
   return object
 }
