@@ -63,7 +63,7 @@ const updateSiteSetting = UpdateRecord({
 })
 
 test('recordUtil.resolve', (t) => {
-  t.plan(7)
+  t.plan(8)
 
   const forRecordsWithAction = (t, action, callback) => {
     t.plan(baseRecords.length)
@@ -107,6 +107,23 @@ test('recordUtil.resolve', (t) => {
       const resolved = recordUtil.resolve(record, existingObject)
       t.equals(resolved, null, `${t.name}: ${record.objectData}`)
     })
+  })
+
+  t.test('UPDATE, existing object with same props reordered -> null', (t) => {
+    t.plan(1)
+    const siteSettingReordered = UpdateRecord({
+      objectId: recordSiteSetting.objectId,
+      objectData: 'siteSetting',
+      siteSetting: {
+        shieldsUp: false, // yolo
+        fingerprintingProtection: false,
+        hostPattern: 'https?://soundcloud.com',
+        zoomLevel: 2.5,
+        noScript: false
+      }
+    })
+    const resolved = recordUtil.resolve(siteSettingReordered, recordSiteSetting)
+    t.equals(resolved, null, `${t.name}: object props are reordered`)
   })
 
   t.test('UPDATE, existing object with different props -> identity', (t) => {
