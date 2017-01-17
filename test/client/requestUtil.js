@@ -141,16 +141,55 @@ test('client RequestUtil', (t) => {
 
     const testCanDeletePreferences = (t) => {
       t.test('#deleteCategory preferences', (t) => {
-        t.plan(1)
+        t.plan(2)
         requestUtil.deleteCategory(proto.categories.PREFERENCES)
           .then((_response) => {
             requestUtil.list(proto.categories.PREFERENCES)
               .then((response) => {
                 t.equals(response.length, 0, `${t.name} works`)
+                testCanDeleteSiteSettings(t)
               })
               .catch((error) => { t.fail(error) })
           })
           .catch((error) => { t.fail(error) })
+      })
+    }
+
+    const testCanDeleteSiteSettings = (t) => {
+      t.test('#deleteSiteSettings', (t) => {
+        t.plan(2)
+
+        const deviceRecord = {
+          action: 'CREATE',
+          deviceId: new Uint8Array([0]),
+          objectId: testHelper.newUuid(),
+          device: {name: 'coconut pyramid'}
+        }
+        const siteSettingRecord = {
+          action: 'CREATE',
+          deviceId: new Uint8Array([0]),
+          objectId: testHelper.newUuid(),
+          siteSetting: {hostPattern: 'https://google.com', shieldsUp: true}
+        }
+
+        Promise.all([
+          requestUtil.put(proto.categories.PREFERENCES, encrypt(deviceRecord)),
+          requestUtil.put(proto.categories.PREFERENCES, encrypt(siteSettingRecord))
+        ])
+        .then(() => {
+          requestUtil.deleteSiteSettings()
+            .then(() => {
+              requestUtil.list(proto.categories.PREFERENCES)
+                .then((response) => {
+                  t.equals(response.length, 1, `${t.name} deletes records`)
+                  const s3Record = decrypt(response[0])
+                  t.assert(s3Record.device && s3Record.device.name, `${t.name} preserves device records`)
+                })
+                .catch((error) => { t.fail(error) })
+            })
+            .catch((error) => { t.fail(error) })
+        })
+        .catch((error) => { t.fail(error) })
       })
     }
 
@@ -186,9 +225,7 @@ test('client RequestUtil', (t) => {
         requestUtil.refreshAWSCredentials()
           .then(() => {
             requestUtil.list(proto.categories.PREFERENCES)
-              .then((response) => {
-                t.equals(response.length, 0, `${t.name} works`)
-              })
+              .then((response) => { t.pass(t.name) })
               .catch((error) => { t.fail(error) })
           })
           .catch((error) => { t.fail(error) })
@@ -201,7 +238,7 @@ test('client RequestUtil', (t) => {
           t.plan(1)
           const requestUtil = new RequestUtil(expiredArgs)
           requestUtil.list(proto.categories.PREFERENCES)
-            .then((response) => { t.equals(response.length, 0, t.name) })
+            .then((response) => { t.pass(t.name) })
             .catch((error) => { t.fail(error) })
         })
 

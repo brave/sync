@@ -129,6 +129,10 @@ const startSync = (requester) => {
     logSync(`Deleting category: ${category}`)
     requester.deleteCategory(proto.categories[category])
   })
+  ipc.on(messages.DELETE_SYNC_SITE_SETTINGS, (e) => {
+    logSync(`Deleting siteSettings`)
+    requester.deleteSiteSettings()
+  })
   logSync('success')
 }
 

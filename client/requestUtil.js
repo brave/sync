@@ -2,7 +2,9 @@
 
 const awsSdk = require('aws-sdk')
 const cryptoUtil = require('./cryptoUtil')
+const proto = require('./constants/proto')
 const s3Helper = require('../lib/s3Helper')
+const serializer = require('../lib/serializer')
 
 const CONFIG = require('./config')
 const S3_MAX_RETRIES = 1
@@ -108,11 +110,7 @@ RequestUtil.prototype.saveAWSCredentials = function (parsedResponse) {
  * @return {{s3: Object, postData: Object, expiration: string, bucket: string, region: string}}
  */
 RequestUtil.prototype.parseAWSResponse = function (bytes) {
-  const serializer = this.serializer
-  if (!serializer) {
-    throw new Error('Missing proto serializer object.')
-  }
-  const parsedBody = serializer.byteArrayToCredentials(bytes)
+  const parsedBody = this.serializer.byteArrayToCredentials(bytes)
   const credentials = parsedBody.aws
   if (!credentials) {
     throw new Error('AWS did not return credentials!')
@@ -233,6 +231,22 @@ RequestUtil.prototype.deleteUser = function () {
  */
 RequestUtil.prototype.deleteCategory = function (category) {
   return this.s3DeletePrefix(`${this.apiVersion}/${this.userId}/${category}`)
+}
+
+/**
+ * Delete site settings, which are stored in the preferences collection
+ * alongside device records.
+ */
+RequestUtil.prototype.deleteSiteSettings = function () {
+  const prefix = `${this.apiVersion}/${this.userId}/${proto.categories.PREFERENCES}`
+  return s3Helper.deletePrefix(this.s3, this.bucket, prefix, (s3Object) => {
+    // TODO: Recombine split records
+    const parsedKey = s3Helper.parseS3Key(s3Object.Key)
+    const decodedData = s3Helper.s3StringToByteArray(parsedKey.recordPartString)
+    const record = this.decrypt(decodedData)
+    const objectData = serializer.getSyncRecordObjectData(record)
+    return objectData === 'siteSetting'
+  })
 }
 
 /**
