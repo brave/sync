@@ -308,8 +308,8 @@ test('recordUtil.syncRecordAsJS()', (t) => {
     }
     const conversionEquals = (recordProps) => {
       const props = Object.assign({}, baseProps, recordProps)
-      const encodedRecord = serializer.api.SyncRecord.encode(props).finish()
-      const decodedRecord = serializer.api.SyncRecord.decode(encodedRecord)
+      const encodedRecord = serializer.syncRecordToByteArray(props)
+      const decodedRecord = serializer.byteArrayToSyncRecord(encodedRecord)
       const recordJS = recordUtil.syncRecordAsJS(decodedRecord)
       t.deepEquals(recordJS, props, `${t.name} ${recordProps.objectData}`)
     }
@@ -331,9 +331,8 @@ test('recordUtil.syncRecordAsJS()', (t) => {
     })
     conversionEquals({ objectData: 'bookmark', bookmark })
 
-    // All params are required because protobufs assume undefined == default value
     const siteSetting = serializer.api.SyncRecord.SiteSetting.create({
-      adControl: 0, cookieControl: 0, fingerprintingProtection: false, hostPattern: 'https://jisho.org', httpsEverywhere: false, ledgerPayments: false, ledgerPaymentsShown: false, noScript: false, safeBrowsing: false, shieldsUp: false, zoomLevel: 0.5
+      hostPattern: 'https://jisho.org', httpsEverywhere: false, ledgerPayments: false, ledgerPaymentsShown: false, noScript: false, safeBrowsing: false, shieldsUp: false, zoomLevel: 0.5
     })
     conversionEquals({ objectData: 'siteSetting', siteSetting })
 
