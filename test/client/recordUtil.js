@@ -16,6 +16,9 @@ const Record = (props) => {
 const UpdateRecord = (props) => {
   return Record(Object.assign({action: proto.actions.UPDATE}, props))
 }
+const DeleteRecord = (props) => {
+  return Record(Object.assign({action: proto.actions.DELETE}, props))
+}
 
 const timestampMs = 1480004209001
 const siteProps = {
@@ -63,7 +66,7 @@ const updateSiteSetting = UpdateRecord({
 })
 
 test('recordUtil.resolve', (t) => {
-  t.plan(8)
+  t.plan(10)
 
   const forRecordsWithAction = (t, action, callback) => {
     t.plan(baseRecords.length)
@@ -84,15 +87,52 @@ test('recordUtil.resolve', (t) => {
   t.test('CREATE, no existing object -> identity', (t) => {
     forRecordsWithAction(t, proto.actions.CREATE, (record) => {
       const resolved = recordUtil.resolve(record, undefined)
-      t.equals(resolved, record, `${t.name}: ${record.objectData}`)
+      t.deepEquals(resolved, record, `${t.name}: ${record.objectData}`)
     })
   })
 
   t.test('DELETE, existing object -> identity', (t) => {
     forRecordsWithAction(t, proto.actions.DELETE, (record, existingObject) => {
       const resolved = recordUtil.resolve(record, existingObject)
-      t.equals(resolved, record, `${t.name}: ${record.objectData}`)
+      t.deepEquals(resolved, record, `${t.name}: ${record.objectData}`)
     })
+  })
+
+  t.test('DELETE siteSetting, existing -> overlapping props', (t) => {
+    t.plan(1)
+    const deleteSiteSetting = DeleteRecord({
+      objectId: recordSiteSetting.objectId,
+      objectData: 'siteSetting',
+      siteSetting: {
+        hostPattern: 'https?://soundcloud.com',
+        fingerprintingProtection: true, // In recordSiteSetting.siteSetting
+        httpsEverywhere: false // Not in recordSiteSetting.siteSetting
+      }
+    })
+    const expected = DeleteRecord({
+      objectId: recordSiteSetting.objectId,
+      objectData: 'siteSetting',
+      siteSetting: {
+        fingerprintingProtection: true,
+        hostPattern: 'https?://soundcloud.com'
+      }
+    })
+    const resolved = recordUtil.resolve(deleteSiteSetting, recordSiteSetting)
+    t.deepEquals(resolved, expected, `${t.name}`)
+  })
+
+  t.test('DELETE siteSetting, existing, no common props -> null', (t) => {
+    t.plan(1)
+    const deleteSiteSetting = DeleteRecord({
+      objectId: recordSiteSetting.objectId,
+      objectData: 'siteSetting',
+      siteSetting: {
+        hostPattern: 'https?://soundcloud.com',
+        httpsEverywhere: false // Not in recordSiteSetting.siteSetting
+      }
+    })
+    const resolved = recordUtil.resolve(deleteSiteSetting, recordSiteSetting)
+    t.equals(resolved, null, `${t.name}`)
   })
 
   t.test('DELETE, no existing object -> null', (t) => {
