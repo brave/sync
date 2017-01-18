@@ -66,6 +66,7 @@ message SyncRecord {
     bool fingerprintingProtection = 9;
     bool ledgerPayments = 10;
     bool ledgerPaymentsShown = 11;
+    repeated string fields = 12;
   }
   message Device {
     string name = 1;

@@ -183,6 +183,13 @@ module.exports.resolveRecords = (recordsAndExistingObjects) => {
   return resolvedRecords
 }
 
+const pickFields = (object, fields) => {
+  return fields.reduce((a, x) => {
+    if (object.hasOwnProperty(x)) { a[x] = object[x] }
+    return a
+  }, {})
+}
+
 /**
  * Given a SyncRecord protobuf object, convert to a basic JS object.
  * @param {Serializer.api.SyncRecord}
@@ -196,8 +203,13 @@ module.exports.syncRecordAsJS = (record) => {
    */
   let object = record.toObject()
   object.action = record.action
-  const objectData = serializer.getSyncRecordObjectData(record)
-  object.objectData = objectData
-  object[objectData] = record[objectData].toObject({defaults: true, enums: Number, longs: Number})
+  const type = serializer.getSyncRecordObjectData(record)
+  object.objectData = type
+  const data = record[type].toObject({defaults: true, enums: Number, longs: Number})
+  if (data.fields && data.fields.length > 0) {
+    object[type] = pickFields(data, data.fields)
+  } else {
+    object[type] = data
+  }
   return object
 }
