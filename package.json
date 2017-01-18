@@ -6,7 +6,7 @@
   "scripts": {
     "lint": "standard",
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
-    "build": "yarn upgrade && yarn build-proto && browserify client/sync.js | uglifyjs - > bundles/bundle.js",
+    "build": "yarn upgrade && yarn build-proto || yarn build-proto && browserify client/sync.js | uglifyjs - > bundles/bundle.js",
     "build-proto": "pbjs --target=static-module lib/api.proto > lib/api.proto.js",
     "browsertest": "yarn start-test; browserify test/client/*.js test/*.js | uglifyjs - | tape-run; exitCode=$?; yarn stop-test; exit $exitCode",
     "browsertest-client": "yarn start-test; browserify test/client/*.js | tape-run --browser chrome; exitCode=$?; yarn stop-test; exit $exitCode",
@@ -57,7 +57,7 @@
     "crc": "^3.4.4",
     "express": "^4.14.0",
     "lodash.merge": "^4.6.0",
-    "protobufjs": "6.4.5",
+    "protobufjs": "~6.5.0",
     "raven": "^0.12.3",
     "request": "^2.79.0",
     "tweetnacl": "^0.14.3",
