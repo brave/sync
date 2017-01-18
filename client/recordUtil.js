@@ -86,6 +86,41 @@ module.exports.createFromUpdate = (record) => {
   }
 }
 
+const pickFields = (object, fields) => {
+  return fields.reduce((a, x) => {
+    if (object.hasOwnProperty(x)) { a[x] = object[x] }
+    return a
+  }, {})
+}
+
+/**
+ * Given a Delete SyncRecord and a browser's matching existing object,
+ * resolve Delete objectData to only those fields present on the existing
+ * object.
+ * @param {Object} record Delete SyncRecord JS object
+ * @param {Object=} existingObject Browser object as syncRecord JS object
+ * @returns {Object|null} Resolved syncRecord to apply to browser data
+ */
+const resolveDeleteWithObject = (record, existingObject) => {
+  const commonFields = ['hostPattern']
+  const type = record.objectData
+  const recordFields = new Set(Object.keys(record[type]))
+  const existingFields = new Set(Object.keys(existingObject[type]))
+  const resolvedFields = [...recordFields].filter(field =>
+    !commonFields.includes(field) && existingFields.has(field)
+  )
+  const resolvedData = pickFields(record[type], resolvedFields)
+  if (Object.keys(resolvedData).length === 0) {
+    return null
+  }
+  let resolved = Object.assign({}, record, {[type]: resolvedData})
+  for (let field of commonFields) {
+    if (!recordFields.has(field)) { continue }
+    resolved[type][field] = record[type][field]
+  }
+  return resolved
+}
+
 /**
  * Given a new SyncRecord and a browser's matching existing object if available,
  * resolve the write to perform on the browser's data.
@@ -99,6 +134,7 @@ module.exports.resolve = (record, existingObject) => {
     console.log(`Ignoring ${record.action} of object ${record.objectId}.`)
     return null
   }
+  const type = record.objectData
   switch (record.action) {
     case proto.actions.CREATE:
       if (existingObject) {
@@ -108,8 +144,7 @@ module.exports.resolve = (record, existingObject) => {
       }
     case proto.actions.UPDATE:
       if (existingObject) {
-        if (valueEquals(record[record.objectData],
-          existingObject[existingObject.objectData])) {
+        if (valueEquals(record[type], existingObject[type])) {
           return nullIgnore()
         }
         return record
@@ -117,11 +152,11 @@ module.exports.resolve = (record, existingObject) => {
         return this.createFromUpdate(record) || nullIgnore()
       }
     case proto.actions.DELETE:
+      let resolved = null
       if (existingObject) {
-        return record
-      } else {
-        return nullIgnore()
+        resolved = resolveDeleteWithObject(record, existingObject)
       }
+      return resolved || nullIgnore()
     default:
       throw new Error(`Invalid record action: ${record.action}`)
   }
@@ -181,13 +216,6 @@ module.exports.resolveRecords = (recordsAndExistingObjects) => {
     if (resolved) { resolvedRecords.push(resolved) }
   })
   return resolvedRecords
-}
-
-const pickFields = (object, fields) => {
-  return fields.reduce((a, x) => {
-    if (object.hasOwnProperty(x)) { a[x] = object[x] }
-    return a
-  }, {})
 }
 
 /**
