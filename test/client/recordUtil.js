@@ -66,7 +66,7 @@ const updateSiteSetting = UpdateRecord({
 })
 
 test('recordUtil.resolve', (t) => {
-  t.plan(10)
+  t.plan(12)
 
   const forRecordsWithAction = (t, action, callback) => {
     t.plan(baseRecords.length)
@@ -169,11 +169,48 @@ test('recordUtil.resolve', (t) => {
   t.test('UPDATE, existing object with different props -> identity', (t) => {
     t.plan(3)
     const resolvedBookmark = recordUtil.resolve(updateBookmark, recordBookmark)
-    t.equals(resolvedBookmark, updateBookmark, `${t.name}: bookmark`)
+    t.deepEquals(resolvedBookmark, updateBookmark, `${t.name}: bookmark`)
     const resolvedHistorySite = recordUtil.resolve(updateHistorySite, recordHistorySite)
-    t.equals(resolvedHistorySite, updateHistorySite, `${t.name}: historySite`)
+    t.deepEquals(resolvedHistorySite, updateHistorySite, `${t.name}: historySite`)
     const resolvedSiteSetting = recordUtil.resolve(updateSiteSetting, recordSiteSetting)
-    t.equals(resolvedSiteSetting, updateSiteSetting, `${t.name}: siteSetting`)
+    t.deepEquals(resolvedSiteSetting, updateSiteSetting, `${t.name}: siteSetting`)
+  })
+
+  t.test('UPDATE siteSetting, existing -> only changed props', (t) => {
+    t.plan(1)
+    const updateSiteSetting = UpdateRecord({
+      objectId: recordSiteSetting.objectId,
+      objectData: 'siteSetting',
+      siteSetting: {
+        hostPattern: 'https?://soundcloud.com',
+        fingerprintingProtection: false, // Same as recordSiteSetting.siteSetting
+        httpsEverywhere: false // Not in recordSiteSetting.siteSetting
+      }
+    })
+    const expected = UpdateRecord({
+      objectId: recordSiteSetting.objectId,
+      objectData: 'siteSetting',
+      siteSetting: {
+        hostPattern: 'https?://soundcloud.com',
+        httpsEverywhere: false
+      }
+    })
+    const resolved = recordUtil.resolve(updateSiteSetting, recordSiteSetting)
+    t.deepEquals(resolved, expected, `${t.name}`)
+  })
+
+  t.test('UPDATE siteSetting, existing, no changed props -> null', (t) => {
+    t.plan(1)
+    const updateSiteSetting = UpdateRecord({
+      objectId: recordSiteSetting.objectId,
+      objectData: 'siteSetting',
+      siteSetting: {
+        hostPattern: 'https?://soundcloud.com',
+        fingerprintingProtection: false // Same as recordSiteSetting.siteSetting
+      }
+    })
+    const resolved = recordUtil.resolve(updateSiteSetting, recordSiteSetting)
+    t.equals(resolved, null, `${t.name}`)
   })
 
   t.test('UPDATE, no existing object', (t) => {

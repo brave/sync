@@ -94,21 +94,32 @@ const pickFields = (object, fields) => {
 }
 
 /**
- * Given a Delete SyncRecord and a browser's matching existing object,
- * resolve Delete objectData to only those fields present on the existing
- * object.
- * @param {Object} record Delete SyncRecord JS object
+ * Given a SyncRecord and a browser's matching existing object, resolve
+ * objectData to only have the applicable fields.
+ * @param {Object} record SyncRecord JS object
  * @param {Object=} existingObject Browser object as syncRecord JS object
  * @returns {Object|null} Resolved syncRecord to apply to browser data
  */
-const resolveDeleteWithObject = (record, existingObject) => {
+const resolveRecordWithObject = (record, existingObject) => {
   const commonFields = ['hostPattern']
   const type = record.objectData
   const recordFields = new Set(Object.keys(record[type]))
   const existingFields = new Set(Object.keys(existingObject[type]))
-  const resolvedFields = [...recordFields].filter(field =>
-    !commonFields.includes(field) && existingFields.has(field)
-  )
+
+  let resolveField = null
+  if (record.action === proto.actions.UPDATE) {
+    resolveField = (field) => {
+      return !commonFields.includes(field) &&
+      (!existingFields.has(field) || !valueEquals(existingObject[type][field], record[type][field]))
+    }
+  } else if (record.action === proto.actions.DELETE) {
+    resolveField = (field) => {
+      return !commonFields.includes(field) && existingFields.has(field)
+    }
+  } else {
+    throw new Error('Invalid record action')
+  }
+  const resolvedFields = [...recordFields].filter(resolveField)
   const resolvedData = pickFields(record[type], resolvedFields)
   if (Object.keys(resolvedData).length === 0) {
     return null
@@ -134,29 +145,21 @@ module.exports.resolve = (record, existingObject) => {
     console.log(`Ignoring ${record.action} of object ${record.objectId}.`)
     return null
   }
-  const type = record.objectData
   switch (record.action) {
     case proto.actions.CREATE:
-      if (existingObject) {
-        return nullIgnore()
-      } else {
-        return record
-      }
+      return existingObject
+        ? nullIgnore()
+        : record
     case proto.actions.UPDATE:
-      if (existingObject) {
-        if (valueEquals(record[type], existingObject[type])) {
-          return nullIgnore()
-        }
-        return record
-      } else {
-        return this.createFromUpdate(record) || nullIgnore()
-      }
+      const resolvedUpdate = existingObject
+        ? resolveRecordWithObject(record, existingObject)
+        : this.createFromUpdate(record)
+      return resolvedUpdate || nullIgnore()
     case proto.actions.DELETE:
-      let resolved = null
-      if (existingObject) {
-        resolved = resolveDeleteWithObject(record, existingObject)
-      }
-      return resolved || nullIgnore()
+      const resolvedDelete = existingObject
+        ? resolveRecordWithObject(record, existingObject)
+        : null
+      return resolvedDelete || nullIgnore()
     default:
       throw new Error(`Invalid record action: ${record.action}`)
   }
