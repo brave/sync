@@ -12,19 +12,19 @@ A client/server for Brave sync
 Install dependencies:
 
 ```
-npm install
+yarn install
 ```
 
 Build a bundled JS library for the client:
 
 ```
-npm run build
+yarn run build
 ```
 
 Run the server:
 
 ```sh
-npm start
+yarn run start
 ```
 
 ## Testing
@@ -34,7 +34,7 @@ the library in a browser (default: electron), run `yarn browsertest`.
 To test in a different browser run `yarn browsertest -- --browser chrome`.
 Results appear in both the browser inspector and your terminal.
 
-To run tests in Node, just do `npm test`.
+To run tests in Node, just do `yarn test`.
 
 To do a basic client/server integration test against the production server, run
 `npm run client` and navigate to `http://localhost:8000/`). The page
@@ -56,7 +56,7 @@ export AWS_SECRET_ACCESS_KEY="{secret stuff}"
 
 Run the server with file watching and autoreloading:
 ```sh
-npm start-dev
+yarn run start-dev
 ```
 
 ### Client integration
