@@ -42,8 +42,8 @@ message SyncRecord {
   message Bookmark {
     Site site = 1;
     bool isFolder = 2;
-    uint32 folderId = 3;
-    uint32 parentFolderId = 4;
+    bytes parentFolderObjectId = 3;
+    int32 index = 4;
   }
   message SiteSetting {
     string hostPattern = 1;

@@ -114,6 +114,9 @@ const startSync = (requester) => {
       // Workaround #17
       record.deviceId = new Uint8Array(record.deviceId)
       record.objectId = new Uint8Array(record.objectId)
+      if (record.bookmark && record.bookmark.parentFolderObjectId) {
+        record.bookmark.parentFolderObjectId = new Uint8Array(record.bookmark.parentFolderObjectId)
+      }
       logSync(`sending record: ${JSON.stringify(record)}`)
       requester.put(proto.categories[category], requester.encrypt(record))
     })
