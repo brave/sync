@@ -18,10 +18,6 @@
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/@protobufjs/eventemitter/-/eventemitter-1.0.5.tgz#f3702db33b418b681a9123a10b035173fcba31dc"
 
-"@protobufjs/extend@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@protobufjs/extend/-/extend-1.0.2.tgz#cb7fe9d374bda82f719fe8ca050078c55e9e17d6"
-
 "@protobufjs/fetch@^1.0.4":
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/@protobufjs/fetch/-/fetch-1.0.4.tgz#9f48faa1f9fc01ea4c6d61133ef5af75491f8298"
@@ -41,7 +37,7 @@
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/@protobufjs/pool/-/pool-1.0.5.tgz#c08a7ac8b703bc2532e15542ecb6d84ad3662366"
 
-"@protobufjs/utf8@^1.0.4", "@protobufjs/utf8@^1.0.7":
+"@protobufjs/utf8@^1.0.7":
   version "1.0.7"
   resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.0.7.tgz#827e0393275a4eef808ce3345ae7a470c4d1749d"
 
@@ -653,8 +649,8 @@ code-point-at@^1.0.0:
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
 
 coffee-script@^1.8.0:
-  version "1.12.2"
-  resolved "https://registry.yarnpkg.com/coffee-script/-/coffee-script-1.12.2.tgz#0d4cbdee183f650da95419570c4929d08ef91376"
+  version "1.12.3"
+  resolved "https://registry.yarnpkg.com/coffee-script/-/coffee-script-1.12.3.tgz#de5f4b1b934a4e9f915c57acd7ad323f68f715db"
 
 colors@1.0.3, colors@1.0.x:
   version "1.0.3"
@@ -1064,8 +1060,8 @@ electron-stream@^4.0.0:
     stream-read "^1.1.2"
 
 electron@^1.4.4:
-  version "1.4.15"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-1.4.15.tgz#eaccafe3f55ade02a746b706ac14b43db6c7ccf8"
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-1.5.0.tgz#d783d5ca8c89fd781b04c6ca75652c55bbdb80d5"
   dependencies:
     electron-download "^3.0.1"
     extract-zip "^1.0.3"
@@ -2027,7 +2023,7 @@ is-path-inside@^1.0.0:
 
 is-posix-bracket@^0.1.0:
   version "0.1.1"
-  resolved "https://registry.yarnpkg.com/is-posix-bracket/-/is-posix-bracket-0.1.1.tgz#3334dc79774368e92f016e6fbc0a88f5cd6e6bc4"
+  resolved "http://registry.npmjs.org/is-posix-bracket/-/is-posix-bracket-0.1.1.tgz#3334dc79774368e92f016e6fbc0a88f5cd6e6bc4"
 
 is-primitive@^2.0.0:
   version "2.0.0"
@@ -2651,7 +2647,7 @@ object-assign@^4.0.1, object-assign@^4.1.0:
 
 object-inspect@~1.2.1:
   version "1.2.1"
-  resolved "http://registry.npmjs.org/object-inspect/-/object-inspect-1.2.1.tgz#3b62226eb8f6d441751c7d8f22a20ff80ac9dc3f"
+  resolved "https://registry.yarnpkg.com/object-inspect/-/object-inspect-1.2.1.tgz#3b62226eb8f6d441751c7d8f22a20ff80ac9dc3f"
 
 object-keys@^1.0.8:
   version "1.0.11"
@@ -2903,15 +2899,14 @@ progress@^1.1.8:
   version "1.1.8"
   resolved "https://registry.yarnpkg.com/progress/-/progress-1.1.8.tgz#e260c78f6161cdd9b0e56cc3e0a85de17c7a57be"
 
-protobufjs@~6.5.0:
-  version "6.5.3"
-  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-6.5.3.tgz#08d189da90397070de9fcd634919ddbae36025de"
+protobufjs@^6.6.1:
+  version "6.6.1"
+  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-6.6.1.tgz#aa355b9d1baf7ed131fa7734b6977d526fa58392"
   dependencies:
     "@protobufjs/aspromise" "^1.0.5"
     "@protobufjs/base64" "^1.0.5"
     "@protobufjs/codegen" "^1.0.8"
     "@protobufjs/eventemitter" "^1.0.5"
-    "@protobufjs/extend" "^1.0.2"
     "@protobufjs/fetch" "^1.0.4"
     "@protobufjs/inquire" "^1.0.2"
     "@protobufjs/path" "^1.0.2"
