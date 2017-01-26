@@ -41,12 +41,12 @@ const createFromUpdateBookmark = CreateFromUpdate(
   (record) => {
     return (record.bookmark.site && (
       record.bookmark.site.location ||
-      (record.bookmark.site.customTitle && record.bookmark.folderId && record.bookmark.folderId > 0)
+      (record.bookmark.site.customTitle && record.bookmark.isFolder)
     ))
   },
   (bookmark) => {
-    if (bookmark.folderId && bookmark.folderId > 0) {
-      return Object.assign({isFolder: true}, bookmark)
+    if (bookmark.isFolder) {
+      return bookmark
     } else {
       const defaultProps = {
         isFolder: false

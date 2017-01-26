@@ -297,16 +297,15 @@ test('recordUtil.resolve', (t) => {
       resolveToCreate(t, recordProps, resolvedProps, t.name)
     })
 
-    t.test(`${t.name}, bookmark, .folderId .site.customTitle -> create folder`, (t) => {
+    t.test(`${t.name}, bookmark, .isFolder .site.customTitle -> create folder`, (t) => {
       const recordProps = {
         objectData: 'bookmark',
-        bookmark: {folderId: 1, site: {customTitle: 'sweet title'}}
+        bookmark: {isFolder: true, site: {customTitle: 'sweet title'}}
       }
       const resolvedProps = {
         bookmark: {
           site: {customTitle: 'sweet title'},
-          isFolder: true,
-          folderId: 1
+          isFolder: true
         },
         objectData: 'bookmark'
       }
