@@ -27,7 +27,7 @@ const messages = {
    * saved. 'config' contains apiVersion, serverUrl, debug;
    * see server/config/default.json
    */
-  GOT_INIT_DATA: _, /* @param {Array} seed, @param {Array} deviceId, @param {Object} config */
+  GOT_INIT_DATA: _, /* @param {Array} seed, @param {Array} deviceId, @param {Object} config, @param {boolean} enabled */
   /**
    * webview -> browser
    * browser must save values in persistent storage if non-empty
@@ -84,7 +84,12 @@ const messages = {
    * webview -> browser
    * webview sends this to delete all site settings.
    */
-  DELETE_SYNC_SITE_SETTINGS: _
+  DELETE_SYNC_SITE_SETTINGS: _,
+  /**
+   * browser -> webview
+   * indicates sync has been enabled/disabled in preferences.
+   */
+  SET_SYNC_ENABLED: _ /* @param {boolean} enabled */
 }
 
 module.exports = mapValuesByKeys(messages)
