@@ -129,11 +129,70 @@ test('client RequestUtil', (t) => {
                   t.equals(s3Record0.device.name, `pyramid at ${TIME_B}`)
                   t.equals(s3Record1.device.name, `pyramid at ${TIME_C}`)
                   t.equals(s3Record2.device.name, `pyramid at ${TIME_D}`)
-                  testCanDeletePreferences(t)
+                  testCanPutHistorySite(t)
                 })
                 .catch((error) => { t.fail(error) })
             })
             .catch((error) => { t.fail(error) })
+          })
+          .catch((error) => { t.fail(error) })
+      })
+    }
+
+    const testCanPutHistorySite = (t) => {
+      const record = {
+        action: 'CREATE',
+        deviceId: new Uint8Array([0]),
+        objectId: testHelper.newUuid(),
+        historySite: {
+          location: `https://brave.com?q=${'x'.repeat(4048)}`,
+          title: 'lulz',
+          lastAccessedTime: 1480000000 * 1000,
+          creationTime: 1480000000 * 1000
+        }
+      }
+
+      t.test('#put history site: large URL (multipart)', (t) => {
+        t.plan(2)
+        timekeeper.freeze(1480000000 * 1000)
+        requestUtil.put(proto.categories.HISTORY_SITES, encrypt(record))
+          .then((response) => {
+            timekeeper.reset()
+            t.pass(`${t.name} resolves`)
+            testCanRetrieve(t)
+          })
+          .catch((error) => { t.fail(error) })
+      })
+
+      const testCanRetrieve = (t) => {
+        t.test(`${t.name}`, (t) => {
+          t.plan(5)
+          requestUtil.list(proto.categories.HISTORY_SITES)
+            .then((response) => {
+              const s3Record = decrypt(response[0])
+              // FIXME: Should this deserialize to 'CREATE' ?
+              t.equals(s3Record.action, 0, `${t.name}: action`)
+              t.deepEquals(s3Record.deviceId, record.deviceId, `${t.name}: deviceId`)
+              t.deepEquals(s3Record.objectId, record.objectId, `${t.name}: objectId`)
+              t.deepEquals(s3Record.historySite, record.historySite, `${t.name}: historySite.location`)
+              testCanDeleteHistorySites(t)
+            })
+            .catch((error) => { t.fail(error) })
+        })
+      }
+    }
+
+    const testCanDeleteHistorySites = (t) => {
+      t.test('#deleteCategory historySites', (t) => {
+        t.plan(2)
+        requestUtil.deleteCategory(proto.categories.HISTORY_SITES)
+          .then((_response) => {
+            requestUtil.list(proto.categories.HISTORY_SITES)
+              .then((response) => {
+                t.equals(response.length, 0, `${t.name} works`)
+                testCanDeletePreferences(t)
+              })
+              .catch((error) => { t.fail(error) })
           })
           .catch((error) => { t.fail(error) })
       })

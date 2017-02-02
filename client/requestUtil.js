@@ -152,6 +152,8 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
  * @returns {Promise(Array.<Uint8Array>)}
  */
 RequestUtil.prototype.list = function (category, startAt) {
+  const crc = require('crc')
+  const radix64 = require('../lib/radix64')
   const prefix = `${this.apiVersion}/${this.userId}/${category}`
   let options = {
     MaxKeys: 1000,
@@ -161,13 +163,30 @@ RequestUtil.prototype.list = function (category, startAt) {
   if (startAt) { options.StartAfter = `${prefix}/${startAt}` }
   return this.withRetry(() => {
     return s3Helper.listObjects(this.s3, options)
-  }).then((data) => {
-    return data.map((s3Object) => {
+  }).then((s3Objects) => {
+    const output = []
+    const partBuffer = {}
+    for (let s3Object of s3Objects) {
       const parsedKey = s3Helper.parseS3Key(s3Object.Key)
-      // TODO: Recombine split records
-      const decodedData = s3Helper.s3StringToByteArray(parsedKey.recordPartString)
-      return decodedData
-    })
+      const fullCrc = parsedKey.recordCrc
+      let data = parsedKey.recordPartString
+      if (partBuffer[fullCrc]) {
+        partBuffer[fullCrc] = partBuffer[fullCrc].concat(data)
+        data = partBuffer[fullCrc]
+      }
+      const dataBytes = s3Helper.s3StringToByteArray(data)
+      const dataCrc = radix64.fromNumber(crc.crc32.unsigned(dataBytes.buffer))
+      if (dataCrc === fullCrc) {
+        output.push(dataBytes)
+        if (partBuffer[fullCrc]) { delete partBuffer[fullCrc] }
+      } else {
+        partBuffer[fullCrc] = data
+      }
+    }
+    for (let crc in partBuffer) {
+      console.log(`Record with CRC ${crc} is missing parts or corrupt.`)
+    }
+    return output
   })
 }
 
