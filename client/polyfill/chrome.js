@@ -20,7 +20,7 @@
   }
   self.chrome = {}
   const ipc = {}
-  ipc.on = (message, cb) => {
+  ipc.once = (message, cb) => {
     // Replace this with your polyfill!
     if (message === 'got-init-data') {
       if (cb) {
