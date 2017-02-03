@@ -7,7 +7,7 @@ const messages = require('./constants/messages')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
 
-const ipc = window.chrome.ipcRenderer
+let ipc = window.chrome.ipcRenderer
 
 // logging
 const DEBUG = 0
@@ -19,8 +19,6 @@ var clientDeviceId = null
 var clientUserId = null
 var clientKeys = {}
 var config = {}
-
-console.log('in sync script')
 
 /**
  * Logs stuff on the visible HTML page.
@@ -35,7 +33,7 @@ const logSync = (message, logLevel = DEBUG) => {
   }
   if (logElement) {
     logElement.innerText = `${logElement.innerText}\r\n${message}`
-  } else if (config.debug) {
+  } else if (ipc && config.debug) {
     ipc.send(messages.SYNC_DEBUG, message)
   } else {
     console.log(message)
@@ -139,47 +137,58 @@ const startSync = (requester) => {
   logSync('success')
 }
 
-Promise.all([serializer.init(), initializer.init(window.chrome)]).then((values) => {
-  const clientSerializer = values[0]
-  const keys = values[1].keys
-  const deviceId = values[1].deviceId
-  clientKeys = keys
-  config = values[1].config
-  if (deviceId instanceof Uint8Array && deviceId.length === 1) {
-    clientDeviceId = deviceId
-    logSync(`initialized deviceId ${clientDeviceId}`)
+const main = () => {
+  if (!ipc) {
+    logSync('chrome.ipcRenderer is missing!', ERROR)
+    return
   }
-  if (keys.publicKey instanceof Uint8Array) {
-    clientUserId = window.btoa(String.fromCharCode.apply(null, keys.publicKey))
-  }
-  if (!clientUserId || !clientKeys.secretKey) {
-    throw new Error('Missing userID or keys')
-  }
-  if (!config || !config.serverUrl || typeof config.apiVersion !== 'string') {
-    throw new Error('Missing client env configuration')
-  }
-  logSync(`initialized userId ${clientUserId}`)
-  return clientSerializer
-})
-  .then((clientSerializer) => {
-    const requester = new RequestUtil({
-      apiVersion: config.apiVersion,
-      credentialsBytes: null, // TODO: Start with previous session's credentials
-      keys: clientKeys,
-      serializer: clientSerializer,
-      serverUrl: config.serverUrl
-    })
-    return requester.refreshAWSCredentials()
-  })
-  .then((requester) => {
-    logSync('successfully authenticated userId: ' + clientUserId)
-    logSync('using AWS bucket: ' + requester.bucket)
-    return maybeSetDeviceId(requester)
-  })
-  .then((requester) => {
-    if (clientDeviceId !== null && requester && requester.s3) {
-      logSync('set device ID: ' + clientDeviceId)
-      startSync(requester)
+
+  console.log(`in sync script ${window.location.href}`)
+
+  Promise.all([serializer.init(), initializer.init()]).then((values) => {
+    const clientSerializer = values[0]
+    const keys = values[1].keys
+    const deviceId = values[1].deviceId
+    clientKeys = keys
+    config = values[1].config
+    if (deviceId instanceof Uint8Array && deviceId.length === 1) {
+      clientDeviceId = deviceId
+      logSync(`initialized deviceId ${clientDeviceId}`)
     }
+    if (keys.publicKey instanceof Uint8Array) {
+      clientUserId = window.btoa(String.fromCharCode.apply(null, keys.publicKey))
+    }
+    if (!clientUserId || !clientKeys.secretKey) {
+      throw new Error('Missing userID or keys')
+    }
+    if (!config || !config.serverUrl || typeof config.apiVersion !== 'string') {
+      throw new Error('Missing client env configuration')
+    }
+    logSync(`initialized userId ${clientUserId}`)
+    return clientSerializer
   })
-  .catch((e) => { logSync('could not init sync: ' + e, ERROR) })
+    .then((clientSerializer) => {
+      const requester = new RequestUtil({
+        apiVersion: config.apiVersion,
+        credentialsBytes: null, // TODO: Start with previous session's credentials
+        keys: clientKeys,
+        serializer: clientSerializer,
+        serverUrl: config.serverUrl
+      })
+      return requester.refreshAWSCredentials()
+    })
+    .then((requester) => {
+      logSync('successfully authenticated userId: ' + clientUserId)
+      logSync('using AWS bucket: ' + requester.bucket)
+      return maybeSetDeviceId(requester)
+    })
+    .then((requester) => {
+      if (clientDeviceId !== null && requester && requester.s3) {
+        logSync('set device ID: ' + clientDeviceId)
+        startSync(requester)
+      }
+    })
+    .catch((e) => { logSync('could not init sync: ' + e, ERROR) })
+}
+
+main()
