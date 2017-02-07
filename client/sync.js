@@ -80,7 +80,6 @@ const maybeSetDeviceId = (requester) => {
  * @param {RequestUtil} requester
  */
 const startSync = (requester) => {
-  ipc.send(messages.SYNC_READY)
   ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames, startAt) => {
     logSync(`fetching ${categoryNames} records after ${startAt}`)
     categoryNames.forEach((category) => {
@@ -134,6 +133,7 @@ const startSync = (requester) => {
     logSync(`Deleting siteSettings`)
     requester.deleteSiteSettings()
   })
+  ipc.send(messages.SYNC_READY)
   logSync('success')
 }
 
