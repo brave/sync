@@ -18,7 +18,7 @@ test('s3Helper', (t) => {
 
   t.test('encodeDataToS3KeyArray / parseS3Key', (t) => {
     t.plan(3)
-    const s3Prefix = '0/xGrUe8vokl9kjAx+RTu9t6I1UnOT7mcdcizAVI+2bos=/2/1482435340'
+    const s3Prefix = '0/xGrUe8vokl9kjAx+RTu9t6I1UnOT7mcdcizAVI+2bos=/2/1482435340000'
 
     t.test(`${t.name}: small data`, (t) => {
       t.plan(3)

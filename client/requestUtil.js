@@ -29,10 +29,6 @@ const isExpiredCredentialError = (error) => {
   })
 }
 
-const getTime = () => {
-  return Math.floor(Date.now() / 1000)
-}
-
 /**
  * @param {{
  *   apiVersion: <string>,
@@ -68,7 +64,8 @@ const RequestUtil = function (opts = {}) {
  * @return {Promise} After it resolves, the object is ready to make requests.
  */
 RequestUtil.prototype.refreshAWSCredentials = function () {
-  const timestampString = getTime().toString()
+  // Timestamp checked in server/lib/request-verifier.js
+  const timestampString = Math.floor(Date.now() / 1000).toString()
   const userId = window.encodeURIComponent(this.userId)
   const url = `${this.serverUrl}/${userId}/credentials`
   const bytes = this.serializer.stringToByteArray(timestampString)
@@ -196,7 +193,7 @@ RequestUtil.prototype.list = function (category, startAt) {
  * @returns {string}
  */
 RequestUtil.prototype.currentRecordPrefix = function (category) {
-  return `${this.apiVersion}/${this.userId}/${category}/${getTime()}/`
+  return `${this.apiVersion}/${this.userId}/${category}/${Date.now()}/`
 }
 
 /**
