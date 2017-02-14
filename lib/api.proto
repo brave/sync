@@ -43,8 +43,9 @@ message SyncRecord {
     Site site = 1;
     bool isFolder = 2;
     bytes parentFolderObjectId = 3;
-    uint32 index = 4;
-    repeated string fields = 5;
+    bytes previousObjectId = 4;
+    bytes nextObjectId = 5;
+    repeated string fields = 6;
   }
   message SiteSetting {
     string hostPattern = 1;
