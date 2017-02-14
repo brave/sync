@@ -401,7 +401,6 @@ test('recordUtil.syncRecordAsJS()', (t) => {
 
     const bookmark = serializer.api.SyncRecord.Bookmark.create({
       site,
-      index: 1,
       isFolder: false,
       parentFolderObjectId: testHelper.newUuid()
     })
