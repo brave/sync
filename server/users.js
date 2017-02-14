@@ -6,7 +6,6 @@ const router = Express.Router()
 const serializer = require('../lib/serializer.js')
 const cors = require('cors')
 const config = require('config')
-const clientConfig = require('../client/config.js')
 // TODO: This returns a Promise; we may want to block requests until it resolves
 serializer.init()
 
@@ -19,7 +18,7 @@ const REGION = config.awsRegion
 router.param('userId', requestVerifier)
 
 const corsOptions = {
-  origin: clientConfig.clientOrigins
+  origin: '*'
 }
 
 // Generate temporary AWS credentials allowing user to access their Sync data.

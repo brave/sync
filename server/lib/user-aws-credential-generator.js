@@ -18,7 +18,7 @@ class UserAwsCredentialGenerator {
     /* {
          ResponseMetadata: { RequestId: '...' },
          Credentials: {
-           AccessKeyId: '...', SecretAccessKey: '...', SessionToken: '...', Expiration: 2016-12-04T01:23:45.000Z
+           AccessKeyId: '...', SecretAccessKey: '...', SessionToken: '...', Expiration: 2016-12-04T01:23:45.000Z // <Date>
          },
          FederatedUser: { FederatedUserId: '012345678900:{specified below}',
          Arn: 'arn:aws:sts::012345678900:federated-user/{specified below}' },
@@ -39,7 +39,7 @@ class UserAwsCredentialGenerator {
           accessKeyId: data.Credentials.AccessKeyId,
           secretAccessKey: data.Credentials.SecretAccessKey,
           sessionToken: data.Credentials.SessionToken,
-          expiration: data.Credentials.Expiration
+          expiration: data.Credentials.Expiration.toJSON()
         }
         resolve(returnData)
       })
@@ -60,6 +60,14 @@ class UserAwsCredentialGenerator {
     {
       "Version":"2012-10-17",
       "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": "s3:ListBucket",
+          "Resource": "arn:aws:s3:::${this.s3Bucket}",
+          "Condition": {
+            "StringLike": {"s3:prefix": "${this.s3Prefix()}"}
+          }
+        },
         {
           "Effect": "Allow",
           "Action": "s3:ListBucket",

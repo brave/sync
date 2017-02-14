@@ -20,14 +20,10 @@ message Credentials {
   string region = 4;
 }
 
-message SecretBoxRecord {
+message SecretboxRecord {
   bytes encryptedData = 1;
-  int counter = 2;
+  uint32 counter = 2;
   bytes nonceRandom = 3;
-}
-
-message GenericMessage {
-  string message = 1;
 }
 
 message SyncRecord {
@@ -40,19 +36,20 @@ message SyncRecord {
     string location = 1;
     string title = 2;
     string customTitle = 3;
-    string favicon = 4;
-    number lastAccessedTime = 5;
-    number creationTime = 6;
+    uint64 lastAccessedTime = 4;
+    uint64 creationTime = 5;
   }
   message Bookmark {
     Site site = 1;
     bool isFolder = 2;
-    number folderId = 3;
-    number parentFolderId = 4;
+    bytes parentFolderObjectId = 3;
+    bytes previousObjectId = 4;
+    bytes nextObjectId = 5;
+    repeated string fields = 6;
   }
   message SiteSetting {
     string hostPattern = 1;
-    number zoomLevel = 2;
+    float zoomLevel = 2;
     bool shieldsUp = 3;
     enum AdControl {
       SHOW_BRAVE_ADS = 0;
@@ -71,10 +68,10 @@ message SyncRecord {
     bool fingerprintingProtection = 9;
     bool ledgerPayments = 10;
     bool ledgerPaymentsShown = 11;
+    repeated string fields = 12;
   }
   message Device {
-    bytes deviceId = 1;
-    string name = 2;
+    string name = 1;
   }
   Action action = 1;
   bytes deviceId = 2;

@@ -1,4 +1,5 @@
 const test = require('tape')
+const testHelper = require('../testHelper.js')
 const awsSdk = require('aws-sdk')
 const config = require('config')
 const crypto = require('../../lib/crypto')
@@ -15,12 +16,10 @@ test('users router', (t) => {
   const app = Express()
   app.use('/', usersRouter)
   const server = app.listen(0, 'localhost', () => {
-    serializer.init().then(() => {
+    serializer.init().then((serializer) => {
       const serverUrl = `http://localhost:${server.address().port}`
       console.log(`server up on ${serverUrl}`)
-
-      const seed = new Uint8Array([243, 203, 185, 143, 101, 184, 134, 109, 69, 166, 218, 58, 63, 155, 158, 17, 31, 184, 175, 52, 73, 80, 190, 47, 45, 12, 59, 64, 130, 13, 146, 248])
-      const keys = crypto.deriveKeys(seed)
+      const keys = crypto.deriveKeys(testHelper.cryptoSeed())
       const userId = Buffer.from(keys.publicKey).toString('base64')
       console.log(`UserId: ${userId}`)
       const baseRequest = request.defaults({
@@ -33,7 +32,7 @@ test('users router', (t) => {
       function signedTimestamp (secretKey, timestamp) {
         if (!timestamp) { timestamp = Math.floor(Date.now() / 1000) }
         const message = timestamp.toString()
-        return crypto.sign(serializer.serializer.stringToByteArray(message), secretKey)
+        return crypto.sign(serializer.stringToByteArray(message), secretKey)
       }
 
       t.test('POST /:userId/credentials', (t) => {
@@ -62,7 +61,13 @@ test('users router', (t) => {
 
           let requester = null
           try {
-            requester = new RequestUtil(serializer.serializer, response.body)
+            requester = new RequestUtil({
+              apiVersion: config.apiVersion,
+              credentialsBytes: response.body,
+              keys,
+              serializer,
+              serverUrl: config.serverUrl
+            })
           } catch (e) {
             t.fail(`Couldn't parse body / ${e}: ${response.body}`)
           }

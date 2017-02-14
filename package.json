@@ -6,15 +6,20 @@
   "scripts": {
     "lint": "standard",
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
-    "build": "npm update && browserify client/sync.js -o bundles/bundle.js",
+    "build": "yarn upgrade && yarn build-proto && browserify client/sync.js | uglifyjs - > bundles/bundle.js",
+    "build-proto": "pbjs --target=static-module lib/api.proto > lib/api.proto.js",
+    "browsertest": "yarn build-proto; yarn start-test; browserify test/client/*.js test/*.js | uglifyjs - | tape-run; exitCode=$?; yarn stop-test; exit $exitCode",
+    "browsertest-client": "yarn build-proto; yarn start-test; browserify test/client/*.js | tape-run --browser chrome; exitCode=$?; yarn stop-test; exit $exitCode",
     "check": "nsp check",
-    "client": "npm run build && python -m SimpleHTTPServer",
-    "coverage": "NODE_CONFIG_DIR=server/config/ istanbul cover tape 'test/**/*.js' --report lcovonly -- -R spec",
-    "browsertest": "browserify test/*.js > bundles/testbundle.js && python -m SimpleHTTPServer",
+    "client": "yarn build && python -m SimpleHTTPServer",
+    "coverage": "NODE_CONFIG_DIR=server/config/ istanbul cover tape test/*.js test/server/**/*.js --report lcovonly -- -R spec",
+    "dist": "yarn build && cp bundles/bundle.js ../browser-laptop/app/extensions/brave/content/scripts/sync.js && cp client/constants/*.js ../browser-laptop/js/constants/sync/",
     "start": "NODE_CONFIG_DIR=server/config/ node server/index.js",
     "start-dev": "NODE_CONFIG_DIR=server/config/ nodemon server/index.js",
+    "start-test": "NODE_CONFIG_DIR=server/config/ NODE_ENV=test nohup node server/index.js > /dev/null 2>&1 & echo $! > start-test.pid",
+    "stop-test": "kill $(cat start-test.pid)",
     "tape": "NODE_CONFIG_DIR=server/config/ tape",
-    "test": "NODE_CONFIG_DIR=server/config/ tape 'test/**/*.js'"
+    "test": "NODE_CONFIG_DIR=server/config/ tape test/*.js test/server/**/*.js"
   },
   "repository": {
     "type": "git",
@@ -40,14 +45,19 @@
     "pryjs": "^1.0.3",
     "standard": "^8.5.0",
     "tape": "^4.6.3",
-    "timekeeper": "^1.0.0"
+    "tape-run": "^2.1.5",
+    "timekeeper": "^1.0.0",
+    "uglify-js": "mishoo/UglifyJS2#harmony"
   },
   "dependencies": {
+    "@protobufjs/utf8": "^1.0.7",
     "aws-sdk": "^2.7.7",
     "config": "^1.24.0",
     "cors": "^2.8.1",
+    "crc": "^3.4.4",
     "express": "^4.14.0",
-    "protobufjs": "6.0.1",
+    "lodash.merge": "^4.6.0",
+    "protobufjs": "^6.6.1",
     "raven": "^0.12.3",
     "request": "^2.79.0",
     "tweetnacl": "^0.14.3",
@@ -58,7 +68,9 @@
     "ignore": [
       "test/crypto.js",
       "bundles/*.js",
-      "client/polyfill/*.js"
+      "client/polyfill/*.js",
+      "lib/api.proto.js",
+      "lib/valueEquals.js"
     ]
   }
 }
