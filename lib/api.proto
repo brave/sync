@@ -36,8 +36,9 @@ message SyncRecord {
     string location = 1;
     string title = 2;
     string customTitle = 3;
-    uint64 lastAccessedTime = 4;
-    uint64 creationTime = 5;
+    string favicon = 4;
+    uint64 lastAccessedTime = 5;
+    uint64 creationTime = 6;
   }
   message Bookmark {
     Site site = 1;
