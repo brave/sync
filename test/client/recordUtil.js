@@ -26,7 +26,8 @@ const siteProps = {
   title: 'jisho',
   customTitle: '辞書',
   lastAccessedTime: timestampMs,
-  creationTime: timestampMs
+  creationTime: timestampMs,
+  favicon: 'foobar'
 }
 const props = {
   bookmark: {
@@ -261,7 +262,8 @@ test('recordUtil.resolve', (t) => {
           title: '',
           customTitle: url,
           lastAccessedTime: time,
-          creationTime: time
+          creationTime: time,
+          favicon: ''
         },
         objectData: 'historySite'
       }
@@ -288,7 +290,8 @@ test('recordUtil.resolve', (t) => {
             title: '',
             customTitle: url,
             lastAccessedTime: time,
-            creationTime: time
+            creationTime: time,
+            favicon: ''
           },
           isFolder: false
         },
@@ -394,6 +397,7 @@ test('recordUtil.syncRecordAsJS()', (t) => {
       creationTime: time,
       customTitle: 'cool',
       lastAccessedTime: time,
+      favicon: 'foobar',
       location: 'https://jisho.org',
       title: 'jisho'
     })
