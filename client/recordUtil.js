@@ -29,6 +29,7 @@ const CreateFromUpdate = (type, isValidRecord, mapUpdateToCreate) => {
 const createSitePropsFromUpdateSite = (site) => {
   const defaultProps = {
     title: '',
+    favicon: '',
     customTitle: site.location,
     lastAccessedTime: Date.now(),
     creationTime: Date.now()
