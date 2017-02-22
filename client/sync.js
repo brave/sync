@@ -120,7 +120,9 @@ const startSync = (requester) => {
   })
   ipc.on(messages.DELETE_SYNC_USER, (e) => {
     logSync(`Deleting user!!`)
-    requester.deleteUser()
+    requester.deleteUser().then(() => {
+      ipc.send(messages.DELETED_SYNC_USER)
+    })
   })
   ipc.on(messages.DELETE_SYNC_CATEGORY, (e, category) => {
     if (!proto.categories[category]) {
