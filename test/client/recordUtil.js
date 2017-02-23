@@ -346,12 +346,12 @@ test('recordUtil.resolveRecords()', (t) => {
   t.test(`${t.name} takes [ [{syncRecord}, {existingObject || null}], ... ] and returns resolved records [{syncRecord}, ...]`, (t) => {
     t.plan(1)
     const input = [
-      [updateBookmark, recordBookmark],
-      [recordSiteSetting, null]
+      [updateBookmark, [recordBookmark, siteProps]],
+      [recordSiteSetting, [null, null]]
     ]
     const resolved = recordUtil.resolveRecords(input)
     const expected = [updateBookmark, recordSiteSetting]
-    t.deepEquals(resolved, expected, t.name)
+    t.deepEquals(resolved.records, expected, t.name)
   })
 
   t.test(`${t.name} sequential Updates should become no op`, (t) => {
@@ -368,11 +368,11 @@ test('recordUtil.resolveRecords()', (t) => {
       bookmark: { site: Object.assign({}, siteProps, updateSiteProps) }
     })
     const input = [
-      [update1, existingObject],
-      [update2, existingObject]
+      [update1, [existingObject, siteProps]],
+      [update2, [existingObject, siteProps]]
     ]
     const resolved = recordUtil.resolveRecords(input)
-    t.deepEquals(resolved, [], t.name)
+    t.deepEquals(resolved.records, [], t.name)
   })
 })
 

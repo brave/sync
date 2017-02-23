@@ -210,14 +210,21 @@ const mergeRecords = (recordsAndObjects) => {
  * Given a list of new SyncRecords and matching browser objects, resolve
  * writes to perform on the browser's data.
  * @param {Array} recordsAndExistingObjects
- * @returns {Array.<Object>} Resolved syncRecords to apply to browser data.
+ * @returns {{records: Array, existingObjects: Array}} Resolved syncRecords to
+ *   apply to browser data, along with original object data.
  */
 module.exports.resolveRecords = (recordsAndExistingObjects) => {
-  let resolvedRecords = []
+  let resolvedRecords = {
+    records: [],
+    existingObjects: []
+  }
   const merged = mergeRecords(recordsAndExistingObjects)
   merged.forEach(([record, existingObject]) => {
-    const resolved = this.resolve(record, existingObject)
-    if (resolved) { resolvedRecords.push(resolved) }
+    const resolved = this.resolve(record, existingObject[0])
+    if (resolved) {
+      resolvedRecords.records.push(resolved)
+      resolvedRecords.existingObjects.push(existingObject[1])
+    }
   })
   return resolvedRecords
 }

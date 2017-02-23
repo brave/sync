@@ -24,7 +24,7 @@ const messages = {
   /**
    * browser -> webview
    * browser must send null for seed or deviceId if a value has not yet been
-   * saved. 'config' contains apiVersion, serverUrl, debug;
+   * saved. 'config' contains apiVersion, serverUrl, debug, platform;
    * see server/config/default.json
    */
   GOT_INIT_DATA: _, /* @param {Array} seed, @param {Array} deviceId, @param {Object} config */

@@ -3,6 +3,7 @@
 const initializer = require('./init')
 const RequestUtil = require('./requestUtil')
 const recordUtil = require('./recordUtil')
+const syncActions = require('./actions/syncActions')
 const messages = require('./constants/messages')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
@@ -99,9 +100,14 @@ const startSync = (requester) => {
   })
   ipc.on(messages.RESOLVE_SYNC_RECORDS, (e, category, recordsAndExistingObjects) => {
     const resolvedRecords = recordUtil.resolveRecords(recordsAndExistingObjects)
-    logSync(`resolved ${recordsAndExistingObjects.length} ${category} -> ${resolvedRecords.length}`)
-    if (resolvedRecords.length === 0) { return }
-    ipc.send(messages.RESOLVED_SYNC_RECORDS, category, resolvedRecords)
+    logSync(`resolved ${recordsAndExistingObjects.length} ${category} -> ${resolvedRecords.records.length}`)
+    if (resolvedRecords.records.length === 0) { return }
+    if (config && config.platform === 'laptop') {
+      // For performance reasons, resolve directly instead of passing records
+      // to the browser process in browser-laptop.
+      syncActions.resolveSyncRecords(resolvedRecords.records, resolvedRecords.existingObjects)
+    }
+    ipc.send(messages.RESOLVED_SYNC_RECORDS, category, resolvedRecords.records)
   })
   ipc.on(messages.SEND_SYNC_RECORDS, (e, category, records) => {
     if (!proto.categories[category]) {
