@@ -151,7 +151,8 @@ const syncActions = {
    * @param {Object} action
    */
   dispatchAction: function (action) {
-    ipc.send('dispatch-action', JSON.stringify(action))
+    action.dispatchPriority = 5
+    ipc.send('dispatch-action', JSON.stringify([action]))
   },
 
   /**
