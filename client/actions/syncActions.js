@@ -160,9 +160,13 @@ const syncActions = {
    * @param {Array} existingObjects
    */
   resolveSyncRecords: function (records, existingObjects) {
-    records.forEach((record, i) => {
-      applySyncRecord(record, existingObjects[i])
-    })
+    if (records.length === 0) { return }
+    setTimeout(() => {
+      const record = records.shift()
+      const object = existingObjects.shift()
+      applySyncRecord(record, object)
+      syncActions.resolveSyncRecords(records, existingObjects)
+    }, 0)
   },
 
   addSite: function (siteDetail, tag, originalSiteDetail, destinationDetail, skipSync) {
