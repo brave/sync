@@ -38,6 +38,9 @@
       ipc.on('got-init-data')
     }
   }
+  ipc.on = (message, cb) => {
+    // replace with your polyfill
+  }
   self.chrome.ipcRenderer = ipc
 })(typeof self !== 'undefined' ? self : this)
 
