@@ -47,7 +47,7 @@
     "tape": "^4.6.3",
     "tape-run": "^2.1.5",
     "timekeeper": "^1.0.0",
-    "uglify-js": "mishoo/UglifyJS2#harmony"
+    "uglify-js-harmony": "^2.7.5"
   },
   "dependencies": {
     "@protobufjs/utf8": "^1.0.7",
