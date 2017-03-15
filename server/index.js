@@ -5,6 +5,7 @@
 
 // web server
 const Express = require('express')
+const cors = require('cors')
 
 // See config/
 const Config = require('config')
@@ -36,6 +37,10 @@ app.disable('x-powered-by')
 if (Config.logLevel === 'debug') {
   app.use(Util.debugLogger)
 }
+
+app.post('/:userId/credentials', cors({
+  origin: '*'
+}))
 
 const UsersRouter = require('./users.js')
 app.use('/', UsersRouter)
