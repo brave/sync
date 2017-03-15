@@ -1,6 +1,6 @@
 {
   "name": "brave-sync",
-  "version": "0.0.1",
+  "version": "1.0.4",
   "description": "Brave sync server and client",
   "main": "server/index.js",
   "scripts": {
