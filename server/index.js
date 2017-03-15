@@ -38,9 +38,7 @@ if (Config.logLevel === 'debug') {
   app.use(Util.debugLogger)
 }
 
-app.post('/:userId/credentials', cors({
-  origin: '*'
-}))
+app.use(cors())
 
 const UsersRouter = require('./users.js')
 app.use('/', UsersRouter)
