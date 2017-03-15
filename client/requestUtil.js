@@ -24,6 +24,9 @@ const checkFetchStatus = (response) => {
 }
 
 const isExpiredCredentialError = (error) => {
+  if (!error || !error.message) {
+    return false
+  }
   return EXPIRED_CREDENTIAL_ERRORS.some((message) => {
     return error.message.match(message)
   })
