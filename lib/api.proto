@@ -60,6 +60,7 @@ message SyncRecord {
     enum CookieControl {
       BLOCK_THIRD_PARTY_COOKIE = 0;
       ALLOW_ALL_COOKIES = 1;
+      BLOCK_ALL_COOKIES = 2;
     }
     AdControl adControl = 4;
     CookieControl cookieControl = 5;
