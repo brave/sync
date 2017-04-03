@@ -147,13 +147,12 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
 }
 
 /**
+ * Get S3 objects in a category.
  * @param {string} category - the category ID
- * @param {number=} startAt return records with timestamp >= startAt (e.g. 1482435340)
- * @returns {Promise(Array.<Uint8Array>)}
+ * @param {number=} startAt return objects with timestamp >= startAt (e.g. 1482435340)
+ * @returns {Promise(Array.<Object>)}
  */
 RequestUtil.prototype.list = function (category, startAt) {
-  const crc = require('crc')
-  const radix64 = require('../lib/radix64')
   const prefix = `${this.apiVersion}/${this.userId}/${category}`
   let options = {
     MaxKeys: 1000,
@@ -163,31 +162,46 @@ RequestUtil.prototype.list = function (category, startAt) {
   if (startAt) { options.StartAfter = `${prefix}/${startAt}` }
   return this.withRetry(() => {
     return s3Helper.listObjects(this.s3, options)
-  }).then((s3Objects) => {
-    const output = []
-    const partBuffer = {}
-    for (let s3Object of s3Objects) {
-      const parsedKey = s3Helper.parseS3Key(s3Object.Key)
-      const fullCrc = parsedKey.recordCrc
-      let data = parsedKey.recordPartString
-      if (partBuffer[fullCrc]) {
-        partBuffer[fullCrc] = partBuffer[fullCrc].concat(data)
-        data = partBuffer[fullCrc]
-      }
-      const dataBytes = s3Helper.s3StringToByteArray(data)
-      const dataCrc = radix64.fromNumber(crc.crc32.unsigned(dataBytes.buffer))
-      if (dataCrc === fullCrc) {
-        output.push(dataBytes)
-        if (partBuffer[fullCrc]) { delete partBuffer[fullCrc] }
-      } else {
-        partBuffer[fullCrc] = data
-      }
-    }
-    for (let crc in partBuffer) {
-      console.log(`Record with CRC ${crc} is missing parts or corrupt.`)
-    }
-    return output
   })
+}
+
+/**
+ * From an array of S3 keys, extract and decrypt records.
+ * @param {Array.<Uint8Array>} s3Objects resolved result of .list()
+ * @returns {Array.<Uint8Array>}
+ */
+RequestUtil.prototype.s3ObjectsToRecords = function (s3Objects) {
+  const crc = require('crc')
+  const radix64 = require('../lib/radix64')
+  const output = []
+  const partBuffer = {}
+  for (let s3Object of s3Objects) {
+    const parsedKey = s3Helper.parseS3Key(s3Object.Key)
+    const fullCrc = parsedKey.recordCrc
+    let data = parsedKey.recordPartString
+    if (partBuffer[fullCrc]) {
+      partBuffer[fullCrc] = partBuffer[fullCrc].concat(data)
+      data = partBuffer[fullCrc]
+    }
+    const dataBytes = s3Helper.s3StringToByteArray(data)
+    const dataCrc = radix64.fromNumber(crc.crc32.unsigned(dataBytes.buffer))
+    if (dataCrc === fullCrc) {
+      let decrypted = {}
+      try {
+        decrypted = this.decrypt(dataBytes)
+        output.push(decrypted)
+      } catch (e) {
+        console.log(`Record with CRC ${crc} can't be decrypted: ${e}`)
+      }
+      if (partBuffer[fullCrc]) { delete partBuffer[fullCrc] }
+    } else {
+      partBuffer[fullCrc] = data
+    }
+  }
+  for (let crc in partBuffer) {
+    console.log(`Record with CRC ${crc} is missing parts or corrupt.`)
+  }
+  return output
 }
 
 /**
