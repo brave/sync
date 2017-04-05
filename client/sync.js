@@ -190,7 +190,10 @@ const main = () => {
         startSync(requester)
       }
     })
-    .catch((e) => { logSync('could not init sync: ' + e, ERROR) })
+    .catch((e) => {
+      logSync('could not init sync: ' + e, ERROR)
+      ipc.send(messages.SYNC_SETUP_ERROR, e.message)
+    })
 }
 
 main()
