@@ -76,13 +76,13 @@ const maybeSetDeviceId = (requester) => {
  * @param {RequestUtil} requester
  */
 const startSync = (requester) => {
-  ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames, startAt) => {
+  ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames, startAt, limitResponse) => {
     logSync(`fetching ${categoryNames} records after ${startAt}`)
     categoryNames.forEach((category) => {
       if (!proto.categories[category]) {
         throw new Error(`Unsupported sync category: ${category}`)
       }
-      requester.list(proto.categories[category], startAt).then((s3Objects) => {
+      requester.list(proto.categories[category], startAt, limitResponse).then((s3Objects) => {
         const records = requester.s3ObjectsToRecords(s3Objects)
         if (records.length === 0) { return }
         logSync(`fetched ${records.length} ${category} after ${startAt}`)
