@@ -5,7 +5,6 @@ const RequestUtil = require('./requestUtil')
 const recordUtil = require('./recordUtil')
 const messages = require('./constants/messages')
 const proto = require('./constants/proto')
-const s3Helper = require('../lib/s3Helper')
 const serializer = require('../lib/serializer')
 
 let ipc = window.chrome.ipcRenderer
@@ -87,12 +86,28 @@ const startSync = (requester) => {
         if (records.length === 0) { return }
         logSync(`fetched ${records.length} ${category} after ${startAt}`)
         const jsRecords = records.map((record) => {
-          return recordUtil.syncRecordAsJS(record)
+          const jsRecord = recordUtil.syncRecordAsJS(record)
+          // Useful but stored in the S3 key.
+          jsRecord.syncTimestamp = record.syncTimestamp
+          return jsRecord
         })
-        const lastObject = s3Objects[s3Objects.length - 1]
-        const lastRecordTimestamp = s3Helper.parseS3Key(lastObject.Key).timestamp
+        const lastRecordTimestamp = records[records.length - 1].syncTimestamp
         ipc.send(messages.GET_EXISTING_OBJECTS, category, jsRecords, lastRecordTimestamp)
       })
+    })
+  })
+  ipc.on(messages.FETCH_SYNC_DEVICES, (e) => {
+    logSync(`fetching devices`)
+    requester.list(proto.categories['PREFERENCES'], 0).then((s3Objects) => {
+      const records = requester.s3ObjectsToRecords(s3Objects)
+      logSync(`fetched ${records.length} devices`)
+      const jsRecords = records.map((record) => {
+        const jsRecord = recordUtil.syncRecordAsJS(record)
+        // Useful but stored in the S3 key.
+        jsRecord.syncTimestamp = record.syncTimestamp
+        return jsRecord
+      })
+      ipc.send(messages.RESOLVED_SYNC_RECORDS, 'PREFERENCES', jsRecords)
     })
   })
   ipc.on(messages.RESOLVE_SYNC_RECORDS, (e, category, recordsAndExistingObjects) => {
