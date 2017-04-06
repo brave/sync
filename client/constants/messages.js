@@ -18,6 +18,12 @@ const messages = {
   SYNC_DEBUG: _, /* @param {string} message */
   /**
    * webview -> browser
+   * indicates that a fatal error occurred during sync setup, meaning that sync
+   * is not running.
+   */
+  SYNC_SETUP_ERROR: _, /* @param {string} error */
+  /**
+   * webview -> browser
    * browser sends GOT_INIT_DATA with the saved values
    */
   GET_INIT_DATA: _,
@@ -45,7 +51,7 @@ const messages = {
    * with new records, do
    * GET_EXISTING_OBJECTS -> RESOLVE_SYNC_RECORDS -> RESOLVED_SYNC_RECORDS
    */
-  FETCH_SYNC_RECORDS: _, /* @param Array.<string> categoryNames, @param {number} startAt (in seconds) */
+  FETCH_SYNC_RECORDS: _, /* @param Array.<string> categoryNames, @param {number} startAt (in seconds or milliseconds), @param {boolean=} limitResponse true to limit response to 1000 records */
   /**
    * webview -> browser
    * after sync gets records, it requests the browser's existing objects so sync
