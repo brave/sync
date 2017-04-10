@@ -169,7 +169,7 @@ RequestUtil.prototype.list = function (category, startAt, limitResponse) {
 /**
  * From an array of S3 keys, extract and decrypt records.
  * @param {Array.<Uint8Array>} s3Objects resolved result of .list()
- * @returns {Array.<Uint8Array>}
+ * @returns {Array.<Object>}
  */
 RequestUtil.prototype.s3ObjectsToRecords = function (s3Objects) {
   const crc = require('crc')
@@ -190,6 +190,7 @@ RequestUtil.prototype.s3ObjectsToRecords = function (s3Objects) {
       let decrypted = {}
       try {
         decrypted = this.decrypt(dataBytes)
+        decrypted.syncTimestamp = parsedKey.timestamp
         output.push(decrypted)
       } catch (e) {
         console.log(`Record with CRC ${crc} can't be decrypted: ${e}`)
