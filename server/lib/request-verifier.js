@@ -3,6 +3,7 @@
 const config = require('config')
 const crypto = require('../../lib/crypto')
 const serializer = require('../../lib/serializer.js')
+const util = require('./util.js')
 serializer.init()
 
 /**
@@ -23,6 +24,7 @@ function validTimestamp (timestamp) {
  */
 module.exports = function (request, response, next, userId) {
   if (!userId) {
+    util.logger.debug('<- 400; userId (pubkey) missing')
     return response.status(400).end('userId (pubkey) is required (url syntax: /:userId/{endpoint}).')
   }
   let body = Buffer.alloc(0)
@@ -31,6 +33,7 @@ module.exports = function (request, response, next, userId) {
     body = Buffer.concat([body, chunk], totalLength)
   }).on('end', () => {
     if (!body || body.length === 0) {
+      util.logger.debug('<- 400; request body missing')
       return response.status(400).end('Signed request body is required.')
     }
     const publicKey = Buffer.from(userId, 'base64')
@@ -40,6 +43,7 @@ module.exports = function (request, response, next, userId) {
       verifiedBytes = crypto.verify(body, publicKey)
     } catch (e) {}
     if (!verifiedBytes) {
+      util.logger.debug('<- 400; crypto verification failed.')
       return response.status(400).end('Unable to verify the signed request. Please check the signing private key matches the pubkey.')
     }
 
@@ -47,8 +51,11 @@ module.exports = function (request, response, next, userId) {
     const timestamp = parseInt(result)
 
     if (!result || !timestamp || !validTimestamp(timestamp)) {
+      util.logger.debug(`<- 400; malformed request. should have a timestamp in seconds, max age ${config.clientTimestampOffsetMax}. decrypted request body=${result}; timestamp=${timestamp}`)
       return response.status(400).end('Signed request body of the client timestamp is required.')
     }
+
+    util.logger.debug(' * request verified')
     request.userId = userId
     next()
   })

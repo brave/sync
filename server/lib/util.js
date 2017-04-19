@@ -10,27 +10,19 @@ exports.logger = new (winston.Logger)({
 
 // Log additional things in development environments.
 exports.debugLogger = (request, response, next) => {
+  this.logger.debug('->', request.url)
   this.logger.debug('-> Headers:', request.headers)
   if (request.cookies) {
     for (let cookieName in request.cookies) {
       this.logger.debug(`-> Cookie: ${cookieName}:`, request.cookies[cookieName])
     }
   }
-
-  // if (request.query && request.query.data) {
-  //   this.logger.debug('-> Query:', request.query)
-  //   this.logger.debug('-> Query data:', parseQuery(request.query.data))
-  // } else {
-  //   this.logger.debug('-> Query: (empty)')
-  // }
-
-  // if (request.body && request.body.length) {
-  //   this.logger.debug('-> Body:', request.body)
-  //   const rawData = Querystring.parse(request.body).data
-  //   this.logger.debug('-> Body data:', parseQuery(rawData))
-  // } else {
-  //   logger.debug('-> Body: (empty)')
-  // }
+  if (request.query && request.query.data) {
+    this.logger.debug('-> Query:', request.query)
+  }
+  if (request.body && request.body.length) {
+    this.logger.debug('-> Body:', request.body)
+  }
 
   next()
 }
