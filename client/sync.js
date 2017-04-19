@@ -78,16 +78,22 @@ const startSync = (requester) => {
   /**
    * Helper method to convert s3objects to decrypted JS records
    * @param {Array.<Uint8Array>} s3Objects
-   * @returns  {Array.<Object}
+   * @param {function=} filterFunction Only return records where function returns true.
+   * @returns  {Array.<Object>}
    */
-  const getJSRecords = (s3Objects) => {
+  const getJSRecords = (s3Objects, filterFunction) => {
     const records = requester.s3ObjectsToRecords(s3Objects)
-    return records.map((record) => {
+    let jsRecords = []
+    for (let record of records) {
       const jsRecord = recordUtil.syncRecordAsJS(record)
       // Useful but stored in the S3 key.
       jsRecord.syncTimestamp = record.syncTimestamp
-      return jsRecord
-    })
+      if (typeof filterFunction === 'function' && filterFunction(jsRecord) !== true) {
+        continue
+      }
+      jsRecords.push(jsRecord)
+    }
+    return jsRecords
   }
 
   ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames, startAt, limitResponse) => {
@@ -110,7 +116,8 @@ const startSync = (requester) => {
   ipc.on(messages.FETCH_SYNC_DEVICES, (e) => {
     logSync(`fetching devices`)
     requester.list(proto.categories['PREFERENCES'], 0).then((s3Objects) => {
-      const jsRecords = getJSRecords(s3Objects.contents)
+      const isDevice = (jsRecord) => !!jsRecord.device
+      const jsRecords = getJSRecords(s3Objects.contents, isDevice)
       logSync(`fetched ${jsRecords.length} devices`)
       ipc.send(messages.RESOLVED_SYNC_RECORDS, 'PREFERENCES', jsRecords)
     })
