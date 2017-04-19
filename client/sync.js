@@ -53,7 +53,7 @@ const maybeSetDeviceId = (requester) => {
     throw new Error('cannot set device ID because AWS SDK is not initialized.')
   }
   return requester.list(proto.categories.PREFERENCES)
-    .then(s3Objects => requester.s3ObjectsToRecords(s3Objects))
+    .then(s3Objects => requester.s3ObjectsToRecords(s3Objects.contents))
     .then((records) => {
       let maxId = -1
       if (records && records.length) {
@@ -75,6 +75,21 @@ const maybeSetDeviceId = (requester) => {
  * @param {RequestUtil} requester
  */
 const startSync = (requester) => {
+  /**
+   * Helper method to convert s3objects to decrypted JS records
+   * @param {Array.<Uint8Array>} s3Objects
+   * @returns  {Array.<Object}
+   */
+  const getJSRecords = (s3Objects) => {
+    const records = requester.s3ObjectsToRecords(s3Objects)
+    return records.map((record) => {
+      const jsRecord = recordUtil.syncRecordAsJS(record)
+      // Useful but stored in the S3 key.
+      jsRecord.syncTimestamp = record.syncTimestamp
+      return jsRecord
+    })
+  }
+
   ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames, startAt, limitResponse) => {
     logSync(`fetching ${categoryNames} records after ${startAt}`)
     categoryNames.forEach((category) => {
@@ -82,38 +97,27 @@ const startSync = (requester) => {
         throw new Error(`Unsupported sync category: ${category}`)
       }
       requester.list(proto.categories[category], startAt, limitResponse).then((s3Objects) => {
-        const records = requester.s3ObjectsToRecords(s3Objects)
-        if (records.length === 0) { return }
-        logSync(`fetched ${records.length} ${category} after ${startAt}`)
-        const jsRecords = records.map((record) => {
-          const jsRecord = recordUtil.syncRecordAsJS(record)
-          // Useful but stored in the S3 key.
-          jsRecord.syncTimestamp = record.syncTimestamp
-          return jsRecord
-        })
-        const lastRecordTimestamp = records[records.length - 1].syncTimestamp
-        ipc.send(messages.GET_EXISTING_OBJECTS, category, jsRecords, lastRecordTimestamp)
+        const jsRecords = getJSRecords(s3Objects.contents)
+        logSync(`got ${jsRecords.length} decrypted records in ${category} after ${startAt}`)
+        let lastRecordTimestamp
+        if (jsRecords.length > 0) {
+          lastRecordTimestamp = jsRecords[jsRecords.length - 1].syncTimestamp
+        }
+        ipc.send(messages.GET_EXISTING_OBJECTS, category, jsRecords, lastRecordTimestamp, s3Objects.isTruncated)
       })
     })
   })
   ipc.on(messages.FETCH_SYNC_DEVICES, (e) => {
     logSync(`fetching devices`)
     requester.list(proto.categories['PREFERENCES'], 0).then((s3Objects) => {
-      const records = requester.s3ObjectsToRecords(s3Objects)
-      logSync(`fetched ${records.length} devices`)
-      const jsRecords = records.map((record) => {
-        const jsRecord = recordUtil.syncRecordAsJS(record)
-        // Useful but stored in the S3 key.
-        jsRecord.syncTimestamp = record.syncTimestamp
-        return jsRecord
-      })
+      const jsRecords = getJSRecords(s3Objects.contents)
+      logSync(`fetched ${jsRecords.length} devices`)
       ipc.send(messages.RESOLVED_SYNC_RECORDS, 'PREFERENCES', jsRecords)
     })
   })
   ipc.on(messages.RESOLVE_SYNC_RECORDS, (e, category, recordsAndExistingObjects) => {
     const resolvedRecords = recordUtil.resolveRecords(recordsAndExistingObjects)
     logSync(`resolved ${recordsAndExistingObjects.length} ${category} -> ${resolvedRecords.length}`)
-    if (resolvedRecords.length === 0) { return }
     ipc.send(messages.RESOLVED_SYNC_RECORDS, category, resolvedRecords)
   })
   ipc.on(messages.SEND_SYNC_RECORDS, (e, category, records) => {

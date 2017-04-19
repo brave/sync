@@ -73,7 +73,7 @@ test('client RequestUtil', (t) => {
       t.test('#list preferences lists the key', (t) => {
         t.plan(5)
         requestUtil.list(proto.categories.PREFERENCES)
-          .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects))
+          .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
           .then((response) => {
             const s3Record = response[0]
             // FIXME: Should this deserialize to 'CREATE' ?
@@ -121,7 +121,7 @@ test('client RequestUtil', (t) => {
             ])
             .then(() => {
               requestUtil.list(proto.categories.PREFERENCES, TIME_B)
-                .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects))
+                .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
                 .then((response) => {
                   t.equals(response.length, 3, t.name)
                   const s3Record0 = response[0]
@@ -169,7 +169,7 @@ test('client RequestUtil', (t) => {
         t.test(`${t.name}`, (t) => {
           t.plan(5)
           requestUtil.list(proto.categories.HISTORY_SITES)
-            .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects))
+            .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
             .then((response) => {
               const s3Record = response[0]
               // FIXME: Should this deserialize to 'CREATE' ?
@@ -190,7 +190,7 @@ test('client RequestUtil', (t) => {
         requestUtil.deleteCategory(proto.categories.HISTORY_SITES)
           .then((_response) => {
             requestUtil.list(proto.categories.HISTORY_SITES)
-              .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects))
+              .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
               .then((response) => {
                 t.equals(response.length, 0, `${t.name} works`)
                 testCanDeletePreferences(t)
@@ -207,7 +207,7 @@ test('client RequestUtil', (t) => {
         requestUtil.deleteCategory(proto.categories.PREFERENCES)
           .then((_response) => {
             requestUtil.list(proto.categories.PREFERENCES)
-              .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects))
+              .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
               .then((response) => {
                 t.equals(response.length, 0, `${t.name} works`)
                 testCanDeleteSiteSettings(t)
@@ -220,7 +220,7 @@ test('client RequestUtil', (t) => {
 
     const testCanDeleteSiteSettings = (t) => {
       t.test('#deleteSiteSettings', (t) => {
-        t.plan(2)
+        t.plan(3)
 
         const deviceRecord = {
           action: 'CREATE',
@@ -243,17 +243,27 @@ test('client RequestUtil', (t) => {
           requestUtil.deleteSiteSettings()
             .then(() => {
               requestUtil.list(proto.categories.PREFERENCES)
-                .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects))
+                .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
                 .then((response) => {
                   t.equals(response.length, 1, `${t.name} deletes records`)
                   const s3Record = response[0]
                   t.assert(s3Record.device && s3Record.device.name, `${t.name} preserves device records`)
+                  testCanLimitResponse(t)
                 })
                 .catch((error) => { t.fail(error) })
             })
             .catch((error) => { t.fail(error) })
         })
         .catch((error) => { t.fail(error) })
+      })
+    }
+
+    const testCanLimitResponse = (t) => {
+      t.test('limitResponse true', (t) => {
+        t.plan(1)
+        requestUtil.list(proto.categories.PREFERENCES, 0, true)
+          .then(s3Objects => t.assert(s3Objects.isTruncated === false, `${t.name} has boolean isTruncated value`))
+          .catch((error) => t.fail(error))
       })
     }
 
