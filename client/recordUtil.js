@@ -186,24 +186,19 @@ const mergeRecord = (record1, record2) => {
  * @returns {Array}
  */
 const mergeRecords = (recordsAndObjects) => {
-  let idsAndIndices = {}
-  let outputList = []
-  for (let n = 0; n < recordsAndObjects.length; n++) {
-    const recordAndObject = recordsAndObjects[n]
+  const objectIdMap = {} // map of objectId to [record, object]
+  recordsAndObjects.forEach((recordAndObject) => {
     const record = recordAndObject[0]
     const object = recordAndObject[1]
     const id = JSON.stringify(record.objectId)
-    const previousIndex = idsAndIndices[id]
-    if (previousIndex >= 0) {
-      const previousRecord = recordsAndObjects[previousIndex][0]
-      const mergedRecord = mergeRecord(previousRecord, record)
-      outputList[previousIndex] = [mergedRecord, object]
+    if (objectIdMap[id]) {
+      const mergedRecord = mergeRecord(objectIdMap[id][0], record)
+      objectIdMap[id] = [mergedRecord, object]
     } else {
-      idsAndIndices[id] = outputList.length
-      outputList.push(recordAndObject)
+      objectIdMap[id] = recordAndObject
     }
-  }
-  return outputList
+  })
+  return Object.values(objectIdMap)
 }
 
 /**
