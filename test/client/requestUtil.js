@@ -259,10 +259,50 @@ test('client RequestUtil', (t) => {
     }
 
     const testCanLimitResponse = (t) => {
-      t.test('limitResponse true', (t) => {
-        t.plan(1)
-        requestUtil.list(proto.categories.PREFERENCES, 0, true)
-          .then(s3Objects => t.assert(s3Objects.isTruncated === false, `${t.name} has boolean isTruncated value`))
+      t.test('limitResponse undefined', (t) => {
+        t.plan(3)
+        const siteSettingRecord = {
+          action: 'CREATE',
+          deviceId: new Uint8Array([0]),
+          objectId: testHelper.newUuid(),
+          siteSetting: {hostPattern: 'https://google.com', shieldsUp: true}
+        }
+
+        requestUtil.put(proto.categories.PREFERENCES, encrypt(siteSettingRecord))
+          .then(() => {
+            requestUtil.list(proto.categories.PREFERENCES, 0)
+              .then((s3Objects) => {
+                t.assert(s3Objects.isTruncated === false, `${t.name} has false isTruncated value`)
+                t.assert(s3Objects.contents.length === 2, `${t.name} has two records`)
+                testCanLimitResponseToZero(t)
+              })
+              .catch((error) => t.fail(error))
+          })
+          .catch((error) => t.fail(error))
+      })
+    }
+
+    const testCanLimitResponseToZero = (t) => {
+      t.test('limitResponse to 0', (t) => {
+        t.plan(3)
+        requestUtil.list(proto.categories.PREFERENCES, 0, 0)
+          .then((s3Objects) => {
+            t.assert(s3Objects.isTruncated === false, `${t.name} has false isTruncated value`)
+            t.assert(s3Objects.contents.length === 2, `${t.name} has two records`)
+            testCanLimitResponseToOne(t)
+          })
+          .catch((error) => t.fail(error))
+      })
+    }
+
+    const testCanLimitResponseToOne = (t) => {
+      t.test('limitResponse to 1', (t) => {
+        t.plan(2)
+        requestUtil.list(proto.categories.PREFERENCES, 0, 1)
+          .then((s3Objects) => {
+            t.assert(s3Objects.isTruncated === true, `${t.name} has true isTruncated value`)
+            t.assert(s3Objects.contents.length === 1, `${t.name} has one record`)
+          })
           .catch((error) => t.fail(error))
       })
     }
