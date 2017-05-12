@@ -150,19 +150,19 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
  * Get S3 objects in a category.
  * @param {string} category - the category ID
  * @param {number=} startAt return objects with timestamp >= startAt (e.g. 1482435340)
- * @param {boolean=} limitResponse Limit response to 1000 keys, which is AWS's max response for a listObjects request. By default the Sync lib will fetch all matching records, which might take a long time.
+ * @param {number=} maxRecords Limit response to a given number of recods. By default the Sync lib will fetch all matching records, which might take a long time. If falsey, fetch all records.
  * @returns {Promise(Array.<Object>)}
  */
-RequestUtil.prototype.list = function (category, startAt, limitResponse) {
+RequestUtil.prototype.list = function (category, startAt, maxRecords) {
   const prefix = `${this.apiVersion}/${this.userId}/${category}`
   let options = {
-    MaxKeys: 1000,
+    MaxKeys: maxRecords || 1000,
     Bucket: this.bucket,
     Prefix: prefix
   }
   if (startAt) { options.StartAfter = `${prefix}/${startAt}` }
   return this.withRetry(() => {
-    return s3Helper.listObjects(this.s3, options, limitResponse)
+    return s3Helper.listObjects(this.s3, options, !!maxRecords)
   })
 }
 

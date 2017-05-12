@@ -198,7 +198,8 @@ const mergeRecords = (recordsAndObjects) => {
       objectIdMap[id] = recordAndObject
     }
   })
-  return Object.values(objectIdMap)
+  // webkit does not support Object.values
+  return Object.keys(objectIdMap).map((key) => objectIdMap[key])
 }
 
 /**
