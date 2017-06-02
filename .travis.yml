@@ -8,8 +8,7 @@ script:
 - yarn check
 - yarn browsertest
 - yarn coverage
-group: stable
-dist: precise
+dist: trusty
 os: linux
 addons:
   apt:

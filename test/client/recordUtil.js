@@ -32,6 +32,7 @@ const siteProps = {
 const props = {
   bookmark: {
     isFolder: false,
+    hideInToolbar: true,
     site: siteProps
   },
   historySite: siteProps,
@@ -406,7 +407,8 @@ test('recordUtil.syncRecordAsJS()', (t) => {
     const bookmark = serializer.api.SyncRecord.Bookmark.create({
       site,
       isFolder: false,
-      parentFolderObjectId: testHelper.newUuid()
+      parentFolderObjectId: testHelper.newUuid(),
+      hideInToolbar: true
     })
     conversionEquals({ objectData: 'bookmark', bookmark })
 
