@@ -44,9 +44,10 @@ message SyncRecord {
     Site site = 1;
     bool isFolder = 2;
     bytes parentFolderObjectId = 3;
-    bytes previousObjectId = 4;
-    bytes nextObjectId = 5;
+    bytes previousObjectId = 4; // unused
+    bytes nextObjectId = 5; // unused
     repeated string fields = 6;
+    bool hideInToolbar = 7;
   }
   message SiteSetting {
     string hostPattern = 1;
