@@ -40,13 +40,21 @@ module.exports.EXPIRED_CREDENTIALS = EXPIRED_CREDENTIALS
  *   serializedCredentials: <Uint8Array>
  * }}
  * @param {Serializer}
+ * @param {Object=} config
+ * @param {Uint8Array=} seed if missing will be generated
  * @returns {Promise}
  */
-module.exports.getSerializedCredentials = (serializer) => {
+module.exports.getSerializedCredentials = (serializer, config, seed) => {
   const crypto = require('../../lib/crypto')
+  if (!config) {
+    config = CONFIG
+  }
+  if (!seed) {
+    seed = crypto.getSeed()
+  }
 
-  console.log(`Connecting to ${CONFIG.serverUrl}`)
-  const keys = crypto.deriveKeys(crypto.getSeed())
+  console.log(`Connecting to ${config.serverUrl}`)
+  const keys = crypto.deriveKeys(seed)
   const userId = Buffer.from(keys.publicKey).toString('base64')
 
   const timestamp = Math.floor(Date.now() / 1000)
@@ -57,7 +65,7 @@ module.exports.getSerializedCredentials = (serializer) => {
     method: 'POST',
     body: signedTimestamp
   }
-  return window.fetch(`${CONFIG.serverUrl}/${encodeURIComponent(userId)}/credentials`, params)
+  return window.fetch(`${config.serverUrl}/${encodeURIComponent(userId)}/credentials`, params)
     .then((response) => {
       if (!response.ok) {
         throw new Error('Credential server response ' + response.status)
