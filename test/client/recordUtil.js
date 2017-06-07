@@ -68,7 +68,7 @@ const updateSiteSetting = UpdateRecord({
 })
 
 test('recordUtil.resolve', (t) => {
-  t.plan(12)
+  t.plan(14)
 
   const forRecordsWithAction = (t, action, callback) => {
     t.plan(baseRecords.length)
@@ -134,6 +134,30 @@ test('recordUtil.resolve', (t) => {
       }
     })
     const resolved = recordUtil.resolve(deleteSiteSetting, recordSiteSetting)
+    t.equals(resolved, null, `${t.name}`)
+  })
+
+  t.test('DELETE site, existing, no props -> identity', (t) => {
+    t.plan(1)
+    const deleteSite = DeleteRecord({
+      objectId: recordBookmark.objectId,
+      deviceId: [0],
+      objectData: 'bookmark',
+      bookmark: {}
+    })
+    const resolved = recordUtil.resolve(deleteSite, recordBookmark)
+    t.equals(resolved, deleteSite, `${t.name}`)
+  })
+
+  t.test('DELETE site, no existing object, no props -> null', (t) => {
+    t.plan(1)
+    const deleteSite = DeleteRecord({
+      objectId: recordHistorySite.objectId,
+      deviceId: [0],
+      objectData: 'historySite',
+      historySite: {}
+    })
+    const resolved = recordUtil.resolve(deleteSite, null)
     t.equals(resolved, null, `${t.name}`)
   })
 
