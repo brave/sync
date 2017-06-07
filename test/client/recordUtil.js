@@ -13,6 +13,9 @@ const Record = (props) => {
   }
   return Object.assign({}, baseProps, props)
 }
+const CreateRecord = (props) => {
+  return Record(Object.assign({action: proto.actions.CREATE}, props))
+}
 const UpdateRecord = (props) => {
   return Record(Object.assign({action: proto.actions.UPDATE}, props))
 }
@@ -366,7 +369,7 @@ test('recordUtil.resolve', (t) => {
 })
 
 test('recordUtil.resolveRecords()', (t) => {
-  t.plan(3)
+  t.plan(4)
 
   t.test(`${t.name} takes [ [{syncRecord}, {existingObject || null}], ... ] and returns resolved records [{syncRecord}, ...]`, (t) => {
     t.plan(1)
@@ -398,6 +401,22 @@ test('recordUtil.resolveRecords()', (t) => {
     ]
     const resolved = recordUtil.resolveRecords(input)
     t.deepEquals(resolved, [], t.name)
+  })
+
+  t.test(`${t.name} Create + Update of a new object should resolve to a single Create`, (t) => {
+    t.plan(1)
+    const expectedRecord = CreateRecord({
+      objectId: recordBookmark.objectId,
+      objectData: 'bookmark',
+      bookmark: Object.assign(
+        {},
+        props.bookmark,
+        { site: Object.assign({}, siteProps, updateSiteProps) }
+      )
+    })
+    const input = [[recordBookmark, null], [updateBookmark, null]]
+    const resolved = recordUtil.resolveRecords(input)
+    t.deepEquals(resolved, [expectedRecord], t.name)
   })
 
   t.test(`${t.name} resolves bookmark records with same parent folder`, (t) => {

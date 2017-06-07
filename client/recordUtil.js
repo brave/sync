@@ -87,6 +87,23 @@ module.exports.createFromUpdate = (record) => {
   }
 }
 
+const ACTION_NUMBERS_TO_STRINGS = Object.keys(proto.actions)
+  .reduce((obj, key) => Object.assign({}, obj, { [proto.actions[key]]: key }), {})
+
+/**
+ * @param {number} action e.g. 0
+ * @returns {string} action string e.g. CREATE
+ */
+const humanAction = (action) => {
+  const string = ACTION_NUMBERS_TO_STRINGS[action]
+  if (string) { return string }
+  if (typeof action.toString === 'function') {
+    return action.toString()
+  } else {
+    return undefined
+  }
+}
+
 const pickFields = (object, fields) => {
   return fields.reduce((a, x) => {
     if (object.hasOwnProperty(x)) { a[x] = object[x] }
@@ -169,7 +186,7 @@ const resolveSiteSettingsRecordWithObject = (record, existingObject) => {
 module.exports.resolve = (record, existingObject) => {
   if (!record) { throw new Error('Missing syncRecord JS object.') }
   const nullIgnore = () => {
-    console.log(`Ignoring ${record.action} of object ${record.objectId}.`)
+    console.log(`Ignoring ${humanAction(record.action)} of object ${record.objectId}.`)
     return null
   }
   switch (record.action) {
@@ -202,7 +219,13 @@ const mergeRecord = (record1, record2) => {
   if (record1.objectData !== record2.objectData) {
     throw new Error('Records with same objectId have mismatched objectData!')
   }
-  return merge(record1, record2)
+  const newRecord = {}
+  merge(newRecord, record1)
+  merge(newRecord, record2)
+  if (record2.action === proto.actions.UPDATE && record1.action === proto.actions.CREATE) {
+    newRecord.action = proto.actions.CREATE
+  }
+  return newRecord
 }
 
 /**
