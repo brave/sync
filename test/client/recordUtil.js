@@ -68,7 +68,7 @@ const updateSiteSetting = UpdateRecord({
 })
 
 test('recordUtil.resolve', (t) => {
-  t.plan(12)
+  t.plan(14)
 
   const forRecordsWithAction = (t, action, callback) => {
     t.plan(baseRecords.length)
@@ -134,6 +134,30 @@ test('recordUtil.resolve', (t) => {
       }
     })
     const resolved = recordUtil.resolve(deleteSiteSetting, recordSiteSetting)
+    t.equals(resolved, null, `${t.name}`)
+  })
+
+  t.test('DELETE site, existing, no props -> identity', (t) => {
+    t.plan(1)
+    const deleteSite = DeleteRecord({
+      objectId: recordBookmark.objectId,
+      deviceId: [0],
+      objectData: 'bookmark',
+      bookmark: {}
+    })
+    const resolved = recordUtil.resolve(deleteSite, recordBookmark)
+    t.equals(resolved, deleteSite, `${t.name}`)
+  })
+
+  t.test('DELETE site, no existing object, no props -> null', (t) => {
+    t.plan(1)
+    const deleteSite = DeleteRecord({
+      objectId: recordHistorySite.objectId,
+      deviceId: [0],
+      objectData: 'historySite',
+      historySite: {}
+    })
+    const resolved = recordUtil.resolve(deleteSite, null)
     t.equals(resolved, null, `${t.name}`)
   })
 
@@ -342,7 +366,7 @@ test('recordUtil.resolve', (t) => {
 })
 
 test('recordUtil.resolveRecords()', (t) => {
-  t.plan(2)
+  t.plan(3)
 
   t.test(`${t.name} takes [ [{syncRecord}, {existingObject || null}], ... ] and returns resolved records [{syncRecord}, ...]`, (t) => {
     t.plan(1)
@@ -374,6 +398,49 @@ test('recordUtil.resolveRecords()', (t) => {
     ]
     const resolved = recordUtil.resolveRecords(input)
     t.deepEquals(resolved, [], t.name)
+  })
+
+  t.test(`${t.name} resolves bookmark records with same parent folder`, (t) => {
+    t.plan(1)
+    const record = {
+      action: 1,
+      deviceId: [0],
+      objectId: [16, 84, 219, 81, 33, 13, 44, 121, 211, 208, 1, 203, 114, 18, 215, 244],
+      objectData: 'bookmark',
+      bookmark: {
+        site: {
+          location: 'https://www.bobsclamhut.com/',
+          title: "Bob's Clam Hut",
+          customTitle: 'best seafood in Kittery',
+          favicon: '',
+          lastAccessedTime: 0,
+          creationTime: 0
+        },
+        isFolder: false,
+        parentFolderObjectId: [119, 148, 37, 242, 165, 20, 119, 15, 53, 57, 223, 116, 155, 99, 9, 128]
+      }
+    }
+    const existingObject = {
+      action: 1,
+      deviceId: [12],
+      objectId: [16, 84, 219, 81, 33, 13, 44, 121, 211, 208, 1, 203, 114, 18, 215, 244],
+      objectData: 'bookmark',
+      bookmark: {
+        site: {
+          location: 'https://www.bobsclamhut.com/',
+          title: "Bob's Clam Hut",
+          customTitle: '',
+          favicon: '',
+          lastAccessedTime: 0,
+          creationTime: 0
+        },
+        isFolder: false,
+        parentFolderObjectId: [119, 148, 37, 242, 165, 20, 119, 15, 53, 57, 223, 116, 155, 99, 9, 128]
+      }
+    }
+    const recordsAndExistingObjects = [[record, existingObject]]
+    const resolved = recordUtil.resolveRecords(recordsAndExistingObjects)
+    t.deepEquals(resolved, [record], t.name)
   })
 })
 

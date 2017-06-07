@@ -96,12 +96,38 @@ const pickFields = (object, fields) => {
 
 /**
  * Given a SyncRecord and a browser's matching existing object, resolve
- * objectData to only have the applicable fields.
+ * objectData to the final object that should be applied by the browser.
  * @param {Object} record SyncRecord JS object
  * @param {Object=} existingObject Browser object as syncRecord JS object
  * @returns {Object|null} Resolved syncRecord to apply to browser data
  */
 const resolveRecordWithObject = (record, existingObject) => {
+  const type = record.objectData
+  if (type === 'siteSetting') {
+    return resolveSiteSettingsRecordWithObject(record, existingObject)
+  }
+  if (record.action === proto.actions.UPDATE) {
+    if (valueEquals(record[type], existingObject[type])) {
+      // no-op
+      return null
+    }
+    return record
+  } else if (record.action === proto.actions.DELETE) {
+    return record
+  } else {
+    throw new Error('Invalid record action')
+  }
+}
+
+/**
+ * Given a siteSettings SyncRecord and a browser's matching existing object, resolve
+ * objectData to only have the applicable fields.
+ * TODO: Maybe make behavior for siteSettings same as for other types.
+ * @param {Object} record SyncRecord JS object
+ * @param {Object=} existingObject Browser object as syncRecord JS object
+ * @returns {Object|null} Resolved syncRecord to apply to browser data
+ */
+const resolveSiteSettingsRecordWithObject = (record, existingObject) => {
   const commonFields = ['hostPattern']
   const type = record.objectData
   const recordFields = new Set(Object.keys(record[type]))
