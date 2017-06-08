@@ -87,6 +87,23 @@ module.exports.createFromUpdate = (record) => {
   }
 }
 
+const ACTION_NUMBERS_TO_STRINGS = Object.keys(proto.actions)
+  .reduce((obj, key) => Object.assign({}, obj, { [proto.actions[key]]: key }), {})
+
+/**
+ * @param {number} action e.g. 0
+ * @returns {string} action string e.g. CREATE
+ */
+const humanAction = (action) => {
+  const string = ACTION_NUMBERS_TO_STRINGS[action]
+  if (string) { return string }
+  if (typeof action.toString === 'function') {
+    return action.toString()
+  } else {
+    return undefined
+  }
+}
+
 const pickFields = (object, fields) => {
   return fields.reduce((a, x) => {
     if (object.hasOwnProperty(x)) { a[x] = object[x] }
@@ -96,12 +113,38 @@ const pickFields = (object, fields) => {
 
 /**
  * Given a SyncRecord and a browser's matching existing object, resolve
- * objectData to only have the applicable fields.
+ * objectData to the final object that should be applied by the browser.
  * @param {Object} record SyncRecord JS object
  * @param {Object=} existingObject Browser object as syncRecord JS object
  * @returns {Object|null} Resolved syncRecord to apply to browser data
  */
 const resolveRecordWithObject = (record, existingObject) => {
+  const type = record.objectData
+  if (type === 'siteSetting') {
+    return resolveSiteSettingsRecordWithObject(record, existingObject)
+  }
+  if (record.action === proto.actions.UPDATE) {
+    if (valueEquals(record[type], existingObject[type])) {
+      // no-op
+      return null
+    }
+    return record
+  } else if (record.action === proto.actions.DELETE) {
+    return record
+  } else {
+    throw new Error('Invalid record action')
+  }
+}
+
+/**
+ * Given a siteSettings SyncRecord and a browser's matching existing object, resolve
+ * objectData to only have the applicable fields.
+ * TODO: Maybe make behavior for siteSettings same as for other types.
+ * @param {Object} record SyncRecord JS object
+ * @param {Object=} existingObject Browser object as syncRecord JS object
+ * @returns {Object|null} Resolved syncRecord to apply to browser data
+ */
+const resolveSiteSettingsRecordWithObject = (record, existingObject) => {
   const commonFields = ['hostPattern']
   const type = record.objectData
   const recordFields = new Set(Object.keys(record[type]))
@@ -143,7 +186,7 @@ const resolveRecordWithObject = (record, existingObject) => {
 module.exports.resolve = (record, existingObject) => {
   if (!record) { throw new Error('Missing syncRecord JS object.') }
   const nullIgnore = () => {
-    console.log(`Ignoring ${record.action} of object ${record.objectId}.`)
+    console.log(`Ignoring ${humanAction(record.action)} of object ${record.objectId}.`)
     return null
   }
   switch (record.action) {
@@ -176,7 +219,13 @@ const mergeRecord = (record1, record2) => {
   if (record1.objectData !== record2.objectData) {
     throw new Error('Records with same objectId have mismatched objectData!')
   }
-  return merge(record1, record2)
+  const newRecord = {}
+  merge(newRecord, record1)
+  merge(newRecord, record2)
+  if (record2.action === proto.actions.UPDATE && record1.action === proto.actions.CREATE) {
+    newRecord.action = proto.actions.CREATE
+  }
+  return newRecord
 }
 
 /**
