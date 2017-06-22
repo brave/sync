@@ -2,11 +2,14 @@
 
 const awsSdk = require('aws-sdk')
 const cryptoUtil = require('./cryptoUtil')
+const recordUtil = require('./recordUtil')
 const proto = require('./constants/proto')
+const {limitConcurrency} = require('../lib/promiseHelper')
 const s3Helper = require('../lib/s3Helper')
 const serializer = require('../lib/serializer')
 
 const CONFIG = require('./config')
+const PUT_CONCURRENCY = 100
 const S3_MAX_RETRIES = 1
 const EXPIRED_CREDENTIAL_ERRORS = [
   /The provided token has expired\./,
@@ -55,6 +58,10 @@ const RequestUtil = function (opts = {}) {
   this.encrypt = cryptoUtil.Encrypt(this.serializer, opts.keys.secretboxKey, CONFIG.nonceCounter)
   this.decrypt = cryptoUtil.Decrypt(this.serializer, opts.keys.secretboxKey)
   this.sign = cryptoUtil.Sign(opts.keys.secretKey)
+  this.putConcurrency = opts.putConcurrency || PUT_CONCURRENCY
+  // Like put() but with limited concurrency to avoid out of memory/connection
+  // errors (net::ERR_INSUFFICIENT_RESOURCES)
+  this.bufferedPut = limitConcurrency(RequestUtil.prototype.put, this.putConcurrency)
   if (opts.credentialsBytes) {
     const credentials = this.parseAWSResponse(opts.credentialsBytes)
     this.saveAWSCredentials(credentials)
@@ -217,12 +224,18 @@ RequestUtil.prototype.currentRecordPrefix = function (category) {
 
 /**
  * Puts a single record, splitting it into multiple objects if needed.
- * @param {string} category - the category ID
- * @param {Uint8Array} record - the object content, serialized and encrypted
+ * See also bufferedPut() assigned in the constructor.
+ * @param {string=} category - the category ID
+ * @param {object} record - the object content
  */
 RequestUtil.prototype.put = function (category, record) {
-  const s3Prefix = this.currentRecordPrefix(category)
-  const s3Keys = s3Helper.encodeDataToS3KeyArray(s3Prefix, record)
+  const thisCategory = category || recordUtil.getRecordCategory(record)
+  if (!recordUtil.CATEGORY_IDS.includes(thisCategory)) {
+    throw new Error(`Unsupported sync category: ${category}`)
+  }
+  const encryptedRecord = this.encrypt(record)
+  const s3Prefix = this.currentRecordPrefix(thisCategory)
+  const s3Keys = s3Helper.encodeDataToS3KeyArray(s3Prefix, encryptedRecord)
   return this.withRetry(() => {
     const fetchPromises = s3Keys.map((key, _i) => {
       const params = {

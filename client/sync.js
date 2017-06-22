@@ -128,9 +128,8 @@ const startSync = (requester) => {
     ipc.send(messages.RESOLVED_SYNC_RECORDS, category, resolvedRecords)
   })
   ipc.on(messages.SEND_SYNC_RECORDS, (e, category, records) => {
-    if (!proto.categories[category]) {
-      throw new Error(`Unsupported sync category: ${category}`)
-    }
+    logSync(`Sending ${records.length} records`)
+    const categoryId = proto.categories[category]
     records.forEach((record) => {
       // Workaround #17
       record.deviceId = new Uint8Array(record.deviceId)
@@ -139,7 +138,7 @@ const startSync = (requester) => {
         record.bookmark.parentFolderObjectId = new Uint8Array(record.bookmark.parentFolderObjectId)
       }
       logSync(`sending record: ${JSON.stringify(record)}`)
-      requester.put(proto.categories[category], requester.encrypt(record))
+      requester.bufferedPut(categoryId, record)
     })
   })
   ipc.on(messages.DELETE_SYNC_USER, (e) => {
