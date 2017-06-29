@@ -52,6 +52,7 @@ const updateSiteProps = {customTitle: 'a ball pit filled with plush coconuts'}
 const recordBookmark = Record({objectData: 'bookmark', bookmark: props.bookmark})
 const recordHistorySite = Record({objectData: 'historySite', historySite: siteProps})
 const recordSiteSetting = Record({objectData: 'siteSetting', siteSetting: props.siteSetting})
+const recordDevice = Record({objectData: 'device', device: {name: 'test pyramid'}})
 const baseRecords = [recordBookmark, recordHistorySite, recordSiteSetting]
 
 const updateBookmark = UpdateRecord({
@@ -508,4 +509,17 @@ test('recordUtil.syncRecordAsJS()', (t) => {
     })
     conversionEquals({ objectData: 'device', device })
   })
+})
+
+test('recordUtil.getRecordCategory()', (t) => {
+  t.plan(8)
+  const brokenRecord = Record({})
+  t.equals(recordUtil.getRecordCategory(recordBookmark), '0')
+  t.equals(recordUtil.getRecordCategory(updateBookmark), '0')
+  t.equals(recordUtil.getRecordCategory(recordHistorySite), '1')
+  t.equals(recordUtil.getRecordCategory(updateHistorySite), '1')
+  t.equals(recordUtil.getRecordCategory(recordSiteSetting), '2')
+  t.equals(recordUtil.getRecordCategory(updateSiteSetting), '2')
+  t.equals(recordUtil.getRecordCategory(recordDevice), '2')
+  t.equals(recordUtil.getRecordCategory(brokenRecord), undefined)
 })

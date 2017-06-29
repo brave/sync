@@ -5,6 +5,9 @@ const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
 const valueEquals = require('../lib/valueEquals')
 
+// ['0', '1', '2']
+module.exports.CATEGORY_IDS = Object.values(proto.categories)
+
 /**
  * @param {string} type e.g. 'historySite'
  * @param {Function} isValidRecord checks if the update record has enough props to make a create record
@@ -289,4 +292,19 @@ module.exports.syncRecordAsJS = (record) => {
     object[type] = data
   }
   return object
+}
+
+/**
+ * Derive category ID number from a JS Sync record.
+ * @param {Object} record e.g. {"action":0, "bookmark": {"isFolder": false,"site": {...}, ...}
+ * @returns {string} e.g. '0' for bookmark
+ */
+module.exports.getRecordCategory = (record) => {
+  for (let type in proto.categoryMap) {
+    if (record[type]) {
+      const categoryName = proto.categoryMap[type]
+      if (!categoryName) { return undefined }
+      return proto.categories[categoryName]
+    }
+  }
 }

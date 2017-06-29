@@ -2,7 +2,6 @@ const test = require('tape')
 const testHelper = require('../testHelper')
 const timekeeper = require('timekeeper')
 const clientTestHelper = require('./testHelper')
-const cryptoUtil = require('../../client/cryptoUtil')
 const Serializer = require('../../lib/serializer')
 const RequestUtil = require('../../client/requestUtil')
 const proto = require('../../client/constants/proto')
@@ -45,7 +44,6 @@ test('client RequestUtil', (t) => {
         .catch((error) => { console.log(`Cleanup failed: ${error}`) })
     })
     const serializer = requestUtil.serializer
-    const encrypt = cryptoUtil.Encrypt(serializer, keys.secretboxKey, 0)
 
     t.plan(2)
     t.test('#put preference: device', (t) => {
@@ -60,7 +58,7 @@ test('client RequestUtil', (t) => {
         device: {name}
       }
       timekeeper.freeze(1480000000 * 1000)
-      requestUtil.put(proto.categories.PREFERENCES, encrypt(record))
+      requestUtil.put(proto.categories.PREFERENCES, record)
         .then((response) => {
           timekeeper.reset()
           t.pass(`${t.name} resolves`)
@@ -102,7 +100,7 @@ test('client RequestUtil', (t) => {
             objectId,
             device: {name}
           }
-          const putRequest = requestUtil.put(proto.categories.PREFERENCES, encrypt(record))
+          const putRequest = requestUtil.put(proto.categories.PREFERENCES, record)
           timekeeper.reset()
           return putRequest
         }
@@ -156,7 +154,7 @@ test('client RequestUtil', (t) => {
       t.test('#put history site: large URL (multipart)', (t) => {
         t.plan(2)
         timekeeper.freeze(1480000000 * 1000)
-        requestUtil.put(proto.categories.HISTORY_SITES, encrypt(record))
+        requestUtil.put(proto.categories.HISTORY_SITES, record)
           .then((response) => {
             timekeeper.reset()
             t.pass(`${t.name} resolves`)
@@ -236,8 +234,8 @@ test('client RequestUtil', (t) => {
         }
 
         Promise.all([
-          requestUtil.put(proto.categories.PREFERENCES, encrypt(deviceRecord)),
-          requestUtil.put(proto.categories.PREFERENCES, encrypt(siteSettingRecord))
+          requestUtil.put(proto.categories.PREFERENCES, deviceRecord),
+          requestUtil.put(proto.categories.PREFERENCES, siteSettingRecord)
         ])
         .then(() => {
           requestUtil.deleteSiteSettings()
@@ -268,7 +266,7 @@ test('client RequestUtil', (t) => {
           siteSetting: {hostPattern: 'https://google.com', shieldsUp: true}
         }
 
-        requestUtil.put(proto.categories.PREFERENCES, encrypt(siteSettingRecord))
+        requestUtil.put(proto.categories.PREFERENCES, siteSettingRecord)
           .then(() => {
             requestUtil.list(proto.categories.PREFERENCES, 0)
               .then((s3Objects) => {
@@ -365,7 +363,7 @@ test('client RequestUtil', (t) => {
             device: {name: 'sweet'}
           }
           const requestUtil = new RequestUtil(expiredArgs)
-          requestUtil.put(proto.categories.PREFERENCES, encrypt(record))
+          requestUtil.put(proto.categories.PREFERENCES, record)
             .then((response) => {
               t.pass(t.name)
               testCredentialRefreshDelete(t)
