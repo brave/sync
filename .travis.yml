@@ -9,6 +9,7 @@ script:
 - yarn browsertest
 - yarn coverage
 dist: trusty
+sudo: false
 os: linux
 addons:
   apt:
