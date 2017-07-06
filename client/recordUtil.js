@@ -115,6 +115,17 @@ const pickFields = (object, fields) => {
 }
 
 /**
+ * Converts [] parentFolderObjectIds fields to null in place. Fix #107.
+ * @param {Object} record
+ */
+const normalizeBookmark = (record) => {
+  if (record && record.bookmark && record.bookmark.parentFolderObjectId &&
+    !record.bookmark.parentFolderObjectId.length) {
+    record.bookmark.parentFolderObjectId = null
+  }
+}
+
+/**
  * Given a SyncRecord and a browser's matching existing object, resolve
  * objectData to the final object that should be applied by the browser.
  * @param {Object} record SyncRecord JS object
@@ -262,6 +273,12 @@ const mergeRecords = (recordsAndObjects) => {
  */
 module.exports.resolveRecords = (recordsAndExistingObjects) => {
   let resolvedRecords = []
+  recordsAndExistingObjects.forEach((item) => {
+    if (item) {
+      normalizeBookmark(item[0])
+      normalizeBookmark(item[1])
+    }
+  })
   const merged = mergeRecords(recordsAndExistingObjects)
   merged.forEach(([record, existingObject]) => {
     const resolved = this.resolve(record, existingObject)

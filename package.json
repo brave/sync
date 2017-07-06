@@ -68,6 +68,7 @@
   "standard": {
     "ignore": [
       "test/crypto.js",
+      "test/client/fixtures/*.js",
       "bundles/*.js",
       "client/polyfill/*.js",
       "lib/api.proto.js",
