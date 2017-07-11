@@ -244,7 +244,7 @@ test('recordUtil.resolve', (t) => {
   })
 
   t.test('UPDATE, no existing object', (t) => {
-    t.plan(7)
+    t.plan(8)
     const time = 1480000000 * 1000
     const url = 'https://jisho.org'
 
@@ -331,17 +331,24 @@ test('recordUtil.resolve', (t) => {
 
     t.test(`${t.name}, bookmark, .isFolder .site.customTitle -> create folder`, (t) => {
       const recordProps = {
-        objectData: 'bookmark',
-        bookmark: {isFolder: true, site: {customTitle: 'sweet title'}}
-      }
-      const resolvedProps = {
         bookmark: {
           site: {customTitle: 'sweet title'},
           isFolder: true
         },
         objectData: 'bookmark'
       }
-      resolveToCreate(t, recordProps, resolvedProps, t.name)
+      resolveToCreate(t, recordProps, recordProps, t.name)
+    })
+
+    t.test(`${t.name}, bookmark, .isFolder, .site.title -> create folder`, (t) => {
+      const recordProps = {
+        bookmark: {
+          site: {title: 'salty title'},
+          isFolder: true
+        },
+        objectData: 'bookmark'
+      }
+      resolveToCreate(t, recordProps, recordProps, t.name)
     })
 
     t.test(`${t.name}, siteSetting, .safeBrowsing -> null`, (t) => {
