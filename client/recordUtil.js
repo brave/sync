@@ -43,10 +43,13 @@ const createSitePropsFromUpdateSite = (site) => {
 const createFromUpdateBookmark = CreateFromUpdate(
   'bookmark',
   (record) => {
-    return (record.bookmark.site && (
-      record.bookmark.site.location ||
-      (record.bookmark.site.customTitle && record.bookmark.isFolder)
-    ))
+    const site = record.bookmark.site
+    if (!site) { return false }
+    if (record.bookmark.isFolder) {
+      return site.customTitle || site.title
+    } else {
+      return site.location
+    }
   },
   (bookmark) => {
     if (bookmark.isFolder) {
