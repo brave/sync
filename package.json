@@ -51,14 +51,14 @@
     "uglify-js-harmony": "^2.7.5"
   },
   "dependencies": {
-    "@protobufjs/utf8": "^1.0.7",
+    "@protobufjs/utf8": "^1.1.0",
     "aws-sdk": "^2.7.7",
     "config": "^1.24.0",
     "cors": "^2.8.1",
     "crc": "^3.4.4",
     "express": "^4.14.0",
     "lodash.merge": "^4.6.0",
-    "protobufjs": "^6.6.1",
+    "protobufjs": "^6.8.0",
     "raven": "^0.12.3",
     "request": "^2.79.0",
     "tweetnacl": "^0.14.3",
