@@ -4,9 +4,12 @@ const merge = require('lodash.merge')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
 const valueEquals = require('../lib/valueEquals')
+const {api} = require('../lib/api.proto.js')
+const syncTypes = require('../lib/syncTypes.js')
 
 // ['0', '1', '2']
-module.exports.CATEGORY_IDS = Object.values(proto.categories)
+// webkit on iOS <= 10.2 does not support Object.values
+module.exports.CATEGORY_IDS = Object.keys(proto.categories).map((key) => proto.categories[key])
 
 /**
  * @param {string} type e.g. 'historySite'
@@ -301,13 +304,24 @@ module.exports.syncRecordAsJS = (record) => {
    * .toObject() options:
    * http://dcode.io/protobuf.js/global.html#ConversionOptions
    */
-  let object = record.toObject()
+  const object = api.SyncRecord.toObject(record)
   object.action = record.action
   const type = serializer.getSyncRecordObjectData(record)
+  if (!syncTypes[type]) {
+    throw new Error('Unknown sync objectData type: ' + type)
+  }
   object.objectData = type
-  const data = record[type].toObject({defaults: true, enums: Number, longs: Number})
+  const data = api.SyncRecord[syncTypes[type]].toObject(record[type], {
+    defaults: true,
+    enums: Number,
+    longs: Number
+  })
   if (data.fields && data.fields.length > 0) {
     object[type] = pickFields(data, data.fields)
+    // Empty the fields field for backwards compatibility with protobufjs 6.6
+    if (object[type].fields) {
+      object[type].fields = []
+    }
   } else {
     object[type] = data
   }

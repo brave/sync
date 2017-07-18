@@ -131,14 +131,21 @@ const startSync = (requester) => {
     logSync(`Sending ${records.length} records`)
     const categoryId = proto.categories[category]
     records.forEach((record) => {
+      if (!record) {
+        logSync(`could not send empty record`, ERROR)
+        return
+      }
       // Workaround #17
       record.deviceId = new Uint8Array(record.deviceId)
       record.objectId = new Uint8Array(record.objectId)
       if (record.bookmark && record.bookmark.parentFolderObjectId) {
         record.bookmark.parentFolderObjectId = new Uint8Array(record.bookmark.parentFolderObjectId)
       }
-      logSync(`sending record: ${JSON.stringify(record)}`)
-      requester.bufferedPut(categoryId, record)
+      requester.bufferedPut(categoryId, record).then(() => {
+        logSync(`sending record: ${JSON.stringify(record)}`)
+      }).catch((e) => {
+        logSync(`could not send record ${JSON.stringify(record)}: ${e}`, ERROR)
+      })
     })
   })
   ipc.on(messages.DELETE_SYNC_USER, (e) => {
