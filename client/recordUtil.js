@@ -6,7 +6,8 @@ const serializer = require('../lib/serializer')
 const valueEquals = require('../lib/valueEquals')
 
 // ['0', '1', '2']
-module.exports.CATEGORY_IDS = Object.values(proto.categories)
+// webkit on iOS <= 10.2 does not support Object.values
+module.exports.CATEGORY_IDS = Object.keys(proto.categories).map((key) => proto.categories[key])
 
 /**
  * @param {string} type e.g. 'historySite'
