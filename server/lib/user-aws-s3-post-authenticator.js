@@ -28,7 +28,7 @@ class UserAwsS3PostAuthenticator {
       acl: 'private'
     }
     if (config.AWSEndpoint) {
-      returnValues.endpoint = config.AWSEndpoint
+      returnValues.endpoint = config.awsEndpoint
     } 
     return returnValues
   }
