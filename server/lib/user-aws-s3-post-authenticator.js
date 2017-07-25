@@ -21,12 +21,16 @@ class UserAwsS3PostAuthenticator {
     const policySignature = crypto.createHmac('sha1', config.awsSecretAccessKey)
       .update(s3PostPolicy)
       .digest('base64')
-    return {
+    const returnValues = {
       AWSAccessKeyId: config.awsAccessKeyId,
       policy: s3PostPolicy,
       signature: policySignature,
       acl: 'private'
     }
+    if (config.AWSEndpoint) {
+      returnValues.endpoint = config.AWSEndpoint
+    } 
+    return returnValues
   }
 
   expirationDate () {
