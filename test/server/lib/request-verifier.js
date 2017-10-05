@@ -17,7 +17,7 @@ test('users router', (t) => {
       const serverUrl = `http://localhost:${server.address().port}`
       console.log(`server up on ${serverUrl}`)
 
-      const keys = crypto.deriveKeys(crypto.getSeed())
+      const keys = crypto.deriveKeys()
       const userId = Buffer.from(keys.publicKey).toString('base64')
       const baseRequest = request.defaults({
         baseUrl: `${serverUrl}/${encodeURIComponent(userId)}`
@@ -38,7 +38,7 @@ test('users router', (t) => {
         }
       })
 
-      const keysTwo = crypto.deriveKeys(crypto.getSeed())
+      const keysTwo = crypto.deriveKeys()
       const mismatchParams = Object.assign(
         sharedParams,
         { body: Buffer.from(signedTimestamp(keysTwo.secretKey).buffer) }
