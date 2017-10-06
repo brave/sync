@@ -46,7 +46,7 @@ module.exports.getSerializedCredentials = (serializer) => {
   const crypto = require('../../lib/crypto')
 
   console.log(`Connecting to ${CONFIG.serverUrl}`)
-  const keys = crypto.deriveKeys(crypto.getSeed())
+  const keys = crypto.deriveKeys()
   const userId = Buffer.from(keys.publicKey).toString('base64')
 
   const timestamp = Math.floor(Date.now() / 1000)

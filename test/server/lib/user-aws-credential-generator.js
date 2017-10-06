@@ -22,7 +22,7 @@ test('userAwsCredentialGenerator', (t) => {
   const categoryIdBookmarks = config.categoryIdBookmarks
   const categoryIdHistorySites = config.categoryIdHistorySites
   const categoryIdPreferences = config.categoryIdPreferences
-  const keys = crypto.deriveKeys(crypto.getSeed())
+  const keys = crypto.deriveKeys()
   const userId = Buffer.from(keys.publicKey).toString('base64')
 
   t.test('perform()', (t) => {
@@ -163,13 +163,13 @@ test('userAwsCredentialGenerator', (t) => {
           .catch((data) => { t.equal(data.code, 'AccessDenied', t.name) })
       })
 
-      const keysTwo = crypto.deriveKeys(crypto.getSeed())
+      const keysTwo = crypto.deriveKeys()
       const userIdTwo = Buffer.from(keysTwo.publicKey).toString('base64')
 
       t.test('deny: s3 listObjectsV2 {apiVersion}/{another userId}/*', (t) => {
         t.plan(1)
 
-        const keysTwo = crypto.deriveKeys(crypto.getSeed())
+        const keysTwo = crypto.deriveKeys()
         const userIdTwo = Buffer.from(keysTwo.publicKey).toString('base64')
         s3.listObjectsV2({
           Bucket: s3Bucket,

@@ -38,7 +38,7 @@ test('userAwsS3PostAuthenticator', (t) => {
     const categoryIdBookmarks = config.categoryIdBookmarks
     const categoryIdHistorySites = config.categoryIdHistorySites
     const categoryIdPreferences = config.categoryIdPreferences
-    const keys = crypto.deriveKeys(crypto.getSeed())
+    const keys = crypto.deriveKeys()
     const userId = Buffer.from(keys.publicKey).toString('base64')
     let result = null
 
@@ -214,7 +214,7 @@ test('userAwsS3PostAuthenticator', (t) => {
       t.test('deny: uploading to another user\'s prefix', (t) => {
         t.plan(1)
 
-        const keysTwo = crypto.deriveKeys(crypto.getSeed())
+        const keysTwo = crypto.deriveKeys()
         const userIdTwo = Buffer.from(keysTwo.publicKey).toString('base64')
         const objectKey = `${apiVersion}/${userIdTwo}/${categoryIdHistorySites}/1234/objectData`
         const formData = Object.assign(
