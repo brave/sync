@@ -57,6 +57,7 @@
     "config": "^1.24.0",
     "cors": "^2.8.1",
     "crc": "^3.4.4",
+    "deep-equal": "^1.0.1",
     "express": "^4.14.0",
     "lodash.merge": "^4.6.0",
     "protobufjs": "^6.8.0",
@@ -72,8 +73,7 @@
       "test/client/fixtures/*.js",
       "bundles/*.js",
       "client/polyfill/*.js",
-      "lib/api.proto.js",
-      "lib/valueEquals.js"
+      "lib/api.proto.js"
     ]
   }
 }
