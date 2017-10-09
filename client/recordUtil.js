@@ -1,9 +1,9 @@
 'use strict'
 
+const deepEqual = require('deep-equal')
 const merge = require('lodash.merge')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
-const valueEquals = require('../lib/valueEquals')
 const {api} = require('../lib/api.proto.js')
 const syncTypes = require('../lib/syncTypes.js')
 
@@ -144,7 +144,7 @@ const resolveRecordWithObject = (record, existingObject) => {
     return resolveSiteSettingsRecordWithObject(record, existingObject)
   }
   if (record.action === proto.actions.UPDATE) {
-    if (valueEquals(record[type], existingObject[type])) {
+    if (deepEqual(record[type], existingObject[type])) {
       // no-op
       return null
     }
@@ -174,7 +174,7 @@ const resolveSiteSettingsRecordWithObject = (record, existingObject) => {
   if (record.action === proto.actions.UPDATE) {
     resolveField = (field) => {
       return !commonFields.includes(field) &&
-      (!existingFields.has(field) || !valueEquals(existingObject[type][field], record[type][field]))
+      (!existingFields.has(field) || !deepEqual(existingObject[type][field], record[type][field]))
     }
   } else if (record.action === proto.actions.DELETE) {
     resolveField = (field) => {
