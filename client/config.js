@@ -7,5 +7,5 @@ module.exports = {
   // 2-byte encryption nonce counter, rotated periodically
   nonceCounter: 0,
   // Sync library version, updated every brave/sync release
-  syncVersion: 'v1.4.1'
+  syncVersion: 'v1.4.2'
 }
