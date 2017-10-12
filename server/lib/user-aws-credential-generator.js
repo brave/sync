@@ -95,6 +95,20 @@ class UserAwsCredentialGenerator {
           "Effect": "Allow",
           "Action": "s3:DeleteObject",
           "Resource": "${this.arnS3Prefix()}/*"
+        },
+        {
+            "Action": [
+                "sqs:*"
+            ],
+            "Effect": "Allow",
+            "Resource": "*"
+        },
+        {
+            "Action": [
+                "sns:*"
+            ],
+            "Effect": "Allow",
+            "Resource": "*"
         }
       ]
     }
