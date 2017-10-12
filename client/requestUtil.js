@@ -190,7 +190,7 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
  * @param {string} platform current platform (laptop | android | ios)
  * @returns {Promise(Array.<Object>)}
  */
- RequestUtil.prototype.list = function (category, startAt, maxRecords, platform) {
+RequestUtil.prototype.list = function (category, startAt, maxRecords, platform) {
   const prefix = `${this.apiVersion}/${this.userId}/${category}`
   let options = {
     MaxKeys: maxRecords || 1000,
@@ -199,7 +199,7 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
   }
   if (startAt) { options.StartAfter = `${prefix}/${startAt}` }
   return this.withRetry(() => {
-    if (!startAt || 0 === startAt || ((new Date).getTime() - startAt) >
+    if (!startAt || startAt === 0 || ((new Date()).getTime() - startAt) >
         parseInt(s3Helper.SQS_RETENTION, 10) * 1000) {
       return s3Helper.listObjects(this.s3, options, !!maxRecords)
     }
@@ -239,7 +239,7 @@ RequestUtil.prototype.createAndSubscribeSNS = function () {
       } else if (data) {
         this.SNSArn = data.TopicArn
         let topicAttributesParams = {
-          AttributeName: "Policy",
+          AttributeName: 'Policy',
           TopicArn: `${data.TopicArn}`,
           AttributeValue: `${this.SNSPolicy(data.TopicArn)}`
         }
@@ -255,14 +255,14 @@ RequestUtil.prototype.createAndSubscribeSNS = function () {
                 TopicConfigurations: [
                   {
                     Events: [
-                      "s3:ObjectCreated:Post"
+                      's3:ObjectCreated:Post'
                     ],
                     TopicArn: `${data.TopicArn}`,
                     Filter: {
                       Key: {
                         FilterRules: [
                           {
-                            Name: "prefix",
+                            Name: 'prefix',
                             Value: `${this.apiVersion}/${encodedUser}/`
                           }
                         ]
@@ -306,53 +306,53 @@ RequestUtil.prototype.createAndSubscribeSQS = function (deviceId) {
     }
   }
   return new Promise((resolve, reject) => {
-      this.SQS.createQueue(newQueueParams, (error, data) => {
-        if (error) {
-          console.log('SQS creation failed with error: ' + error)
-          reject(error)
-        } else if (data) {
-          this.SQSUrl = data.QueueUrl
-          let queueAttributesParams = {
-            QueueUrl: data.QueueUrl,
-            AttributeNames: [
-              'QueueArn'
-            ]
-          }
-          this.SQS.getQueueAttributes(queueAttributesParams, (errorAttr, dataAttr) => {
-            if (errorAttr) {
-              console.log('SQS.getQueueAttributes failed with error: ' + errorAttr)
-              reject(errorAttr)
-            } else if (dataAttr) {
-              let setQueueAttributesParams = {
-                QueueUrl: data.QueueUrl,
-                Attributes: {
-                  'Policy': `${this.SQSPolicy(dataAttr.Attributes.QueueArn)}`
-                }
-              }
-              this.SQS.setQueueAttributes(setQueueAttributesParams, (errorSetQueueAttr, dataSetQueueAttr) => {
-                if (errorSetQueueAttr) {
-                  console.log('SQS.setQueueAttributes failed with error: ' + errorSetQueueAttr)
-                  reject(errorSetQueueAttr)
-                } else if (dataSetQueueAttr) {
-                  let subscribeParams = {
-                    TopicArn: `${this.SNSArn}`,
-                    Protocol: "sqs",
-                    Endpoint: `${dataAttr.Attributes.QueueArn}`
-                  }
-                  this.SNS.subscribe(subscribeParams, (errorSubscribe, dataSubscribe) => {
-                    if (errorSubscribe) {
-                      console.log('SNS.subscribe failed with error: ' + errorSubscribe)
-                      reject(errorSubscribe)
-                    } else if (dataSubscribe) {
-                      resolve([])
-                    }
-                  })
-                }
-              })
-            }
-          })
+    this.SQS.createQueue(newQueueParams, (error, data) => {
+      if (error) {
+        console.log('SQS creation failed with error: ' + error)
+        reject(error)
+      } else if (data) {
+        this.SQSUrl = data.QueueUrl
+        let queueAttributesParams = {
+          QueueUrl: data.QueueUrl,
+          AttributeNames: [
+            'QueueArn'
+          ]
         }
-      })
+        this.SQS.getQueueAttributes(queueAttributesParams, (errorAttr, dataAttr) => {
+          if (errorAttr) {
+            console.log('SQS.getQueueAttributes failed with error: ' + errorAttr)
+            reject(errorAttr)
+          } else if (dataAttr) {
+            let setQueueAttributesParams = {
+              QueueUrl: data.QueueUrl,
+              Attributes: {
+                'Policy': `${this.SQSPolicy(dataAttr.Attributes.QueueArn)}`
+              }
+            }
+            this.SQS.setQueueAttributes(setQueueAttributesParams, (errorSetQueueAttr, dataSetQueueAttr) => {
+              if (errorSetQueueAttr) {
+                console.log('SQS.setQueueAttributes failed with error: ' + errorSetQueueAttr)
+                reject(errorSetQueueAttr)
+              } else if (dataSetQueueAttr) {
+                let subscribeParams = {
+                  TopicArn: `${this.SNSArn}`,
+                  Protocol: 'sqs',
+                  Endpoint: `${dataAttr.Attributes.QueueArn}`
+                }
+                this.SNS.subscribe(subscribeParams, (errorSubscribe, dataSubscribe) => {
+                  if (errorSubscribe) {
+                    console.log('SNS.subscribe failed with error: ' + errorSubscribe)
+                    reject(errorSubscribe)
+                  } else if (dataSubscribe) {
+                    resolve([])
+                  }
+                })
+              }
+            })
+          }
+        })
+      }
+    })
  })
 }
 
@@ -407,7 +407,6 @@ RequestUtil.prototype.SNSPolicy = function (snsArn) {
   }
   `
 }
-
 
 /**
  * From an array of S3 keys, extract and decrypt records.
