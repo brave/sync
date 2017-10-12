@@ -353,7 +353,7 @@ RequestUtil.prototype.createAndSubscribeSQS = function (deviceId) {
         })
       }
     })
- })
+  })
 }
 
 /**
