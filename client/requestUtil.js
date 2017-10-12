@@ -15,6 +15,9 @@ const EXPIRED_CREDENTIAL_ERRORS = [
   /The provided token has expired\./,
   /Invalid according to Policy: Policy expired\./
 ]
+const SQS_MAX_LIST_MESSAGES_COUNT = 10
+const SQS_MESSAGES_VISIBILITY_TIMEOUT = 30  // In seconds
+const SQS_MESSAGES_LONGPOLL_TIMEOUT = 1  // In seconds
 
 const checkFetchStatus = (response) => {
   if (response.status >= 200 && response.status < 300) {
@@ -109,6 +112,9 @@ RequestUtil.prototype.saveAWSCredentials = function (parsedResponse) {
   this.bucket = parsedResponse.bucket
   this.region = parsedResponse.region
   this.s3PostEndpoint = `https://${this.bucket}.s3.dualstack.${this.region}.amazonaws.com`
+
+  this.SQS = parsedResponse.SQS
+  this.SNS = parsedResponse.SNS
 }
 
 /**
@@ -150,7 +156,30 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
     sslEnabled: true,
     useDualstack: true
   })
-  return {s3, postData, expiration, bucket, region}
+  const SQS = new awsSdk.SQS({
+    credentials: new awsSdk.Credentials({
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      sessionToken: credentials.sessionToken
+    }),
+    endpoint: `https://sqs.${region}.amazonaws.com`,
+    maxRetries: S3_MAX_RETRIES,
+    region: region,
+    sslEnabled: true
+  })
+  const SNS = new awsSdk.SNS({
+    credentials: new awsSdk.Credentials({
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      sessionToken: credentials.sessionToken
+    }),
+    endpoint: `https://sns.${region}.amazonaws.com`,
+    maxRetries: S3_MAX_RETRIES,
+    region: region,
+    sslEnabled: true
+  })
+
+  return {s3, postData, expiration, bucket, region, SQS, SNS}
 }
 
 /**
@@ -158,9 +187,10 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
  * @param {string} category - the category ID
  * @param {number=} startAt return objects with timestamp >= startAt (e.g. 1482435340)
  * @param {number=} maxRecords Limit response to a given number of recods. By default the Sync lib will fetch all matching records, which might take a long time. If falsey, fetch all records.
+ * @param {string} platform current platform (laptop | android | ios)
  * @returns {Promise(Array.<Object>)}
  */
-RequestUtil.prototype.list = function (category, startAt, maxRecords) {
+ RequestUtil.prototype.list = function (category, startAt, maxRecords, platform) {
   const prefix = `${this.apiVersion}/${this.userId}/${category}`
   let options = {
     MaxKeys: maxRecords || 1000,
@@ -169,9 +199,215 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords) {
   }
   if (startAt) { options.StartAfter = `${prefix}/${startAt}` }
   return this.withRetry(() => {
-    return s3Helper.listObjects(this.s3, options, !!maxRecords)
+    if (!startAt || 0 === startAt || ((new Date).getTime() - startAt) >
+        parseInt(s3Helper.SQS_RETENTION, 10) * 1000) {
+      return s3Helper.listObjects(this.s3, options, !!maxRecords)
+    }
+    // We poll from SQS
+    let notificationParams = {
+      QueueUrl: `${this.SQSUrl}`,
+      AttributeNames: [
+        'All'
+      ],
+      MaxNumberOfMessages: SQS_MAX_LIST_MESSAGES_COUNT,
+      MessageAttributeNames: [
+        'All'
+      ],
+      VisibilityTimeout: SQS_MESSAGES_VISIBILITY_TIMEOUT,
+      WaitTimeSeconds: SQS_MESSAGES_LONGPOLL_TIMEOUT
+    }
+
+    return s3Helper.listNotifications(this.SQS, notificationParams, category,
+      `${this.apiVersion}/${encodeURIComponent(this.userId)}/${category}`, platform)
   })
 }
+
+/**
+ * Creates SNS Topic for the current user.
+ * @returns {Promise}
+ */
+RequestUtil.prototype.createAndSubscribeSNS = function () {
+  this.SNSName = `${this.bucket}_sns_${this.userId.replace(/[^A-Za-z0-9]/g, '')}`
+  let params = {
+    Name: `${this.SNSName}`
+  }
+  return new Promise((resolve, reject) => {
+    this.SNS.createTopic(params, (error, data) => {
+      if (error) {
+        console.log('SNS creation failed with error: ' + error)
+        reject(error)
+      } else if (data) {
+        this.SNSArn = data.TopicArn
+        let topicAttributesParams = {
+          AttributeName: "Policy",
+          TopicArn: `${data.TopicArn}`,
+          AttributeValue: `${this.SNSPolicy(data.TopicArn)}`
+        }
+        this.SNS.setTopicAttributes(topicAttributesParams, (errorAttr, dataAttr) => {
+          if (errorAttr) {
+            console.log('SNS setTopicAttributes failed with error: ' + errorAttr)
+            reject(errorAttr)
+          } else if (dataAttr) {
+            let encodedUser = encodeURIComponent(this.userId)
+            let bucketNotificationConfiguration = {
+              Bucket: `${this.bucket}`,
+              NotificationConfiguration: {
+                TopicConfigurations: [
+                  {
+                    Events: [
+                      "s3:ObjectCreated:Post"
+                    ],
+                    TopicArn: `${data.TopicArn}`,
+                    Filter: {
+                      Key: {
+                        FilterRules: [
+                          {
+                            Name: "prefix",
+                            Value: `${this.apiVersion}/${encodedUser}/`
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+            this.s3.putBucketNotificationConfiguration(bucketNotificationConfiguration, (errorNotif, dataNotif) => {
+              if (errorNotif) {
+                console.log('S3 putBucketNotificationConfiguration failed with error: ' + errorNotif)
+                reject(errorNotif)
+              } else if (dataNotif) {
+                resolve([])
+              }
+            })
+          }
+        })
+      }
+    })
+  })
+}
+
+/**
+ * Creates SQS for the current device.
+ * @param {string} deviceId
+ * @returns {Promise}
+ */
+RequestUtil.prototype.createAndSubscribeSQS = function (deviceId) {
+  // Creating a query for the current userId
+  if (!deviceId) {
+    throw new Error('createSQS failed. deviceId is null!')
+  }
+  this.deviceId = deviceId
+  this.SQSName = `${this.bucket}_sqs_${this.userId.replace(/[^A-Za-z0-9]/g, '')}_${deviceId}`
+  let newQueueParams = {
+    QueueName: `${this.SQSName}`,
+    Attributes: {
+      'MessageRetentionPeriod': s3Helper.SQS_RETENTION
+    }
+  }
+  return new Promise((resolve, reject) => {
+      this.SQS.createQueue(newQueueParams, (error, data) => {
+        if (error) {
+          console.log('SQS creation failed with error: ' + error)
+          reject(error)
+        } else if (data) {
+          this.SQSUrl = data.QueueUrl
+          let queueAttributesParams = {
+            QueueUrl: data.QueueUrl,
+            AttributeNames: [
+              'QueueArn'
+            ]
+          }
+          this.SQS.getQueueAttributes(queueAttributesParams, (errorAttr, dataAttr) => {
+            if (errorAttr) {
+              console.log('SQS.getQueueAttributes failed with error: ' + errorAttr)
+              reject(errorAttr)
+            } else if (dataAttr) {
+              let setQueueAttributesParams = {
+                QueueUrl: data.QueueUrl,
+                Attributes: {
+                  'Policy': `${this.SQSPolicy(dataAttr.Attributes.QueueArn)}`
+                }
+              }
+              this.SQS.setQueueAttributes(setQueueAttributesParams, (errorSetQueueAttr, dataSetQueueAttr) => {
+                if (errorSetQueueAttr) {
+                  console.log('SQS.setQueueAttributes failed with error: ' + errorSetQueueAttr)
+                  reject(errorSetQueueAttr)
+                } else if (dataSetQueueAttr) {
+                  let subscribeParams = {
+                    TopicArn: `${this.SNSArn}`,
+                    Protocol: "sqs",
+                    Endpoint: `${dataAttr.Attributes.QueueArn}`
+                  }
+                  this.SNS.subscribe(subscribeParams, (errorSubscribe, dataSubscribe) => {
+                    if (errorSubscribe) {
+                      console.log('SNS.subscribe failed with error: ' + errorSubscribe)
+                      reject(errorSubscribe)
+                    } else if (dataSubscribe) {
+                      resolve([])
+                    }
+                  })
+                }
+              })
+            }
+          })
+        }
+      })
+ })
+}
+
+/**
+ * Creates SQS Policy.
+ * @param {string} queueArn
+ * @returns {Promise}
+ */
+RequestUtil.prototype.SQSPolicy = function (queueArn) {
+  return `
+  {
+    "Version":"2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": "*",
+        "Action": "SQS:SendMessage",
+        "Resource": "${queueArn}",
+        "Condition": {
+          "ArnEquals": {
+            "aws:SourceArn": "${this.SNSArn}"
+          }
+        }
+      }
+    ]
+  }
+  `
+}
+
+/**
+ * Creates SNS Policy.
+ * @param {string} snsArn
+ * @returns {Promise}
+ */
+RequestUtil.prototype.SNSPolicy = function (snsArn) {
+  return `
+  {
+    "Version":"2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": "*",
+        "Action": "SNS:Publish",
+        "Resource": "${snsArn}",
+        "Condition": {
+          "ArnEquals": {
+            "aws:SourceArn": "arn:aws:s3:*:*:${this.bucket}"
+          }
+        }
+      }
+    ]
+  }
+  `
+}
+
 
 /**
  * From an array of S3 keys, extract and decrypt records.
