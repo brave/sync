@@ -151,7 +151,9 @@ const startSync = (requester) => {
   ipc.on(messages.DELETE_SYNC_USER, (e) => {
     logSync(`Deleting user!!`)
     requester.deleteUser().then(() => {
-      ipc.send(messages.DELETED_SYNC_USER)
+      requester.deleteUserTopicQueues().then(() => {
+        ipc.send(messages.DELETED_SYNC_USER)
+      })
     })
   })
   ipc.on(messages.DELETE_SYNC_CATEGORY, (e, category) => {
@@ -159,11 +161,15 @@ const startSync = (requester) => {
       throw new Error(`Unsupported sync category: ${category}`)
     }
     logSync(`Deleting category: ${category}`)
-    requester.deleteCategory(proto.categories[category])
+    requester.deleteCategory(proto.categories[category]).then(() => {
+      requester.purgeUserQueues()
+    })
   })
   ipc.on(messages.DELETE_SYNC_SITE_SETTINGS, (e) => {
     logSync(`Deleting siteSettings`)
-    requester.deleteSiteSettings()
+    requester.deleteSiteSettings().then(() => {
+      requester.purgeUserQueues()
+    })
   })
   ipc.send(messages.SYNC_READY)
   logSync('success')
