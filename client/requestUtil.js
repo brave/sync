@@ -502,7 +502,6 @@ RequestUtil.prototype.deleteUser = function () {
 
 RequestUtil.prototype.deleteUserTopicQueues = function () {
   return new Promise((resolve, reject) => {
-
     let subscriptions = []
     listSubscriptionsByTopicRecursively(this.sns, this.SNSArn, subscriptions, '', (error, data) => {
       if (error) {
@@ -533,7 +532,7 @@ RequestUtil.prototype.deleteUserTopicQueues = function () {
   })
 }
 
-function listSubscriptionsByTopicRecursively(sns, snsARN, subscriptions, nextToken, callback) {
+function listSubscriptionsByTopicRecursively (sns, snsARN, subscriptions, nextToken, callback) {
   let params = {
     TopicArn: snsARN,
     NextToken: nextToken
@@ -545,11 +544,11 @@ function listSubscriptionsByTopicRecursively(sns, snsARN, subscriptions, nextTok
     } else if (data) {
       for (let subscription of data.Subscriptions) {
         let parts = subscription.Endpoint.split(':')
-        if (parts.length != 0) {
+        if (parts.length !== 0) {
           subscriptions.push(parts[parts.length - 1])
         }
       }
-      if (data.NextToken && data.NextToken != '') {
+      if (data.NextToken && data.NextToken !== '') {
         listSubscriptionsByTopicRecursively(sns, snsARN, subscriptions, data.NextToken, callback)
       } else {
         callback(null, subscriptions)
@@ -558,7 +557,7 @@ function listSubscriptionsByTopicRecursively(sns, snsARN, subscriptions, nextTok
   })
 }
 
-function getQueuesURLsByNames(sqs, urls, names, callback) {
+function getQueuesURLsByNames (sqs, urls, names, callback) {
   if (names.length === 0) {
     callback(null, urls)
 
@@ -581,7 +580,6 @@ function getQueuesURLsByNames(sqs, urls, names, callback) {
 
 RequestUtil.prototype.purgeUserQueues = function () {
   return new Promise((resolve, reject) => {
-
     let subscriptions = []
     listSubscriptionsByTopicRecursively(this.sns, this.SNSArn, subscriptions, '', (error, data) => {
       if (error) {
