@@ -96,13 +96,13 @@ const startSync = (requester) => {
     return jsRecords
   }
 
-  ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames, startAt, limitResponse) => {
+  ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames, startAt, limitResponse, platform) => {
     logSync(`fetching ${categoryNames} records after ${startAt}`)
     categoryNames.forEach((category) => {
       if (!proto.categories[category]) {
         throw new Error(`Unsupported sync category: ${category}`)
       }
-      requester.list(proto.categories[category], startAt, limitResponse).then((s3Objects) => {
+      requester.list(proto.categories[category], startAt, limitResponse, platform).then((s3Objects) => {
         const jsRecords = getJSRecords(s3Objects.contents)
         logSync(`got ${jsRecords.length} decrypted records in ${category} after ${startAt}`)
         let lastRecordTimestamp
@@ -151,7 +151,9 @@ const startSync = (requester) => {
   ipc.on(messages.DELETE_SYNC_USER, (e) => {
     logSync(`Deleting user!!`)
     requester.deleteUser().then(() => {
-      ipc.send(messages.DELETED_SYNC_USER)
+      requester.deleteUserTopicQueues().then(() => {
+        ipc.send(messages.DELETED_SYNC_USER)
+      })
     })
   })
   ipc.on(messages.DELETE_SYNC_CATEGORY, (e, category) => {
@@ -159,11 +161,15 @@ const startSync = (requester) => {
       throw new Error(`Unsupported sync category: ${category}`)
     }
     logSync(`Deleting category: ${category}`)
-    requester.deleteCategory(proto.categories[category])
+    requester.deleteCategory(proto.categories[category]).then(() => {
+      requester.purgeUserQueues()
+    })
   })
   ipc.on(messages.DELETE_SYNC_SITE_SETTINGS, (e) => {
     logSync(`Deleting siteSettings`)
-    requester.deleteSiteSettings()
+    requester.deleteSiteSettings().then(() => {
+      requester.purgeUserQueues()
+    })
   })
   ipc.send(messages.SYNC_READY)
   logSync('success')
@@ -217,7 +223,15 @@ const main = () => {
     .then((requester) => {
       if (clientDeviceId !== null && requester && requester.s3) {
         logSync('set device ID: ' + clientDeviceId)
-        startSync(requester)
+        requester.createAndSubscribeSNS().then(() => {
+          requester.createAndSubscribeSQS(clientDeviceId).then(() => {
+            startSync(requester)
+          })
+        })
+        .catch((e) => {
+          logSync('could not init sync on creation SQS: ' + e, ERROR)
+          ipc.send(messages.SYNC_SETUP_ERROR, e.message)
+        })
       }
     })
     .catch((e) => {

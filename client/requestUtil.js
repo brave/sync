@@ -9,12 +9,6 @@ const s3Helper = require('../lib/s3Helper')
 const serializer = require('../lib/serializer')
 
 const CONFIG = require('./config')
-const PUT_CONCURRENCY = 100
-const S3_MAX_RETRIES = 1
-const EXPIRED_CREDENTIAL_ERRORS = [
-  /The provided token has expired\./,
-  /Invalid according to Policy: Policy expired\./
-]
 
 const checkFetchStatus = (response) => {
   if (response.status >= 200 && response.status < 300) {
@@ -30,7 +24,7 @@ const isExpiredCredentialError = (error) => {
   if (!error || !error.message) {
     return false
   }
-  return EXPIRED_CREDENTIAL_ERRORS.some((message) => {
+  return CONFIG.EXPIRED_CREDENTIAL_ERRORS.some((message) => {
     return error.message.match(message)
   })
 }
@@ -55,10 +49,12 @@ const RequestUtil = function (opts = {}) {
   this.serializer = opts.serializer
   this.serverUrl = opts.serverUrl
   this.userId = Buffer.from(opts.keys.publicKey).toString('base64')
+  // For SNS and SQS, which don't allow + and /
+  this.userIdBase62 = this.userId.replace(/[^A-Za-z0-9]/g, '')
   this.encrypt = cryptoUtil.Encrypt(this.serializer, opts.keys.secretboxKey, CONFIG.nonceCounter)
   this.decrypt = cryptoUtil.Decrypt(this.serializer, opts.keys.secretboxKey)
   this.sign = cryptoUtil.Sign(opts.keys.secretKey)
-  this.putConcurrency = opts.putConcurrency || PUT_CONCURRENCY
+  this.putConcurrency = opts.putConcurrency || CONFIG.PUT_CONCURRENCY
   // Like put() but with limited concurrency to avoid out of memory/connection
   // errors (net::ERR_INSUFFICIENT_RESOURCES)
   this.bufferedPut = limitConcurrency(RequestUtil.prototype.put, this.putConcurrency)
@@ -109,6 +105,9 @@ RequestUtil.prototype.saveAWSCredentials = function (parsedResponse) {
   this.bucket = parsedResponse.bucket
   this.region = parsedResponse.region
   this.s3PostEndpoint = `https://${this.bucket}.s3.dualstack.${this.region}.amazonaws.com`
+
+  this.sqs = parsedResponse.sqs
+  this.sns = parsedResponse.sns
 }
 
 /**
@@ -145,12 +144,35 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
     // The bucket name is prepended to the endpoint to build the actual request URL, e.g.
     // https://brave-sync-staging.s3.dualstack.us-west-2.amazonaws.com
     endpoint: `https://s3.dualstack.${region}.amazonaws.com`,
-    maxRetries: S3_MAX_RETRIES,
+    maxRetries: CONFIG.SERVICES_MAX_RETRIES,
     region: region,
     sslEnabled: true,
     useDualstack: true
   })
-  return {s3, postData, expiration, bucket, region}
+  const sqs = new awsSdk.SQS({
+    credentials: new awsSdk.Credentials({
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      sessionToken: credentials.sessionToken
+    }),
+    endpoint: `https://sqs.${region}.amazonaws.com`,
+    maxRetries: CONFIG.SERVICES_MAX_RETRIES,
+    region: region,
+    sslEnabled: true
+  })
+  const sns = new awsSdk.SNS({
+    credentials: new awsSdk.Credentials({
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      sessionToken: credentials.sessionToken
+    }),
+    endpoint: `https://sns.${region}.amazonaws.com`,
+    maxRetries: CONFIG.SERVICES_MAX_RETRIES,
+    region: region,
+    sslEnabled: true
+  })
+
+  return {s3, postData, expiration, bucket, region, sqs, sns}
 }
 
 /**
@@ -158,9 +180,10 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
  * @param {string} category - the category ID
  * @param {number=} startAt return objects with timestamp >= startAt (e.g. 1482435340)
  * @param {number=} maxRecords Limit response to a given number of recods. By default the Sync lib will fetch all matching records, which might take a long time. If falsey, fetch all records.
+ * @param {string} platform current platform (laptop | android | ios)
  * @returns {Promise(Array.<Object>)}
  */
-RequestUtil.prototype.list = function (category, startAt, maxRecords) {
+RequestUtil.prototype.list = function (category, startAt, maxRecords, platform) {
   const prefix = `${this.apiVersion}/${this.userId}/${category}`
   let options = {
     MaxKeys: maxRecords || 1000,
@@ -169,8 +192,228 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords) {
   }
   if (startAt) { options.StartAfter = `${prefix}/${startAt}` }
   return this.withRetry(() => {
-    return s3Helper.listObjects(this.s3, options, !!maxRecords)
+    if (!startAt || ((new Date()).getTime() - startAt) >
+        parseInt(s3Helper.SQS_RETENTION, 10) * 1000) {
+      return s3Helper.listObjects(this.s3, options, !!maxRecords)
+    }
+    // We poll from SQS
+    let notificationParams = {
+      QueueUrl: `${this.SQSUrl}`,
+      AttributeNames: [
+        'All'
+      ],
+      MaxNumberOfMessages: CONFIG.SQS_MAX_LIST_MESSAGES_COUNT,
+      MessageAttributeNames: [
+        'All'
+      ],
+      VisibilityTimeout: CONFIG.SQS_MESSAGES_VISIBILITY_TIMEOUT,
+      WaitTimeSeconds: CONFIG.SQS_MESSAGES_LONGPOLL_TIMEOUT
+    }
+
+    return s3Helper.listNotifications(this.sqs, notificationParams, category,
+      `${this.apiVersion}/${encodeURIComponent(this.userId)}/${category}`, platform)
   })
+}
+
+/**
+ * SNS Topic name for the current user.
+ * @returns {string}
+ */
+RequestUtil.prototype.snsTopic = function () {
+  return `${this.bucket}-${this.apiVersion}-${this.userIdBase62}`
+}
+
+/**
+ * Creates SNS Topic for the current user.
+ * @returns {Promise}
+ */
+RequestUtil.prototype.createAndSubscribeSNS = function () {
+  let params = {
+    Name: this.snsTopic()
+  }
+  return new Promise((resolve, reject) => {
+    this.sns.createTopic(params, (error, data) => {
+      if (error) {
+        console.log('SNS creation failed with error: ' + error)
+        reject(error)
+      } else if (data) {
+        this.SNSArn = data.TopicArn
+        let topicAttributesParams = {
+          AttributeName: 'Policy',
+          TopicArn: `${data.TopicArn}`,
+          AttributeValue: `${this.SNSPolicy(data.TopicArn)}`
+        }
+        this.sns.setTopicAttributes(topicAttributesParams, (errorAttr, dataAttr) => {
+          if (errorAttr) {
+            console.log('SNS setTopicAttributes failed with error: ' + errorAttr)
+            reject(errorAttr)
+          } else if (dataAttr) {
+            let encodedUser = encodeURIComponent(this.userId)
+            let bucketNotificationConfiguration = {
+              Bucket: `${this.bucket}`,
+              NotificationConfiguration: {
+                TopicConfigurations: [
+                  {
+                    Events: [
+                      's3:ObjectCreated:Post'
+                    ],
+                    TopicArn: `${data.TopicArn}`,
+                    Filter: {
+                      Key: {
+                        FilterRules: [
+                          {
+                            Name: 'prefix',
+                            Value: `${this.apiVersion}/${encodedUser}/`
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+            this.s3.putBucketNotificationConfiguration(bucketNotificationConfiguration, (errorNotif, dataNotif) => {
+              if (errorNotif) {
+                console.log('S3 putBucketNotificationConfiguration failed with error: ' + errorNotif)
+                reject(errorNotif)
+              } else if (dataNotif) {
+                resolve([])
+              }
+            })
+          }
+        })
+      }
+    })
+  })
+}
+
+/**
+ * SQS queue name for a device
+ * @param {string} deviceId
+ * @returns {string}
+ */
+RequestUtil.prototype.sqsName = function (deviceId) {
+  return `${this.bucket}-${this.apiVersion}-${this.userIdBase62}-${deviceId}`
+}
+
+/**
+ * Creates SQS for the current device.
+ * @param {string} deviceId
+ * @returns {Promise}
+ */
+RequestUtil.prototype.createAndSubscribeSQS = function (deviceId) {
+  // Creating a query for the current userId
+  if (!deviceId) {
+    throw new Error('createSQS failed. deviceId is null!')
+  }
+  this.deviceId = deviceId
+  let newQueueParams = {
+    QueueName: this.sqsName(deviceId),
+    Attributes: {
+      'MessageRetentionPeriod': s3Helper.SQS_RETENTION
+    }
+  }
+  return new Promise((resolve, reject) => {
+    this.sqs.createQueue(newQueueParams, (error, data) => {
+      if (error) {
+        console.log('SQS creation failed with error: ' + error)
+        reject(error)
+      } else if (data) {
+        this.SQSUrl = data.QueueUrl
+        let queueAttributesParams = {
+          QueueUrl: data.QueueUrl,
+          AttributeNames: [
+            'QueueArn'
+          ]
+        }
+        this.sqs.getQueueAttributes(queueAttributesParams, (errorAttr, dataAttr) => {
+          if (errorAttr) {
+            console.log('SQS.getQueueAttributes failed with error: ' + errorAttr)
+            reject(errorAttr)
+          } else if (dataAttr) {
+            let setQueueAttributesParams = {
+              QueueUrl: data.QueueUrl,
+              Attributes: {
+                'Policy': `${this.SQSPolicy(dataAttr.Attributes.QueueArn)}`
+              }
+            }
+            this.sqs.setQueueAttributes(setQueueAttributesParams, (errorSetQueueAttr, dataSetQueueAttr) => {
+              if (errorSetQueueAttr) {
+                console.log('SQS.setQueueAttributes failed with error: ' + errorSetQueueAttr)
+                reject(errorSetQueueAttr)
+              } else if (dataSetQueueAttr) {
+                let subscribeParams = {
+                  TopicArn: `${this.SNSArn}`,
+                  Protocol: 'sqs',
+                  Endpoint: `${dataAttr.Attributes.QueueArn}`
+                }
+                this.sns.subscribe(subscribeParams, (errorSubscribe, dataSubscribe) => {
+                  if (errorSubscribe) {
+                    console.log('SNS.subscribe failed with error: ' + errorSubscribe)
+                    reject(errorSubscribe)
+                  } else if (dataSubscribe) {
+                    resolve([])
+                  }
+                })
+              }
+            })
+          }
+        })
+      }
+    })
+  })
+}
+
+/**
+ * Creates SQS Policy.
+ * @param {string} queueArn
+ * @returns {Promise}
+ */
+RequestUtil.prototype.SQSPolicy = function (queueArn) {
+  return `
+  {
+    "Version":"2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": "*",
+        "Action": "SQS:SendMessage",
+        "Resource": "${queueArn}",
+        "Condition": {
+          "ArnEquals": {
+            "aws:SourceArn": "${this.SNSArn}"
+          }
+        }
+      }
+    ]
+  }
+  `
+}
+
+/**
+ * Creates SNS Policy.
+ * @param {string} snsArn
+ * @returns {Promise}
+ */
+RequestUtil.prototype.SNSPolicy = function (snsArn) {
+  return `
+  {
+    "Version":"2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": "*",
+        "Action": "SNS:Publish",
+        "Resource": "${snsArn}",
+        "Condition": {
+          "ArnEquals": {
+            "aws:SourceArn": "arn:aws:s3:*:*:${this.bucket}"
+          }
+        }
+      }
+    ]
+  }
+  `
 }
 
 /**
@@ -272,6 +515,110 @@ RequestUtil.prototype.s3DeletePrefix = function (prefix) {
 
 RequestUtil.prototype.deleteUser = function () {
   return this.s3DeletePrefix(`${this.apiVersion}/${this.userId}`)
+}
+
+RequestUtil.prototype.deleteUserTopicQueues = function () {
+  return new Promise((resolve, reject) => {
+    let subscriptions = []
+    listSubscriptionsByTopicRecursively(this.sns, this.SNSArn, subscriptions, '', (error, data) => {
+      if (error) {
+        reject(error)
+      }
+      let queuesURLs = []
+      getQueuesURLsByNames(this.sqs, queuesURLs, subscriptions, (errNames, dataNames) => {
+        if (errNames) {
+          reject(errNames)
+        }
+        for (let url of dataNames) {
+          let params = {
+            QueueUrl: url
+          }
+          this.sqs.deleteQueue(params, (errDeleteSQS, dataDeleteSNS) => {
+            // Just ignore data or any error here
+          })
+        }
+        let params = {
+          TopicArn: this.SNSArn
+        }
+        this.sns.deleteTopic(params, (errDeleteTopic, dataDeleteTopic) => {
+          // Just ignore data or any error here
+        })
+        resolve({})
+      })
+    })
+  })
+}
+
+function listSubscriptionsByTopicRecursively (sns, snsARN, subscriptions, nextToken, callback) {
+  let params = {
+    TopicArn: snsARN,
+    NextToken: nextToken
+  }
+  sns.listSubscriptionsByTopic(params, (error, data) => {
+    if (error) {
+      console.log('SNS listSubscriptionsByTopic failed with error: ' + error)
+      callback(error, null)
+    } else if (data) {
+      for (let subscription of data.Subscriptions) {
+        let parts = subscription.Endpoint.split(':')
+        if (parts.length !== 0) {
+          subscriptions.push(parts[parts.length - 1])
+        }
+      }
+      if (data.NextToken && data.NextToken !== '') {
+        listSubscriptionsByTopicRecursively(sns, snsARN, subscriptions, data.NextToken, callback)
+      } else {
+        callback(null, subscriptions)
+      }
+    }
+  })
+}
+
+function getQueuesURLsByNames (sqs, urls, names, callback) {
+  if (names.length === 0) {
+    callback(null, urls)
+
+    return
+  }
+  let name = names.shift()
+  let params = {
+    QueueName: name
+  }
+  sqs.getQueueUrl(params, (error, data) => {
+    if (error) {
+      console.log('SQS getQueueUrl failed with error: ' + error)
+      // Just ignore the error
+    } else if (data) {
+      urls.push(data.QueueUrl)
+    }
+    getQueuesURLsByNames(sqs, urls, names, callback)
+  })
+}
+
+RequestUtil.prototype.purgeUserQueues = function () {
+  return new Promise((resolve, reject) => {
+    let subscriptions = []
+    listSubscriptionsByTopicRecursively(this.sns, this.SNSArn, subscriptions, '', (error, data) => {
+      if (error) {
+        reject(error)
+      }
+      let queuesURLs = []
+      getQueuesURLsByNames(this.sqs, queuesURLs, subscriptions, (errNames, dataNames) => {
+        if (errNames) {
+          reject(errNames)
+        }
+        for (let url of dataNames) {
+          let params = {
+            QueueUrl: url
+          }
+          this.sqs.purgeQueue(params, (errPurgeSQS, dataPurgeSNS) => {
+            // Just ignore data or any error here
+          })
+        }
+        resolve({})
+      })
+    })
+  })
 }
 
 /**
