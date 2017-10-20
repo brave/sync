@@ -49,6 +49,8 @@ const RequestUtil = function (opts = {}) {
   this.serializer = opts.serializer
   this.serverUrl = opts.serverUrl
   this.userId = Buffer.from(opts.keys.publicKey).toString('base64')
+  // For SNS and SQS, which don't allow + and /
+  this.userIdBase62 = this.userId.replace(/[^A-Za-z0-9]/g, '')
   this.encrypt = cryptoUtil.Encrypt(this.serializer, opts.keys.secretboxKey, CONFIG.nonceCounter)
   this.decrypt = cryptoUtil.Decrypt(this.serializer, opts.keys.secretboxKey)
   this.sign = cryptoUtil.Sign(opts.keys.secretKey)
@@ -214,13 +216,20 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, platform) 
 }
 
 /**
+ * SNS Topic name for the current user.
+ * @returns {string}
+ */
+RequestUtil.prototype.snsTopic = function () {
+  return `${this.bucket}-${this.apiVersion}-${this.userIdBase62}`
+}
+
+/**
  * Creates SNS Topic for the current user.
  * @returns {Promise}
  */
 RequestUtil.prototype.createAndSubscribeSNS = function () {
-  this.SNSName = `${this.bucket}_sns_${this.userId.replace(/[^A-Za-z0-9]/g, '')}`
   let params = {
-    Name: `${this.SNSName}`
+    Name: this.snsTopic()
   }
   return new Promise((resolve, reject) => {
     this.sns.createTopic(params, (error, data) => {
@@ -279,6 +288,15 @@ RequestUtil.prototype.createAndSubscribeSNS = function () {
 }
 
 /**
+ * SQS queue name for a device
+ * @param {string} deviceId
+ * @returns {string}
+ */
+RequestUtil.prototype.sqsName = function (deviceId) {
+  return `${this.bucket}-${this.apiVersion}-${this.userIdBase62}-${deviceId}`
+}
+
+/**
  * Creates SQS for the current device.
  * @param {string} deviceId
  * @returns {Promise}
@@ -289,9 +307,8 @@ RequestUtil.prototype.createAndSubscribeSQS = function (deviceId) {
     throw new Error('createSQS failed. deviceId is null!')
   }
   this.deviceId = deviceId
-  this.SQSName = `${this.bucket}_sqs_${this.userId.replace(/[^A-Za-z0-9]/g, '')}_${deviceId}`
   let newQueueParams = {
-    QueueName: `${this.SQSName}`,
+    QueueName: this.sqsName(deviceId),
     Attributes: {
       'MessageRetentionPeriod': s3Helper.SQS_RETENTION
     }
