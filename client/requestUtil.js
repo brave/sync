@@ -108,6 +108,7 @@ RequestUtil.prototype.saveAWSCredentials = function (parsedResponse) {
 
   this.sqs = parsedResponse.sqs
   this.sns = parsedResponse.sns
+  this.initialSyncDone = true
 }
 
 /**
@@ -180,10 +181,9 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
  * @param {string} category - the category ID
  * @param {number=} startAt return objects with timestamp >= startAt (e.g. 1482435340)
  * @param {number=} maxRecords Limit response to a given number of recods. By default the Sync lib will fetch all matching records, which might take a long time. If falsey, fetch all records.
- * @param {string} platform current platform (laptop | android | ios)
  * @returns {Promise(Array.<Object>)}
  */
-RequestUtil.prototype.list = function (category, startAt, maxRecords, platform) {
+RequestUtil.prototype.list = function (category, startAt, maxRecords) {
   const prefix = `${this.apiVersion}/${this.userId}/${category}`
   let options = {
     MaxKeys: maxRecords || 1000,
@@ -192,8 +192,15 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, platform) 
   }
   if (startAt) { options.StartAfter = `${prefix}/${startAt}` }
   return this.withRetry(() => {
-    if (!startAt || ((new Date()).getTime() - startAt) >
-        parseInt(s3Helper.SQS_RETENTION, 10) * 1000) {
+    let startAtToCheck = startAt
+    let currentTime = new Date().getTime()
+    if (startAtToCheck && currentTime.toString().length - startAtToCheck.toString().length >= 3) {
+      startAtToCheck *= 1000
+    }
+    if (!startAtToCheck ||
+        (currentTime - startAtToCheck) > parseInt(s3Helper.SQS_RETENTION, 10) * 1000 ||
+        category !== proto.categories.BOOKMARKS ||
+        !this.initialSyncDone) {
       return s3Helper.listObjects(this.s3, options, !!maxRecords)
     }
     // We poll from SQS
@@ -211,8 +218,16 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, platform) 
     }
 
     return s3Helper.listNotifications(this.sqs, notificationParams, category,
-      `${this.apiVersion}/${encodeURIComponent(this.userId)}/${category}`, platform)
+      `${this.apiVersion}/${encodeURIComponent(this.userId).replace('%2F', '/')}/${category}`)
   })
+}
+
+/**
+ * Sets if the initial sync done or not
+ * @param {boolean}
+ */
+RequestUtil.prototype.setInitialSyncDone = function (initialSyncDone) {
+  this.initialSyncDone = initialSyncDone
 }
 
 /**
@@ -248,7 +263,7 @@ RequestUtil.prototype.createAndSubscribeSNS = function () {
             console.log('SNS setTopicAttributes failed with error: ' + errorAttr)
             reject(errorAttr)
           } else if (dataAttr) {
-            let encodedUser = encodeURIComponent(this.userId)
+            let encodedUser = encodeURIComponent(this.userId).replace('%2F', '/')
             let bucketNotificationConfiguration = {
               Bucket: `${this.bucket}`,
               NotificationConfiguration: {
@@ -367,7 +382,7 @@ RequestUtil.prototype.createAndSubscribeSQS = function (deviceId) {
 /**
  * Creates SQS Policy.
  * @param {string} queueArn
- * @returns {Promise}
+ * @returns {string}
  */
 RequestUtil.prototype.SQSPolicy = function (queueArn) {
   return `
@@ -393,7 +408,7 @@ RequestUtil.prototype.SQSPolicy = function (queueArn) {
 /**
  * Creates SNS Policy.
  * @param {string} snsArn
- * @returns {Promise}
+ * @returns {string}
  */
 RequestUtil.prototype.SNSPolicy = function (snsArn) {
   return `
