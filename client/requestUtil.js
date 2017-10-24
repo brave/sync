@@ -49,7 +49,9 @@ const RequestUtil = function (opts = {}) {
   this.serializer = opts.serializer
   this.serverUrl = opts.serverUrl
   this.userId = Buffer.from(opts.keys.publicKey).toString('base64')
-  // For SNS and SQS, which don't allow + and /
+  // For SNS, SQS notifications filter, we should keep /
+  this.userIdEncoded = encodeURIComponent(this.userId).replace('%2F', '/')
+  // For SNS and SQS names, which don't allow + and /
   this.userIdBase62 = this.userId.replace(/[^A-Za-z0-9]/g, '')
   this.encrypt = cryptoUtil.Encrypt(this.serializer, opts.keys.secretboxKey, CONFIG.nonceCounter)
   this.decrypt = cryptoUtil.Decrypt(this.serializer, opts.keys.secretboxKey)
@@ -108,7 +110,7 @@ RequestUtil.prototype.saveAWSCredentials = function (parsedResponse) {
 
   this.sqs = parsedResponse.sqs
   this.sns = parsedResponse.sns
-  this.initialSyncDone = true
+  this.listInProgress = undefined
 }
 
 /**
@@ -192,15 +194,7 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords) {
   }
   if (startAt) { options.StartAfter = `${prefix}/${startAt}` }
   return this.withRetry(() => {
-    let startAtToCheck = startAt
-    let currentTime = new Date().getTime()
-    if (startAtToCheck && currentTime.toString().length - startAtToCheck.toString().length >= 3) {
-      startAtToCheck *= 1000
-    }
-    if (!startAtToCheck ||
-        (currentTime - startAtToCheck) > parseInt(s3Helper.SQS_RETENTION, 10) * 1000 ||
-        category !== proto.categories.BOOKMARKS ||
-        !this.initialSyncDone) {
+    if (this.shouldListObject(startAt, category)) {
       return s3Helper.listObjects(this.s3, options, !!maxRecords)
     }
     // We poll from SQS
@@ -218,8 +212,39 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords) {
     }
 
     return s3Helper.listNotifications(this.sqs, notificationParams, category,
-      `${this.apiVersion}/${encodeURIComponent(this.userId).replace('%2F', '/')}/${category}`)
+      `${this.apiVersion}/${this.userIdEncoded}/${category}`)
   })
+}
+
+/**
+ * Checks do we need to use s3 list Object or SQS notifications
+ * @param {number=} startAt return objects with timestamp >= startAt (e.g. 1482435340). Could be seconds or milliseconds
+ * @param {string} category - the category ID
+ * @returns {boolean}
+*/
+RequestUtil.prototype.shouldListObject = function (startAt, category) {
+  let currentTime = new Date().getTime()
+  let startAtToCheck = this.normalizeTimestampToMs(startAt, currentTime)
+
+  return !startAtToCheck ||
+      (currentTime - startAtToCheck) > parseInt(s3Helper.SQS_RETENTION, 10) * 1000 ||
+      category !== proto.categories.BOOKMARKS ||
+      this.listInProgress === false
+}
+
+/**
+ * Checks do we need to use s3 list Object or SQS notifications
+ * @param {number=} startAt return objects with timestamp >= startAt (e.g. 1482435340). Could be seconds or milliseconds
+ * @param {number=} currentTime currentTime in milliseconds
+ * @returns {number=}
+*/
+RequestUtil.prototype.normalizeTimestampToMs = function (startAt, currentTime) {
+  let startAtToCheck = startAt
+  if (startAtToCheck && currentTime.toString().length - startAtToCheck.toString().length >= 3) {
+    startAtToCheck *= 1000
+  }
+
+  return startAtToCheck
 }
 
 /**
@@ -227,7 +252,7 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords) {
  * @param {boolean}
  */
 RequestUtil.prototype.setInitialSyncDone = function (initialSyncDone) {
-  this.initialSyncDone = initialSyncDone
+  this.listInProgress = initialSyncDone
 }
 
 /**
@@ -263,7 +288,6 @@ RequestUtil.prototype.createAndSubscribeSNS = function () {
             console.log('SNS setTopicAttributes failed with error: ' + errorAttr)
             reject(errorAttr)
           } else if (dataAttr) {
-            let encodedUser = encodeURIComponent(this.userId).replace('%2F', '/')
             let bucketNotificationConfiguration = {
               Bucket: `${this.bucket}`,
               NotificationConfiguration: {
@@ -278,7 +302,7 @@ RequestUtil.prototype.createAndSubscribeSNS = function () {
                         FilterRules: [
                           {
                             Name: 'prefix',
-                            Value: `${this.apiVersion}/${encodedUser}/`
+                            Value: `${this.apiVersion}/${this.userIdEncoded}/`
                           }
                         ]
                       }
