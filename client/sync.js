@@ -96,18 +96,23 @@ const startSync = (requester) => {
     return jsRecords
   }
 
-  ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames, startAt, limitResponse, platform) => {
+  ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames, startAt, limitResponse) => {
     logSync(`fetching ${categoryNames} records after ${startAt}`)
     categoryNames.forEach((category) => {
       if (!proto.categories[category]) {
         throw new Error(`Unsupported sync category: ${category}`)
       }
-      requester.list(proto.categories[category], startAt, limitResponse, platform).then((s3Objects) => {
+      requester.list(proto.categories[category], startAt, limitResponse).then((s3Objects) => {
         const jsRecords = getJSRecords(s3Objects.contents)
         logSync(`got ${jsRecords.length} decrypted records in ${category} after ${startAt}`)
         let lastRecordTimestamp
         if (jsRecords.length > 0) {
           lastRecordTimestamp = jsRecords[jsRecords.length - 1].syncTimestamp
+        }
+        if (!startAt && s3Objects.isTruncated) {
+          requester.setInitialSyncDone(false)
+        } else if (!s3Objects.isTruncated) {
+          requester.setInitialSyncDone(true)
         }
         ipc.send(messages.GET_EXISTING_OBJECTS, category, jsRecords, lastRecordTimestamp, s3Objects.isTruncated)
       })
