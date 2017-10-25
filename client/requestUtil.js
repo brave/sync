@@ -229,7 +229,7 @@ RequestUtil.prototype.shouldListObject = function (startAt, category) {
   return !startAtToCheck ||
       (currentTime - startAtToCheck) > parseInt(s3Helper.SQS_RETENTION, 10) * 1000 ||
       category !== proto.categories.BOOKMARKS ||
-      this.listInProgress === false
+      this.listInProgress === true
 }
 
 /**
@@ -251,8 +251,8 @@ RequestUtil.prototype.normalizeTimestampToMs = function (startAt, currentTime) {
  * Sets if the initial sync done or not
  * @param {boolean}
  */
-RequestUtil.prototype.setInitialSyncDone = function (initialSyncDone) {
-  this.listInProgress = initialSyncDone
+RequestUtil.prototype.setListInProgress = function (listInProgress) {
+  this.listInProgress = listInProgress
 }
 
 /**

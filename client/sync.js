@@ -110,9 +110,9 @@ const startSync = (requester) => {
           lastRecordTimestamp = jsRecords[jsRecords.length - 1].syncTimestamp
         }
         if (!startAt && s3Objects.isTruncated) {
-          requester.setInitialSyncDone(false)
+          requester.setListInProgress(true)
         } else if (!s3Objects.isTruncated) {
-          requester.setInitialSyncDone(true)
+          requester.setListInProgress(false)
         }
         ipc.send(messages.GET_EXISTING_OBJECTS, category, jsRecords, lastRecordTimestamp, s3Objects.isTruncated)
       })
