@@ -66,7 +66,7 @@ const RequestUtil = function (opts = {}) {
   }
 }
 
-RequestUtil.prototype.addBucketNotification = function(topicARN) {
+RequestUtil.prototype.addBucketNotification = function (topicARN) {
   // Timestamp checked in server/lib/request-verifier.js
   const timestampString = Math.floor(Date.now() / 1000).toString()
   const userId = window.encodeURIComponent(this.userId)

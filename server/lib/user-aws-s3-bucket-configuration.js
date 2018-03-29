@@ -3,7 +3,6 @@
 const config = require('config')
 const awsSdk = require('aws-sdk')
 
-
 class UserAwsS3BucketConfiguration {
   constructor (userId, s3Bucket, topicARN, prefix) {
     this.userId = userId
@@ -16,24 +15,24 @@ class UserAwsS3BucketConfiguration {
     if (!this.prefix) { throw new Error('Missing prefix') }
     // to do debug
     awsSdk.config.update({
-        accessKeyId: config.awsAccessKeyId,
-        secretAccessKey: config.awsSecretAccessKey,
-        region: config.awsRegion
-    });
+      accessKeyId: config.awsAccessKeyId,
+      secretAccessKey: config.awsSecretAccessKey,
+      region: config.awsRegion
+    })
     //
     this.s3 = new awsSdk.S3({
       credentials: new awsSdk.Credentials({
-      accessKeyId: config.awsAccessKeyId,
-      secretAccessKey: config.awsSecretAccessKey
-    }),
-    convertResponseTypes: false,
-    // The bucket name is prepended to the endpoint to build the actual request URL, e.g.
-    // https://brave-sync-staging.s3.dualstack.us-west-2.amazonaws.com
-    endpoint: `https://s3.dualstack.${config.awsRegion}.amazonaws.com`,
-    maxRetries: 10,
-    region: config.awsRegion,
-    sslEnabled: true,
-    useDualstack: true})
+        accessKeyId: config.awsAccessKeyId,
+        secretAccessKey: config.awsSecretAccessKey
+      }),
+      convertResponseTypes: false,
+      // The bucket name is prepended to the endpoint to build the actual request URL, e.g.
+      // https://brave-sync-staging.s3.dualstack.us-west-2.amazonaws.com
+      endpoint: `https://s3.dualstack.${config.awsRegion}.amazonaws.com`,
+      maxRetries: 10,
+      region: config.awsRegion,
+      sslEnabled: true,
+      useDualstack: true})
   }
 
   perform () {
