@@ -66,6 +66,30 @@ const RequestUtil = function (opts = {}) {
   }
 }
 
+RequestUtil.prototype.addBucketNotification = function(topicARN) {
+  // Timestamp checked in server/lib/request-verifier.js
+  const timestampString = Math.floor(Date.now() / 1000).toString()
+  const userId = window.encodeURIComponent(this.userId)
+  const topicARNEncoded = window.encodeURIComponent(topicARN)
+  const prefix = window.encodeURIComponent(`${this.apiVersion}/${this.userIdEncoded}/`)
+  const url = `${this.serverUrl}/${userId}/${topicARNEncoded}/${prefix}/bucket_notification`
+  const bytes = this.serializer.stringToByteArray(timestampString)
+  const params = {
+    method: 'POST',
+    body: this.sign(bytes)
+  }
+  return window.fetch(url, params)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`add bucket notification server response ${response.status}`)
+      }
+      return response.arrayBuffer()
+    })
+    .then((buffer) => {
+      return Promise.resolve(this)
+    })
+}
+
 /**
  * Save parsed AWS credential response to be used with AWS requests.
  * @param {{s3: Object, postData: Object, expiration: string, bucket: string, region: string}}
@@ -288,37 +312,9 @@ RequestUtil.prototype.createAndSubscribeSNS = function () {
             console.log('SNS setTopicAttributes failed with error: ' + errorAttr)
             reject(errorAttr)
           } else if (dataAttr) {
-            let bucketNotificationConfiguration = {
-              Bucket: `${this.bucket}`,
-              NotificationConfiguration: {
-                TopicConfigurations: [
-                  {
-                    Events: [
-                      's3:ObjectCreated:Post'
-                    ],
-                    TopicArn: `${data.TopicArn}`,
-                    Filter: {
-                      Key: {
-                        FilterRules: [
-                          {
-                            Name: 'prefix',
-                            Value: `${this.apiVersion}/${this.userIdEncoded}/`
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            }
-            this.s3.putBucketNotificationConfiguration(bucketNotificationConfiguration, (errorNotif, dataNotif) => {
-              if (errorNotif) {
-                console.log('S3 putBucketNotificationConfiguration failed with error: ' + errorNotif)
-                reject(errorNotif)
-              } else if (dataNotif) {
-                resolve([])
-              }
-            })
+            // Set the bucket configuration on the server side as the s3 API can only
+            // replace an existing configuration. We need to pull it first and append
+            this.addBucketNotification(data.TopicArn)
           }
         })
       }
