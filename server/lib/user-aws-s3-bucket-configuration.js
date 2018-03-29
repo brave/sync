@@ -43,7 +43,6 @@ class UserAwsS3BucketConfiguration {
     this.s3.getBucketNotificationConfiguration(getBucketNotificationConfiguration, (errorGetNotif, dataGetNotif) => {
       if (errorGetNotif) {
         console.log('S3 getBucketNotificationConfiguration failed with error: ' + errorGetNotif)
-        return
       } else if (dataGetNotif) {
         var currentObject = {
           TopicConfigurations: []
@@ -74,7 +73,6 @@ class UserAwsS3BucketConfiguration {
         this.s3.putBucketNotificationConfiguration(bucketNotificationConfiguration, (errorNotif, dataNotif) => {
           if (errorNotif) {
             console.log('S3 putBucketNotificationConfiguration failed with error: ' + errorNotif)
-            return
           }
         })
       }
