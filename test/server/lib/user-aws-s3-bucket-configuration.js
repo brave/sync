@@ -76,7 +76,7 @@ test('userAwsS3BucketConfiguration', (t) => {
     this.sns.createTopic(params, (error, data) => {
       if (error) {
         console.log('SNS creation failed with error: ' + error)
-        reject(error)
+        t.fail('')
       } else if (data) {
         this.SNSArn = data.TopicArn
         let topicAttributesParams = {
