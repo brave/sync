@@ -36,45 +36,52 @@ class UserAwsS3BucketConfiguration {
   }
 
   perform () {
-    let getBucketNotificationConfiguration = {
-      Bucket: `${this.s3Bucket}`
-    }
-    this.s3.getBucketNotificationConfiguration(getBucketNotificationConfiguration, (errorGetNotif, dataGetNotif) => {
-      if (errorGetNotif) {
-        console.log('S3 getBucketNotificationConfiguration failed with error: ' + errorGetNotif)
-      } else if (dataGetNotif) {
-        var currentObject = {
-          TopicConfigurations: []
-        }
-        if (dataGetNotif) {
-          currentObject = dataGetNotif
-        }
-        currentObject.TopicConfigurations.push({
-          Events: [
-            's3:ObjectCreated:Post'
-          ],
-          TopicArn: `${this.topicARN}`,
-          Filter: {
-            Key: {
-              FilterRules: [
-                {
-                  Name: 'prefix',
-                  Value: `${this.prefix}`
-                }
-              ]
-            }
-          }
-        })
-        let bucketNotificationConfiguration = {
-          Bucket: `${this.s3Bucket}`,
-          NotificationConfiguration: currentObject
-        }
-        this.s3.putBucketNotificationConfiguration(bucketNotificationConfiguration, (errorNotif, dataNotif) => {
-          if (errorNotif) {
-            console.log('S3 putBucketNotificationConfiguration failed with error: ' + errorNotif)
-          }
-        })
+    return new Promise((resolve, reject) => {
+      let getBucketNotificationConfiguration = {
+        Bucket: `${this.s3Bucket}`
       }
+      this.s3.getBucketNotificationConfiguration(getBucketNotificationConfiguration, (errorGetNotif, dataGetNotif) => {
+        if (errorGetNotif) {
+          console.log('S3 getBucketNotificationConfiguration failed with error: ' + errorGetNotif)
+          resolve(dataGetNotif)
+        } else if (dataGetNotif) {
+          var currentObject = {
+            TopicConfigurations: []
+          }
+          if (dataGetNotif) {
+            currentObject = dataGetNotif
+          }
+          currentObject.TopicConfigurations.push({
+            Events: [
+              's3:ObjectCreated:Post'
+            ],
+            TopicArn: `${this.topicARN}`,
+            Filter: {
+              Key: {
+                FilterRules: [
+                  {
+                    Name: 'prefix',
+                    Value: `${this.prefix}`
+                  }
+                ]
+              }
+            }
+          })
+          // to do debug
+          console.log('!!!configuration == ' + JSON.stringify(currentObject))
+          //
+          let bucketNotificationConfiguration = {
+            Bucket: `${this.s3Bucket}`,
+            NotificationConfiguration: currentObject
+          }
+          this.s3.putBucketNotificationConfiguration(bucketNotificationConfiguration, (errorNotif, dataNotif) => {
+            if (errorNotif) {
+              console.log('S3 putBucketNotificationConfiguration failed with error: ' + errorNotif)
+            }
+            resolve(dataNotif)
+          })
+        }
+      })
     })
   }
 }

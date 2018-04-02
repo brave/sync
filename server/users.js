@@ -39,8 +39,10 @@ router.post('/:userId/credentials', (request, response) => {
 
 router.post('/:userId/:topicARN/:prefix/bucket_notification', (request, response) => {
   new UserAwsS3BucketConfiguration(request.userId, BUCKET, request.topicARN, request.prefix).perform()
-  response.status(200)
-  response.send('')
+    .then((data) => {
+      response.status(200)
+      response.send('')
+    })
 })
 
 router.get('/', (_request, response) => {
