@@ -42,6 +42,10 @@ app.post('/:userId/credentials', cors({
   origin: '*'
 }))
 
+app.post('/:userId/:topicARN/:prefix/bucket_notification', cors({
+  origin: '*'
+}))
+
 const UsersRouter = require('./users.js')
 app.use('/', UsersRouter)
 
