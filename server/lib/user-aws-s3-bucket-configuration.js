@@ -67,9 +67,6 @@ class UserAwsS3BucketConfiguration {
               }
             }
           })
-          // to do debug
-          console.log('!!!configuration == ' + JSON.stringify(currentObject))
-          //
           let bucketNotificationConfiguration = {
             Bucket: `${this.s3Bucket}`,
             NotificationConfiguration: currentObject
