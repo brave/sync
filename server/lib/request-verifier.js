@@ -57,6 +57,17 @@ module.exports = function (request, response, next, userId) {
 
     util.logger.debug(' * request verified')
     request.userId = userId
+    if (request.params) {
+      if (request.params.userIdNotification) {
+        request.userIdNotification = request.params.userIdNotification
+      }
+      if (request.params.topicARN) {
+        request.topicARN = request.params.topicARN
+      }
+      if (request.params.prefix) {
+        request.prefix = request.params.prefix
+      }
+    }
     next()
   })
 }
