@@ -37,6 +37,7 @@ router.post('/:userId/credentials', (request, response) => {
     .catch((error) => { response.send(error) })
 })
 
+// Put s3 bucket notification configuration.
 router.post('/:userId/:topicARN/:prefix/bucket_notification', (request, response) => {
   new UserAwsS3BucketConfiguration(request.userId, BUCKET, request.topicARN, request.prefix).perform()
     .then((data) => {
