@@ -4,6 +4,7 @@ node_js:
 - node
 script:
 - npm run lint
+- npm run flow
 - npm run check
 - npm run browsertest
 - npm run coverage
