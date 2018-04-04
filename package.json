@@ -5,6 +5,7 @@
   "main": "server/index.js",
   "scripts": {
     "lint": "standard",
+    "lint-fix": "standard --fix",
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
     "build": "npm run build-proto && browserify client/sync.js | uglifyjs - > bundles/bundle.js",
     "build-proto": "pbjs --target=static-module lib/api.proto > lib/api.proto.js",
@@ -71,6 +72,9 @@
     "ignore": [
       "test/crypto.js",
       "test/client/fixtures/*.js",
+      "test/client/requestUtil.js",
+      "test/server/lib/user-aws-s3-post-authenticator.js",
+      "test/server/users.js",
       "bundles/*.js",
       "client/polyfill/*.js",
       "lib/api.proto.js"
