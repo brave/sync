@@ -35,16 +35,16 @@ class UserAwsCredentialGenerator {
 
     return new Promise((resolve, reject) => {
       this.awsSts().getFederationToken(params).promise()
-      .catch((data) => { reject(data) })
-      .then((data) => {
-        const returnData = {
-          accessKeyId: data.Credentials.AccessKeyId,
-          secretAccessKey: data.Credentials.SecretAccessKey,
-          sessionToken: data.Credentials.SessionToken,
-          expiration: data.Credentials.Expiration.toJSON()
-        }
-        resolve(returnData)
-      })
+        .catch((data) => { reject(data) })
+        .then((data) => {
+          const returnData = {
+            accessKeyId: data.Credentials.AccessKeyId,
+            secretAccessKey: data.Credentials.SecretAccessKey,
+            sessionToken: data.Credentials.SessionToken,
+            expiration: data.Credentials.Expiration.toJSON()
+          }
+          resolve(returnData)
+        })
     })
   }
 
