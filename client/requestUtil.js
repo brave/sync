@@ -314,7 +314,7 @@ RequestUtil.prototype.createAndSubscribeSNS = function () {
           } else if (dataAttr) {
             // Set the bucket configuration on the server side as the s3 API can only
             // replace an existing configuration. We need to pull it first and append
-            this.addBucketNotification(data.TopicArn)
+            this.addBucketNotification(data.TopicArn).then((...args) => { resolve([]) })
           }
         })
       }
