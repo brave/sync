@@ -65,7 +65,6 @@ message SyncRecord {
     }
     AdControl adControl = 4;
     CookieControl cookieControl = 5;
-    bool safeBrowsing = 6;
     bool noScript = 7;
     bool httpsEverywhere = 8;
     bool fingerprintingProtection = 9;

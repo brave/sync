@@ -351,14 +351,6 @@ test('recordUtil.resolve', (t) => {
       resolveToCreate(t, recordProps, recordProps, t.name)
     })
 
-    t.test(`${t.name}, siteSetting, .safeBrowsing -> null`, (t) => {
-      const recordProps = {
-        objectData: 'siteSetting',
-        siteSetting: {safeBrowsing: false}
-      }
-      resolveToNull(t, recordProps, t.name)
-    })
-
     t.test(`${t.name}, siteSetting, .hostPattern -> create`, (t) => {
       const recordProps = {
         objectData: 'siteSetting',
@@ -522,7 +514,7 @@ test('recordUtil.syncRecordAsJS()', (t) => {
     conversionEquals({ objectData: 'bookmark', bookmark })
 
     const siteSetting = serializer.api.SyncRecord.SiteSetting.create({
-      hostPattern: 'https://jisho.org', httpsEverywhere: false, ledgerPayments: false, ledgerPaymentsShown: false, noScript: false, safeBrowsing: false, shieldsUp: false, zoomLevel: 0.5
+      hostPattern: 'https://jisho.org', httpsEverywhere: false, ledgerPayments: false, ledgerPaymentsShown: false, noScript: false, shieldsUp: false, zoomLevel: 0.5
     })
     conversionEquals({ objectData: 'siteSetting', siteSetting })
 
