@@ -1,5 +1,5 @@
 {
-  "name": "brave-sync-client",
+  "name": "@brave/sync-client",
   "version": "0.1.0",
   "description": "Browserified sync client for Brave",
   "main": "bundle.js",
