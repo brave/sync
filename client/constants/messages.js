@@ -103,7 +103,27 @@ const messages = {
    * webview -> browser
    * webview sends this to delete all site settings.
    */
-  DELETE_SYNC_SITE_SETTINGS: _
+  DELETE_SYNC_SITE_SETTINGS: _,
+  /**
+   * browser -> webview
+   * browser sends this to get base bookmarks order for the particular device.
+   */
+  GET_BOOKMARKS_BASE_ORDER: _, /* @param {string} deviceId, @param {string} platform */
+  /**
+   * webview -> browser
+   * webview sends base bookmarks order.
+   */
+  SAVE_BOOKMARKS_BASE_ORDER: _, /* @param {string} order */
+  /**
+   * browser -> webview
+   * browser sends this to get a bookmark order based on prev and next bookmark orders.
+   */
+  GET_BOOKMARK_ORDER: _, /* @param {string} prevOrder, @param {string} nextOrder */
+  /**
+   * webview -> browser
+   * webview sends this to set a bookmark order based on prev and next bookmark orders..
+   */
+  SAVE_BOOKMARK_ORDER: _ /* @param {string} order, @param {string} prevOrder, @param {string} nextOrder */
 }
 
 module.exports = mapValuesByKeys(messages)
