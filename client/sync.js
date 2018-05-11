@@ -122,7 +122,7 @@ const startSync = (requester) => {
       }
     } else if (prevOrderSplit.length === 1) {
       if (nextOrderSplit.length > 2) {
-        for (var i = 0; i < nextOrderSplit.length - 1; i++) {
+        for (i = 0; i < nextOrderSplit.length - 1; i++) {
           order += nextOrderSplit[i] + `.`
         }
         let lastNumber = parseInt(nextOrderSplit[nextOrderSplit.length - 1])
@@ -134,7 +134,7 @@ const startSync = (requester) => {
       }
     } else {
       if (prevOrderSplit.length > 2 && nextOrderSplit.length > 2) {
-        for (var i = 0; i < prevOrderSplit.length - 1; i++) {
+        for (i = 0; i < prevOrderSplit.length - 1; i++) {
           order += prevOrderSplit[i] + `.`
         }
         if (prevOrderSplit.length === nextOrderSplit.length) {
@@ -146,17 +146,15 @@ const startSync = (requester) => {
             order += lastNumberPrev + `.1`
           }
         } else if (prevOrderSplit.length < nextOrderSplit.length) {
-          //for (var i = 0; i < prevOrderSplit.length; i++) {
           order += prevOrderSplit[prevOrderSplit.length - 1] + `.`
-          //}
           let currentIndex = prevOrderSplit.length
           while (parseInt(nextOrderSplit[currentIndex]) === 0) {
             order += nextOrderSplit[currentIndex] + `.`
-            currentIndex++;
+            currentIndex++
           }
           if (parseInt(nextOrderSplit[currentIndex]) === 1) {
             order += `0.1`
-          } else if (nextOrderSplit[currentIndex] != 0) {
+          } else if (parseInt(nextOrderSplit[currentIndex]) !== 0) {
             order += (parseInt(nextOrderSplit[currentIndex]) - 1)
           }
         } else {
