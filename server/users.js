@@ -34,7 +34,7 @@ router.post('/:userId/credentials', (request, response) => {
       const serialized = serializer.serializer.credentialsToByteArray({aws, s3Post, bucket: BUCKET, region: REGION})
       response.send(serialized)
     })
-    .catch((error) => { response.send(error) })
+    .catch((error) => { response.status(401).send(error) })
 })
 
 // Put s3 bucket notification configuration.
