@@ -1,8 +1,5 @@
 const test = require('tape')
-const testHelper = require('../testHelper')
-const timekeeper = require('timekeeper')
 const bookmarkUtil = require('../../client/bookmarkUtil')
-
 
 test('test bookmarkUtil', (t) => {
   t.plan(8)
