@@ -37,6 +37,10 @@ class UserAwsCredentialGenerator {
       this.awsSts().getFederationToken(params).promise()
         .catch((data) => { reject(data) })
         .then((data) => {
+          if (!data || !data.Credentials) {
+            reject(data)
+            return
+          }
           const returnData = {
             accessKeyId: data.Credentials.AccessKeyId,
             secretAccessKey: data.Credentials.SecretAccessKey,
