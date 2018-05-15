@@ -60,7 +60,7 @@ module.exports.getBookmarkOrder = (prevOrder, nextOrder) => {
         order += prevOrderSplit[i] + '.'
       }
       let lastNumber = parseInt(prevOrderSplit[prevOrderSplit.length - 1])
-      order = getNextOrderFromPrevOrder(lastNumber,  order)
+      order = getNextOrderFromPrevOrder(lastNumber, order)
     }
   } else if (prevOrderSplit.length === 1) {
     // Prev order is an empty string
