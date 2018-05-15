@@ -1,6 +1,7 @@
 'use strict'
 
 const initializer = require('./init')
+const bookmarkUtil = require('./bookmarkUtil')
 const RequestUtil = require('./requestUtil')
 const recordUtil = require('./recordUtil')
 const messages = require('./constants/messages')
@@ -175,6 +176,15 @@ const startSync = (requester) => {
     requester.deleteSiteSettings().then(() => {
       requester.purgeUserQueues()
     })
+  })
+  ipc.on(messages.GET_BOOKMARKS_BASE_ORDER, (e, deviceId, platform) => {
+    logSync(`Getting bookmarks base order`)
+    ipc.send(messages.SAVE_BOOKMARKS_BASE_ORDER, bookmarkUtil.getBaseBookmarksOrder(deviceId, platform))
+  })
+  ipc.on(messages.GET_BOOKMARK_ORDER, (e, prevOrder, nextOrder) => {
+    logSync(`Getting current bookmark order based on prev and next orders`)
+
+    ipc.send(messages.SAVE_BOOKMARK_ORDER, bookmarkUtil.getBookmarkOrder(prevOrder, nextOrder), prevOrder, nextOrder)
   })
   ipc.send(messages.SYNC_READY)
   logSync('success')

@@ -48,6 +48,7 @@ message SyncRecord {
     bytes nextObjectId = 5; // unused
     repeated string fields = 6;
     bool hideInToolbar = 7;
+    string order = 8;
   }
   message SiteSetting {
     string hostPattern = 1;
