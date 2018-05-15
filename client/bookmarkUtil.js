@@ -60,7 +60,7 @@ module.exports.getBookmarkOrder = (prevOrder, nextOrder) => {
         order += prevOrderSplit[i] + '.'
       }
       let lastNumber = parseInt(prevOrderSplit[prevOrderSplit.length - 1])
-      order = getNextOrderFromPrevOrder(lastNumber, order)
+      order = getNextOrderFromPrevOrder(lastNumber,  order)
     }
   } else if (prevOrderSplit.length === 1) {
     // Prev order is an empty string
@@ -87,14 +87,32 @@ module.exports.getBookmarkOrder = (prevOrder, nextOrder) => {
         }
       } else if (prevOrderSplit.length < nextOrderSplit.length) {
         // Next order is longer than previous order
+        let lastNumberDiff = true
+        for (i = 0; i < prevOrderSplit.length - 1; i++) {
+          if (prevOrderSplit[i] === nextOrderSplit[i]) {
+            continue
+          }
+          lastNumberDiff = false
+          break
+        }
         order += prevOrderSplit[prevOrderSplit.length - 1] + '.'
         let currentIndex = prevOrderSplit.length
         while (parseInt(nextOrderSplit[currentIndex]) === 0) {
           order += nextOrderSplit[currentIndex] + '.'
           currentIndex++
         }
-        let lastNumber = parseInt(nextOrderSplit[currentIndex])
-        order = getPrevOrderFromNextOrder(lastNumber, order)
+        let lastNumberNext = parseInt(nextOrderSplit[currentIndex])
+        let lastNumberPrev = parseInt(prevOrderSplit[prevOrderSplit.length - 1])
+        if (lastNumberDiff) {
+          let samePositionNumberNext = parseInt(nextOrderSplit[prevOrderSplit.length - 1])
+          if ((samePositionNumberNext - lastNumberPrev) >= 1) {
+            order += '1'
+          } else {
+            order = getPrevOrderFromNextOrder(lastNumberNext, order)
+          }
+        } else {
+          order = getPrevOrderFromNextOrder(lastNumberNext, order)
+        }
       } else {
         // Prev order is longer than next order
         let lastNumber = parseInt(prevOrderSplit[prevOrderSplit.length - 1])
