@@ -10,7 +10,6 @@ serializer.init()
 
 const UserAwsCredentialGenerator = require('./lib/user-aws-credential-generator')
 const UserAwsS3PostAuthenticator = require('./lib/user-aws-s3-post-authenticator')
-const UserAwsS3BucketConfiguration = require('./lib/user-aws-s3-bucket-configuration')
 
 const BUCKET = config.awsS3Bucket
 const REGION = config.awsRegion
@@ -35,15 +34,6 @@ router.post('/:userId/credentials', (request, response) => {
       response.send(serialized)
     })
     .catch((error) => { response.status(401).send(error) })
-})
-
-// Put s3 bucket notification configuration.
-router.post('/:userId/:topicARN/:prefix/bucket_notification', (request, response) => {
-  new UserAwsS3BucketConfiguration(request.userId, BUCKET, request.topicARN, request.prefix).perform()
-    .then((data) => {
-      response.status(200)
-      response.send('')
-    })
 })
 
 router.get('/', (_request, response) => {
