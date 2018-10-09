@@ -51,7 +51,7 @@
   },
   "dependencies": {
     "@protobufjs/utf8": "^1.1.0",
-    "aws-sdk": "^2.7.7",
+    "aws-sdk": "^2.331.0",
     "brave-crypto": "^0.2.0",
     "config": "^1.24.0",
     "cors": "^2.8.1",
