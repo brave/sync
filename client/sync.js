@@ -241,10 +241,10 @@ const main = () => {
         requester.createAndSubscribeSQS(clientDeviceId).then(() => {
           startSync(requester)
         })
-        .catch((e) => {
-          logSync('could not init sync on creation SQS: ' + e, ERROR)
-          ipc.send(messages.SYNC_SETUP_ERROR, e.message)
-        })
+          .catch((e) => {
+            logSync('could not init sync on creation SQS: ' + e, ERROR)
+            ipc.send(messages.SYNC_SETUP_ERROR, e.message)
+          })
       }
     })
     .catch((e) => {
