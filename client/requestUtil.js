@@ -407,27 +407,6 @@ RequestUtil.prototype.deleteUser = function () {
   return this.s3DeletePrefix(`${this.apiVersion}/${this.userId}`)
 }
 
-function getQueuesURLsByNames (sqs, urls, names, callback) {
-  if (names.length === 0) {
-    callback(null, urls)
-
-    return
-  }
-  let name = names.shift()
-  let params = {
-    QueueName: name
-  }
-  sqs.getQueueUrl(params, (error, data) => {
-    if (error) {
-      console.log('SQS getQueueUrl failed with error: ' + error)
-      // Just ignore the error
-    } else if (data) {
-      urls.push(data.QueueUrl)
-    }
-    getQueuesURLsByNames(sqs, urls, names, callback)
-  })
-}
-
 RequestUtil.prototype.purgeUserQueue = function () {
   return new Promise((resolve, reject) => {
     let params = {
