@@ -49,9 +49,9 @@ const RequestUtil = function (opts = {}) {
   this.serializer = opts.serializer
   this.serverUrl = opts.serverUrl
   this.userId = Buffer.from(opts.keys.publicKey).toString('base64')
-  // For SNS, SQS notifications filter, we should keep /
+  // For SQS notifications filter, we should keep /
   this.userIdEncoded = encodeURIComponent(this.userId).replace('%2F', '/')
-  // For SNS and SQS names, which don't allow + and /
+  // For SQS names, which don't allow + and /
   this.userIdBase62 = this.userId.replace(/[^A-Za-z0-9]/g, '')
   this.encrypt = cryptoUtil.Encrypt(this.serializer, opts.keys.secretboxKey, CONFIG.nonceCounter)
   this.decrypt = cryptoUtil.Decrypt(this.serializer, opts.keys.secretboxKey)
@@ -133,7 +133,6 @@ RequestUtil.prototype.saveAWSCredentials = function (parsedResponse) {
   this.s3PostEndpoint = `https://${this.bucket}.s3.dualstack.${this.region}.amazonaws.com`
 
   this.sqs = parsedResponse.sqs
-  this.sns = parsedResponse.sns
   this.listInProgress = undefined
 }
 
@@ -187,19 +186,8 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
     region: region,
     sslEnabled: true
   })
-  const sns = new awsSdk.SNS({
-    credentials: new awsSdk.Credentials({
-      accessKeyId: credentials.accessKeyId,
-      secretAccessKey: credentials.secretAccessKey,
-      sessionToken: credentials.sessionToken
-    }),
-    endpoint: `https://sns.${region}.amazonaws.com`,
-    maxRetries: CONFIG.SERVICES_MAX_RETRIES,
-    region: region,
-    sslEnabled: true
-  })
 
-  return {s3, postData, expiration, bucket, region, sqs, sns}
+  return {s3, postData, expiration, bucket, region, sqs}
 }
 
 /**
@@ -280,49 +268,6 @@ RequestUtil.prototype.setListInProgress = function (listInProgress) {
 }
 
 /**
- * SNS Topic name for the current user.
- * @returns {string}
- */
-RequestUtil.prototype.snsTopic = function () {
-  return `${this.bucket}-${this.apiVersion}-${this.userIdBase62}`
-}
-
-/**
- * Creates SNS Topic for the current user.
- * @returns {Promise}
- */
-RequestUtil.prototype.createAndSubscribeSNS = function () {
-  let params = {
-    Name: this.snsTopic()
-  }
-  return new Promise((resolve, reject) => {
-    this.sns.createTopic(params, (error, data) => {
-      if (error) {
-        console.log('SNS creation failed with error: ' + error)
-        reject(error)
-      } else if (data) {
-        this.SNSArn = data.TopicArn
-        let topicAttributesParams = {
-          AttributeName: 'Policy',
-          TopicArn: `${data.TopicArn}`,
-          AttributeValue: `${this.SNSPolicy(data.TopicArn)}`
-        }
-        this.sns.setTopicAttributes(topicAttributesParams, (errorAttr, dataAttr) => {
-          if (errorAttr) {
-            console.log('SNS setTopicAttributes failed with error: ' + errorAttr)
-            reject(errorAttr)
-          } else if (dataAttr) {
-            // Set the bucket configuration on the server side as the s3 API can only
-            // replace an existing configuration. We need to pull it first and append
-            this.addBucketNotification(data.TopicArn).then((...args) => { resolve([]) })
-          }
-        })
-      }
-    })
-  })
-}
-
-/**
  * SQS queue name for a device
  * @param {string} deviceId
  * @returns {string}
@@ -355,100 +300,10 @@ RequestUtil.prototype.createAndSubscribeSQS = function (deviceId) {
         reject(error)
       } else if (data) {
         this.SQSUrl = data.QueueUrl
-        let queueAttributesParams = {
-          QueueUrl: data.QueueUrl,
-          AttributeNames: [
-            'QueueArn'
-          ]
-        }
-        this.sqs.getQueueAttributes(queueAttributesParams, (errorAttr, dataAttr) => {
-          if (errorAttr) {
-            console.log('SQS.getQueueAttributes failed with error: ' + errorAttr)
-            reject(errorAttr)
-          } else if (dataAttr) {
-            let setQueueAttributesParams = {
-              QueueUrl: data.QueueUrl,
-              Attributes: {
-                'Policy': `${this.SQSPolicy(dataAttr.Attributes.QueueArn)}`
-              }
-            }
-            this.sqs.setQueueAttributes(setQueueAttributesParams, (errorSetQueueAttr, dataSetQueueAttr) => {
-              if (errorSetQueueAttr) {
-                console.log('SQS.setQueueAttributes failed with error: ' + errorSetQueueAttr)
-                reject(errorSetQueueAttr)
-              } else if (dataSetQueueAttr) {
-                let subscribeParams = {
-                  TopicArn: `${this.SNSArn}`,
-                  Protocol: 'sqs',
-                  Endpoint: `${dataAttr.Attributes.QueueArn}`
-                }
-                this.sns.subscribe(subscribeParams, (errorSubscribe, dataSubscribe) => {
-                  if (errorSubscribe) {
-                    console.log('SNS.subscribe failed with error: ' + errorSubscribe)
-                    reject(errorSubscribe)
-                  } else if (dataSubscribe) {
-                    resolve([])
-                  }
-                })
-              }
-            })
-          }
-        })
+        resolve([])
       }
     })
   })
-}
-
-/**
- * Creates SQS Policy.
- * @param {string} queueArn
- * @returns {string}
- */
-RequestUtil.prototype.SQSPolicy = function (queueArn) {
-  return `
-  {
-    "Version":"2012-10-17",
-    "Statement": [
-      {
-        "Effect": "Allow",
-        "Principal": "*",
-        "Action": "SQS:SendMessage",
-        "Resource": "${queueArn}",
-        "Condition": {
-          "ArnEquals": {
-            "aws:SourceArn": "${this.SNSArn}"
-          }
-        }
-      }
-    ]
-  }
-  `
-}
-
-/**
- * Creates SNS Policy.
- * @param {string} snsArn
- * @returns {string}
- */
-RequestUtil.prototype.SNSPolicy = function (snsArn) {
-  return `
-  {
-    "Version":"2012-10-17",
-    "Statement": [
-      {
-        "Effect": "Allow",
-        "Principal": "*",
-        "Action": "SNS:Publish",
-        "Resource": "${snsArn}",
-        "Condition": {
-          "ArnEquals": {
-            "aws:SourceArn": "arn:aws:s3:*:*:${this.bucket}"
-          }
-        }
-      }
-    ]
-  }
-  `
 }
 
 /**
@@ -552,106 +407,28 @@ RequestUtil.prototype.deleteUser = function () {
   return this.s3DeletePrefix(`${this.apiVersion}/${this.userId}`)
 }
 
-RequestUtil.prototype.deleteUserTopicQueues = function () {
+RequestUtil.prototype.purgeUserQueue = function () {
   return new Promise((resolve, reject) => {
-    let subscriptions = []
-    listSubscriptionsByTopicRecursively(this.sns, this.SNSArn, subscriptions, '', (error, data) => {
+    let params = {
+      QueueName: this.sqsName(this.deviceId)
+    }
+    this.sqs.getQueueUrl(params, (error, data) => {
       if (error) {
-        reject(error)
-      }
-      let queuesURLs = []
-      getQueuesURLsByNames(this.sqs, queuesURLs, subscriptions, (errNames, dataNames) => {
-        if (errNames) {
-          reject(errNames)
-        }
-        for (let url of dataNames) {
-          let params = {
-            QueueUrl: url
-          }
-          this.sqs.deleteQueue(params, (errDeleteSQS, dataDeleteSNS) => {
-            // Just ignore data or any error here
-          })
-        }
+        console.log('SQS getQueueUrl failed with error: ' + error)
+        resolve([])
+        // Just ignore the error
+      } else if (data) {
         let params = {
-          TopicArn: this.SNSArn
+          QueueUrl: data.QueueUrl
         }
-        this.sns.deleteTopic(params, (errDeleteTopic, dataDeleteTopic) => {
+        this.sqs.purgeQueue(params, (errPurgeSQS, dataPurgeSQS) => {
           // Just ignore data or any error here
-        })
-        resolve({})
-      })
-    })
-  })
-}
-
-function listSubscriptionsByTopicRecursively (sns, snsARN, subscriptions, nextToken, callback) {
-  let params = {
-    TopicArn: snsARN,
-    NextToken: nextToken
-  }
-  sns.listSubscriptionsByTopic(params, (error, data) => {
-    if (error) {
-      console.log('SNS listSubscriptionsByTopic failed with error: ' + error)
-      callback(error, null)
-    } else if (data) {
-      for (let subscription of data.Subscriptions) {
-        let parts = subscription.Endpoint.split(':')
-        if (parts.length !== 0) {
-          subscriptions.push(parts[parts.length - 1])
-        }
-      }
-      if (data.NextToken && data.NextToken !== '') {
-        listSubscriptionsByTopicRecursively(sns, snsARN, subscriptions, data.NextToken, callback)
-      } else {
-        callback(null, subscriptions)
-      }
-    }
-  })
-}
-
-function getQueuesURLsByNames (sqs, urls, names, callback) {
-  if (names.length === 0) {
-    callback(null, urls)
-
-    return
-  }
-  let name = names.shift()
-  let params = {
-    QueueName: name
-  }
-  sqs.getQueueUrl(params, (error, data) => {
-    if (error) {
-      console.log('SQS getQueueUrl failed with error: ' + error)
-      // Just ignore the error
-    } else if (data) {
-      urls.push(data.QueueUrl)
-    }
-    getQueuesURLsByNames(sqs, urls, names, callback)
-  })
-}
-
-RequestUtil.prototype.purgeUserQueues = function () {
-  return new Promise((resolve, reject) => {
-    let subscriptions = []
-    listSubscriptionsByTopicRecursively(this.sns, this.SNSArn, subscriptions, '', (error, data) => {
-      if (error) {
-        reject(error)
-      }
-      let queuesURLs = []
-      getQueuesURLsByNames(this.sqs, queuesURLs, subscriptions, (errNames, dataNames) => {
-        if (errNames) {
-          reject(errNames)
-        }
-        for (let url of dataNames) {
-          let params = {
-            QueueUrl: url
+          if (errPurgeSQS) {
+            console.log('SQS purgeQueue failed with error: ' + errPurgeSQS)
           }
-          this.sqs.purgeQueue(params, (errPurgeSQS, dataPurgeSNS) => {
-            // Just ignore data or any error here
-          })
-        }
-        resolve({})
-      })
+          resolve([])
+        })
+      }
     })
   })
 }

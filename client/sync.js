@@ -157,7 +157,7 @@ const startSync = (requester) => {
   ipc.on(messages.DELETE_SYNC_USER, (e) => {
     logSync(`Deleting user!!`)
     requester.deleteUser().then(() => {
-      requester.deleteUserTopicQueues().then(() => {
+      requester.purgeUserQueue().then(() => {
         ipc.send(messages.DELETED_SYNC_USER)
       })
     })
@@ -168,13 +168,13 @@ const startSync = (requester) => {
     }
     logSync(`Deleting category: ${category}`)
     requester.deleteCategory(proto.categories[category]).then(() => {
-      requester.purgeUserQueues()
+      requester.purgeUserQueue()
     })
   })
   ipc.on(messages.DELETE_SYNC_SITE_SETTINGS, (e) => {
     logSync(`Deleting siteSettings`)
     requester.deleteSiteSettings().then(() => {
-      requester.purgeUserQueues()
+      requester.purgeUserQueue()
     })
   })
   ipc.on(messages.GET_BOOKMARKS_BASE_ORDER, (e, deviceId, platform) => {
@@ -238,10 +238,8 @@ const main = () => {
     .then((requester) => {
       if (clientDeviceId !== null && requester && requester.s3) {
         logSync('set device ID: ' + clientDeviceId)
-        requester.createAndSubscribeSNS().then(() => {
-          requester.createAndSubscribeSQS(clientDeviceId).then(() => {
-            startSync(requester)
-          })
+        requester.createAndSubscribeSQS(clientDeviceId).then(() => {
+          startSync(requester)
         })
           .catch((e) => {
             logSync('could not init sync on creation SQS: ' + e, ERROR)
