@@ -10,6 +10,7 @@ module.exports = {
     /The provided token has expired\./,
     /Invalid according to Policy: Policy expired\./,
     /The security token included in the request is expired/,
+    /The provided token is malformed or otherwise invalid/,
     /The AWS Access Key Id you provided does not exist in our records./
   ],
   // Maximum amount of messages to receive from SQS
