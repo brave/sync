@@ -7,6 +7,7 @@ const recordUtil = require('./recordUtil')
 const messages = require('./constants/messages')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
+const {deriveKeys} = require('../lib/crypto')
 
 let ipc = window.chrome.ipcRenderer
 
@@ -20,6 +21,7 @@ var clientDeviceId = null
 var clientUserId = null
 var clientKeys = {}
 var config = {}
+var seed
 
 /**
  * Logs stuff on the visible HTML page.
@@ -66,7 +68,7 @@ const maybeSetDeviceId = (requester) => {
         })
       }
       clientDeviceId = new Uint8Array([maxId + 1])
-      ipc.send(messages.SAVE_INIT_DATA, undefined, clientDeviceId)
+      ipc.send(messages.SAVE_INIT_DATA, seed, clientDeviceId)
       return Promise.resolve(requester)
     })
 }
@@ -200,8 +202,9 @@ const main = () => {
 
   Promise.all([serializer.init(), initializer.init()]).then((values) => {
     const clientSerializer = values[0]
-    const keys = values[1].keys
+    const keys = deriveKeys(values[1].seed)
     const deviceId = values[1].deviceId
+    seed = values[1].seed
     clientKeys = keys
     config = values[1].config
     if (deviceId instanceof Uint8Array && deviceId.length === 1) {
