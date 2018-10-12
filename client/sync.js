@@ -183,10 +183,10 @@ const startSync = (requester) => {
     logSync(`Getting bookmarks base order`)
     ipc.send(messages.SAVE_BOOKMARKS_BASE_ORDER, bookmarkUtil.getBaseBookmarksOrder(deviceId, platform))
   })
-  ipc.on(messages.GET_BOOKMARK_ORDER, (e, prevOrder, nextOrder) => {
-    logSync(`Getting current bookmark order based on prev and next orders`)
+  ipc.on(messages.GET_BOOKMARK_ORDER, (e, prevOrder, nextOrder, parentOrder) => {
+    logSync(`Getting current bookmark order based on prev, next and parent orders`)
 
-    ipc.send(messages.SAVE_BOOKMARK_ORDER, bookmarkUtil.getBookmarkOrder(prevOrder, nextOrder), prevOrder, nextOrder)
+    ipc.send(messages.SAVE_BOOKMARK_ORDER, bookmarkUtil.getBookmarkOrder(prevOrder, nextOrder, parentOrder), prevOrder, nextOrder, parentOrder)
   })
   ipc.send(messages.SYNC_READY)
   logSync('success')
