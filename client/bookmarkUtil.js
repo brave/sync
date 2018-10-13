@@ -44,16 +44,18 @@ const getPrevOrderFromNextOrder = (lastNumber, order) => {
  * Returns current bookmark order based on previous and next bookmark order.
  * @param {String} prevOrder
  * @param {String} nextOrder
+ * @param {String} parentOrder
  * @returns {String}
  */
 module.exports.getBookmarkOrder = (prevOrder, nextOrder, parentOrder) => {
   let prevOrderSplit = prevOrder.split('.')
   let nextOrderSplit = nextOrder.split('.')
+
   if (prevOrderSplit.length === 1 && nextOrderSplit.length === 1) {
     if (!parentOrder) {
-      throw new Error(`Invalid previous and next orders: ${prevOrderSplit}, ${nextOrderSplit} and ${parentOrder}`)
+      throw new Error(`Invalid previous, next and parent orders: ${prevOrderSplit}, ${nextOrderSplit} and ${parentOrder}`)
     } else {
-      return parentOrder + '.1';
+      return parentOrder + '.1'
     }
   }
   let order = ''
