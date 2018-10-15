@@ -117,13 +117,14 @@ const messages = {
   /**
    * browser -> webview
    * browser sends this to get a bookmark order based on prev and next bookmark orders.
+   * parentOrder should be set if both prevOrder and nextOrder
    */
-  GET_BOOKMARK_ORDER: _, /* @param {string} prevOrder, @param {string} nextOrder */
+  GET_BOOKMARK_ORDER: _, /* @param {string} prevOrder, @param {string} nextOrder, @param {string} parentOrder */
   /**
    * webview -> browser
    * webview sends this to set a bookmark order based on prev and next bookmark orders..
    */
-  SAVE_BOOKMARK_ORDER: _ /* @param {string} order, @param {string} prevOrder, @param {string} nextOrder */
+  SAVE_BOOKMARK_ORDER: _ /* @param {string} order, @param {string} prevOrder, @param {string} nextOrder, @param {string} parentOrder */
 }
 
 module.exports = mapValuesByKeys(messages)

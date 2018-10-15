@@ -2,7 +2,7 @@ const test = require('tape')
 const bookmarkUtil = require('../../client/bookmarkUtil')
 
 test('test bookmarkUtil', (t) => {
-  t.plan(18)
+  t.plan(19)
   t.equals(bookmarkUtil.getBaseBookmarksOrder('0', 'ios'), '2.0.')
   t.equals(bookmarkUtil.getBaseBookmarksOrder('0', 'android'), '2.0.')
   t.equals(bookmarkUtil.getBaseBookmarksOrder('0', 'laptop'), '1.0.')
@@ -18,7 +18,8 @@ test('test bookmarkUtil', (t) => {
   t.equals(bookmarkUtil.getBookmarkOrder('2.0.8.10', '2.0.8.15.1'), '2.0.8.10.1')
   t.equals(bookmarkUtil.getBookmarkOrder('2.0.8.10', '2.0.8.11.1'), '2.0.8.10.1')
   t.equals(bookmarkUtil.getBookmarkOrder('2.0.8.10.0.1', '2.0.8.15.1'), '2.0.8.10.0.2')
-  t.throws(() => bookmarkUtil.getBookmarkOrder('', ''), /Invalid previous and next/, 'requires at least one argument')
+  t.equals(bookmarkUtil.getBookmarkOrder('', '', '2.0.9'), '2.0.9.1')
+  t.throws(() => bookmarkUtil.getBookmarkOrder('', '', ''), /Invalid previous, next and parent/, 'requires at least one argument')
   t.throws(() => bookmarkUtil.getBookmarkOrder('', '2.0.0'), /Invalid input order/)
   t.throws(() => bookmarkUtil.getBookmarkOrder('2.0.0', ''), /Invalid input order/)
 })
