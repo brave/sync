@@ -9,7 +9,7 @@ class UserAwsCredentialGenerator {
   constructor (userId, s3Bucket) {
     this.userId = userId
     if (!userId) { throw new Error('Missing userId') }
-    // For SNS and SQS, which don't allow + and /
+    // For SQS, which don't allow + and /
     this.userIdBase62 = this.userId.replace(/[^A-Za-z0-9]/g, '')
     this.s3Bucket = s3Bucket
     if (!this.s3Bucket) { throw new Error('Missing s3Bucket.') }
@@ -108,13 +108,6 @@ class UserAwsCredentialGenerator {
           ],
           "Effect": "Allow",
           "Resource": "${this.arnSqsPrefix()}*"
-        },
-        {
-          "Action": [
-            "sns:*"
-          ],
-          "Effect": "Allow",
-          "Resource": "${this.arnSnsTopic()}"
         }
       ]
     }
@@ -127,11 +120,6 @@ class UserAwsCredentialGenerator {
 
   s3Prefix () {
     return `${config.apiVersion}/${this.userId}`
-  }
-
-  // SNS topic names are limited to 256 characters.
-  arnSnsTopic () {
-    return `arn:aws:sns:*:*:${this.s3Bucket}-${config.apiVersion}-${this.userIdBase62}`
   }
 
   // SQS queue names are limited to 80 characters.
