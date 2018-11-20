@@ -66,30 +66,6 @@ const RequestUtil = function (opts = {}) {
   }
 }
 
-RequestUtil.prototype.addBucketNotification = function (topicARN) {
-  // Timestamp checked in server/lib/request-verifier.js
-  const timestampString = Math.floor(Date.now() / 1000).toString()
-  const userId = window.encodeURIComponent(this.userId)
-  const topicARNEncoded = window.encodeURIComponent(topicARN)
-  const prefix = window.encodeURIComponent(`${this.apiVersion}/${this.userIdEncoded}/`)
-  const url = `${this.serverUrl}/${userId}/${topicARNEncoded}/${prefix}/bucket_notification`
-  const bytes = this.serializer.stringToByteArray(timestampString)
-  const params = {
-    method: 'POST',
-    body: this.sign(bytes)
-  }
-  return window.fetch(url, params)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`add bucket notification server response ${response.status}`)
-      }
-      return response.arrayBuffer()
-    })
-    .then((buffer) => {
-      return Promise.resolve(this)
-    })
-}
-
 /**
  * Save parsed AWS credential response to be used with AWS requests.
  * @param {{s3: Object, postData: Object, expiration: string, bucket: string, region: string}}
