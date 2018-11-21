@@ -9,12 +9,6 @@ const s3Helper = require('../lib/s3Helper')
 const serializer = require('../lib/serializer')
 
 const CONFIG = require('./config')
-const PUT_CONCURRENCY = 100
-const S3_MAX_RETRIES = 1
-const EXPIRED_CREDENTIAL_ERRORS = [
-  /The provided token has expired\./,
-  /Invalid according to Policy: Policy expired\./
-]
 
 const checkFetchStatus = (response) => {
   if (response.status >= 200 && response.status < 300) {
@@ -30,7 +24,7 @@ const isExpiredCredentialError = (error) => {
   if (!error || !error.message) {
     return false
   }
-  return EXPIRED_CREDENTIAL_ERRORS.some((message) => {
+  return CONFIG.EXPIRED_CREDENTIAL_ERRORS.some((message) => {
     return error.message.match(message)
   })
 }
@@ -55,10 +49,14 @@ const RequestUtil = function (opts = {}) {
   this.serializer = opts.serializer
   this.serverUrl = opts.serverUrl
   this.userId = Buffer.from(opts.keys.publicKey).toString('base64')
+  // For SQS notifications filter, we should keep /
+  this.userIdEncoded = encodeURIComponent(this.userId).replace('%2F', '/')
+  // For SQS names, which don't allow + and /
+  this.userIdBase62 = this.userId.replace(/[^A-Za-z0-9]/g, '')
   this.encrypt = cryptoUtil.Encrypt(this.serializer, opts.keys.secretboxKey, CONFIG.nonceCounter)
   this.decrypt = cryptoUtil.Decrypt(this.serializer, opts.keys.secretboxKey)
   this.sign = cryptoUtil.Sign(opts.keys.secretKey)
-  this.putConcurrency = opts.putConcurrency || PUT_CONCURRENCY
+  this.putConcurrency = opts.putConcurrency || CONFIG.PUT_CONCURRENCY
   // Like put() but with limited concurrency to avoid out of memory/connection
   // errors (net::ERR_INSUFFICIENT_RESOURCES)
   this.bufferedPut = limitConcurrency(RequestUtil.prototype.put, this.putConcurrency)
@@ -109,6 +107,9 @@ RequestUtil.prototype.saveAWSCredentials = function (parsedResponse) {
   this.bucket = parsedResponse.bucket
   this.region = parsedResponse.region
   this.s3PostEndpoint = `https://${this.bucket}.s3.dualstack.${this.region}.amazonaws.com`
+
+  this.sqs = parsedResponse.sqs
+  this.listInProgress = undefined
 }
 
 /**
@@ -145,12 +146,24 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
     // The bucket name is prepended to the endpoint to build the actual request URL, e.g.
     // https://brave-sync-staging.s3.dualstack.us-west-2.amazonaws.com
     endpoint: `https://s3.dualstack.${region}.amazonaws.com`,
-    maxRetries: S3_MAX_RETRIES,
+    maxRetries: CONFIG.SERVICES_MAX_RETRIES,
     region: region,
     sslEnabled: true,
     useDualstack: true
   })
-  return {s3, postData, expiration, bucket, region}
+  const sqs = new awsSdk.SQS({
+    credentials: new awsSdk.Credentials({
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      sessionToken: credentials.sessionToken
+    }),
+    endpoint: `https://sqs.${region}.amazonaws.com`,
+    maxRetries: CONFIG.SERVICES_MAX_RETRIES,
+    region: region,
+    sslEnabled: true
+  })
+
+  return {s3, postData, expiration, bucket, region, sqs}
 }
 
 /**
@@ -169,7 +182,103 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords) {
   }
   if (startAt) { options.StartAfter = `${prefix}/${startAt}` }
   return this.withRetry(() => {
-    return s3Helper.listObjects(this.s3, options, !!maxRecords)
+    if (this.shouldListObject(startAt, category)) {
+      return s3Helper.listObjects(this.s3, options, !!maxRecords)
+    }
+    // We poll from SQS
+    let notificationParams = {
+      QueueUrl: `${this.SQSUrl}`,
+      AttributeNames: [
+        'All'
+      ],
+      MaxNumberOfMessages: CONFIG.SQS_MAX_LIST_MESSAGES_COUNT,
+      MessageAttributeNames: [
+        'All'
+      ],
+      VisibilityTimeout: CONFIG.SQS_MESSAGES_VISIBILITY_TIMEOUT,
+      WaitTimeSeconds: CONFIG.SQS_MESSAGES_LONGPOLL_TIMEOUT
+    }
+
+    return s3Helper.listNotifications(this.sqs, notificationParams, category,
+      `${this.apiVersion}/${this.userIdEncoded}/${category}`)
+  })
+}
+
+/**
+ * Checks do we need to use s3 list Object or SQS notifications
+ * @param {number=} startAt return objects with timestamp >= startAt (e.g. 1482435340). Could be seconds or milliseconds
+ * @param {string} category - the category ID
+ * @returns {boolean}
+*/
+RequestUtil.prototype.shouldListObject = function (startAt, category) {
+  let currentTime = new Date().getTime()
+  let startAtToCheck = this.normalizeTimestampToMs(startAt, currentTime)
+
+  return !startAtToCheck ||
+      (currentTime - startAtToCheck) > parseInt(s3Helper.SQS_RETENTION, 10) * 1000 ||
+      category !== proto.categories.BOOKMARKS ||
+      this.listInProgress === true
+}
+
+/**
+ * Checks do we need to use s3 list Object or SQS notifications
+ * @param {number=} startAt return objects with timestamp >= startAt (e.g. 1482435340). Could be seconds or milliseconds
+ * @param {number=} currentTime currentTime in milliseconds
+ * @returns {number=}
+*/
+RequestUtil.prototype.normalizeTimestampToMs = function (startAt, currentTime) {
+  let startAtToCheck = startAt
+  if (startAtToCheck && currentTime.toString().length - startAtToCheck.toString().length >= 3) {
+    startAtToCheck *= 1000
+  }
+
+  return startAtToCheck
+}
+
+/**
+ * Sets if the initial sync done or not
+ * @param {boolean}
+ */
+RequestUtil.prototype.setListInProgress = function (listInProgress) {
+  this.listInProgress = listInProgress
+}
+
+/**
+ * SQS queue name for a device
+ * @param {string} deviceId
+ * @returns {string}
+ */
+RequestUtil.prototype.sqsName = function (deviceId) {
+  return `${this.bucket}-${this.apiVersion}-${this.userIdBase62}-${deviceId}`
+}
+
+/**
+ * Creates SQS for the current device.
+ * @param {string} deviceId
+ * @returns {Promise}
+ */
+RequestUtil.prototype.createAndSubscribeSQS = function (deviceId) {
+  // Creating a query for the current userId
+  if (!deviceId) {
+    throw new Error('createSQS failed. deviceId is null!')
+  }
+  this.deviceId = deviceId
+  let newQueueParams = {
+    QueueName: this.sqsName(deviceId),
+    Attributes: {
+      'MessageRetentionPeriod': s3Helper.SQS_RETENTION
+    }
+  }
+  return new Promise((resolve, reject) => {
+    this.sqs.createQueue(newQueueParams, (error, data) => {
+      if (error) {
+        console.log('SQS creation failed with error: ' + error)
+        reject(error)
+      } else if (data) {
+        this.SQSUrl = data.QueueUrl
+        resolve([])
+      }
+    })
   })
 }
 
@@ -272,6 +381,32 @@ RequestUtil.prototype.s3DeletePrefix = function (prefix) {
 
 RequestUtil.prototype.deleteUser = function () {
   return this.s3DeletePrefix(`${this.apiVersion}/${this.userId}`)
+}
+
+RequestUtil.prototype.purgeUserQueue = function () {
+  return new Promise((resolve, reject) => {
+    let params = {
+      QueueName: this.sqsName(this.deviceId)
+    }
+    this.sqs.getQueueUrl(params, (error, data) => {
+      if (error) {
+        console.log('SQS getQueueUrl failed with error: ' + error)
+        resolve([])
+        // Just ignore the error
+      } else if (data) {
+        let params = {
+          QueueUrl: data.QueueUrl
+        }
+        this.sqs.purgeQueue(params, (errPurgeSQS, dataPurgeSQS) => {
+          // Just ignore data or any error here
+          if (errPurgeSQS) {
+            console.log('SQS purgeQueue failed with error: ' + errPurgeSQS)
+          }
+          resolve([])
+        })
+      }
+    })
+  })
 }
 
 /**

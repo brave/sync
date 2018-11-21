@@ -1,11 +1,13 @@
 'use strict'
 
 const initializer = require('./init')
+const bookmarkUtil = require('./bookmarkUtil')
 const RequestUtil = require('./requestUtil')
 const recordUtil = require('./recordUtil')
 const messages = require('./constants/messages')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
+const {deriveKeys} = require('../lib/crypto')
 
 let ipc = window.chrome.ipcRenderer
 
@@ -19,6 +21,7 @@ var clientDeviceId = null
 var clientUserId = null
 var clientKeys = {}
 var config = {}
+var seed
 
 /**
  * Logs stuff on the visible HTML page.
@@ -65,7 +68,7 @@ const maybeSetDeviceId = (requester) => {
         })
       }
       clientDeviceId = new Uint8Array([maxId + 1])
-      ipc.send(messages.SAVE_INIT_DATA, undefined, clientDeviceId)
+      ipc.send(messages.SAVE_INIT_DATA, seed, clientDeviceId)
       return Promise.resolve(requester)
     })
 }
@@ -109,6 +112,11 @@ const startSync = (requester) => {
         if (jsRecords.length > 0) {
           lastRecordTimestamp = jsRecords[jsRecords.length - 1].syncTimestamp
         }
+        if (!startAt && s3Objects.isTruncated) {
+          requester.setListInProgress(true)
+        } else if (!s3Objects.isTruncated) {
+          requester.setListInProgress(false)
+        }
         ipc.send(messages.GET_EXISTING_OBJECTS, category, jsRecords, lastRecordTimestamp, s3Objects.isTruncated)
       })
     })
@@ -151,7 +159,9 @@ const startSync = (requester) => {
   ipc.on(messages.DELETE_SYNC_USER, (e) => {
     logSync(`Deleting user!!`)
     requester.deleteUser().then(() => {
-      ipc.send(messages.DELETED_SYNC_USER)
+      requester.purgeUserQueue().then(() => {
+        ipc.send(messages.DELETED_SYNC_USER)
+      })
     })
   })
   ipc.on(messages.DELETE_SYNC_CATEGORY, (e, category) => {
@@ -159,11 +169,24 @@ const startSync = (requester) => {
       throw new Error(`Unsupported sync category: ${category}`)
     }
     logSync(`Deleting category: ${category}`)
-    requester.deleteCategory(proto.categories[category])
+    requester.deleteCategory(proto.categories[category]).then(() => {
+      requester.purgeUserQueue()
+    })
   })
   ipc.on(messages.DELETE_SYNC_SITE_SETTINGS, (e) => {
     logSync(`Deleting siteSettings`)
-    requester.deleteSiteSettings()
+    requester.deleteSiteSettings().then(() => {
+      requester.purgeUserQueue()
+    })
+  })
+  ipc.on(messages.GET_BOOKMARKS_BASE_ORDER, (e, deviceId, platform) => {
+    logSync(`Getting bookmarks base order`)
+    ipc.send(messages.SAVE_BOOKMARKS_BASE_ORDER, bookmarkUtil.getBaseBookmarksOrder(deviceId, platform))
+  })
+  ipc.on(messages.GET_BOOKMARK_ORDER, (e, prevOrder, nextOrder, parentOrder) => {
+    logSync(`Getting current bookmark order based on prev, next and parent orders`)
+
+    ipc.send(messages.SAVE_BOOKMARK_ORDER, bookmarkUtil.getBookmarkOrder(prevOrder, nextOrder, parentOrder), prevOrder, nextOrder, parentOrder)
   })
   ipc.send(messages.SYNC_READY)
   logSync('success')
@@ -179,8 +202,9 @@ const main = () => {
 
   Promise.all([serializer.init(), initializer.init()]).then((values) => {
     const clientSerializer = values[0]
-    const keys = values[1].keys
+    const keys = deriveKeys(values[1].seed)
     const deviceId = values[1].deviceId
+    seed = values[1].seed
     clientKeys = keys
     config = values[1].config
     if (deviceId instanceof Uint8Array && deviceId.length === 1) {
@@ -217,7 +241,13 @@ const main = () => {
     .then((requester) => {
       if (clientDeviceId !== null && requester && requester.s3) {
         logSync('set device ID: ' + clientDeviceId)
-        startSync(requester)
+        requester.createAndSubscribeSQS(clientDeviceId).then(() => {
+          startSync(requester)
+        })
+          .catch((e) => {
+            logSync('could not init sync on creation SQS: ' + e, ERROR)
+            ipc.send(messages.SYNC_SETUP_ERROR, e.message)
+          })
       }
     })
     .catch((e) => {

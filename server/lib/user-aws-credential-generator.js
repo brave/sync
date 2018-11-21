@@ -9,6 +9,8 @@ class UserAwsCredentialGenerator {
   constructor (userId, s3Bucket) {
     this.userId = userId
     if (!userId) { throw new Error('Missing userId') }
+    // For SQS, which don't allow + and /
+    this.userIdBase62 = this.userId.replace(/[^A-Za-z0-9]/g, '')
     this.s3Bucket = s3Bucket
     if (!this.s3Bucket) { throw new Error('Missing s3Bucket.') }
   }
@@ -33,16 +35,20 @@ class UserAwsCredentialGenerator {
 
     return new Promise((resolve, reject) => {
       this.awsSts().getFederationToken(params).promise()
-      .catch((data) => { reject(data) })
-      .then((data) => {
-        const returnData = {
-          accessKeyId: data.Credentials.AccessKeyId,
-          secretAccessKey: data.Credentials.SecretAccessKey,
-          sessionToken: data.Credentials.SessionToken,
-          expiration: data.Credentials.Expiration.toJSON()
-        }
-        resolve(returnData)
-      })
+        .catch((data) => { reject(data) })
+        .then((data) => {
+          if (!data || !data.Credentials) {
+            reject(data)
+            return
+          }
+          const returnData = {
+            accessKeyId: data.Credentials.AccessKeyId,
+            secretAccessKey: data.Credentials.SecretAccessKey,
+            sessionToken: data.Credentials.SessionToken,
+            expiration: data.Credentials.Expiration.toJSON()
+          }
+          resolve(returnData)
+        })
     })
   }
 
@@ -95,6 +101,13 @@ class UserAwsCredentialGenerator {
           "Effect": "Allow",
           "Action": "s3:DeleteObject",
           "Resource": "${this.arnS3Prefix()}/*"
+        },
+        {
+          "Action": [
+            "sqs:*"
+          ],
+          "Effect": "Allow",
+          "Resource": "${this.arnSqsPrefix()}*"
         }
       ]
     }
@@ -107,6 +120,11 @@ class UserAwsCredentialGenerator {
 
   s3Prefix () {
     return `${config.apiVersion}/${this.userId}`
+  }
+
+  // SQS queue names are limited to 80 characters.
+  arnSqsPrefix () {
+    return `arn:aws:sqs:*:*:${this.s3Bucket}-${config.apiVersion}-${this.userIdBase62}-`
   }
 }
 

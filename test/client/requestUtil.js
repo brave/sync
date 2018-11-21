@@ -30,10 +30,13 @@ test('client RequestUtil', (t) => {
         }
 
         const requestUtil = new RequestUtil(args)
-        t.pass('can instantiate requestUtil')
-        t.test('prototype', (t) => {
-          testPrototype(t, requestUtil, data.keys)
-        })
+        requestUtil.createAndSubscribeSQS('0')
+          .then(()=> {
+            t.pass('can instantiate requestUtil')
+            t.test('prototype', (t) => {
+              testPrototype(t, requestUtil, data.keys)
+            })
+          }).catch((error) => { t.end(error) })
       }).catch((error) => { t.end(error) })
     })
   })
@@ -175,11 +178,105 @@ test('client RequestUtil', (t) => {
               t.deepEquals(s3Record.deviceId, record.deviceId, `${t.name}: deviceId`)
               t.deepEquals(s3Record.objectId, record.objectId, `${t.name}: objectId`)
               t.deepEquals(s3Record.historySite, record.historySite, `${t.name}: historySite.location`)
-              testCanDeleteHistorySites(t)
+              testCanPutBookmarks(t)
             })
             .catch((error) => { t.fail(error) })
         })
       }
+    }
+
+    const testCanPutBookmarks = (t) => {
+      const record = {
+        action: 'CREATE',
+        deviceId: new Uint8Array([0]),
+        objectId: testHelper.newUuid(),
+        bookmark: {
+          site: {
+            location: `https://brave.com?q=${'x'.repeat(4096)}`,
+            title: 'lulz',
+            lastAccessedTime: 1480000000 * 1000,
+            creationTime: 1480000000 * 1000
+          },
+          isFolder: false,
+          hideInToolbar: false,
+          order: '1.0.0.1'
+        }
+      }
+
+      t.test('#put bookmark: large URL (multipart)', (t) => {
+        t.plan(2)
+        requestUtil.put(proto.categories.BOOKMARKS, record)
+          .then((response) => {
+            timekeeper.reset()
+            t.pass(`${t.name} resolves`)
+            setTimeout(() => {
+              testCanListObjects(t)
+            }, 5000)
+          })
+          .catch((error) => { t.fail(error) })
+      })
+
+      const testCanListObjects = (t) => {
+        t.test(`${t.name}`, (t) => {
+          t.plan(8)
+          requestUtil.list(proto.categories.BOOKMARKS)
+            .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
+            .then((response) => {
+              const s3Record = response[0]
+              // FIXME: Should this deserialize to 'CREATE' ?
+              t.equals(s3Record.action, 0, `${t.name}: action`)
+              t.deepEquals(s3Record.deviceId, record.deviceId, `${t.name}: deviceId`)
+              t.deepEquals(s3Record.objectId, record.objectId, `${t.name}: objectId`)
+              t.deepEquals(s3Record.bookmark.site, record.bookmark.site, `${t.name}: bookmark.site`)
+              t.deepEquals(s3Record.bookmark.isFolder, record.bookmark.isFolder, `${t.name}: bookmark.isFolder`)
+              t.deepEquals(s3Record.bookmark.hideInToolbar, record.bookmark.hideInToolbar, `${t.name}: bookmark.hideInToolbar`)
+              t.deepEquals(s3Record.bookmark.order, record.bookmark.order, `${t.name}: bookmark.order`)
+              testCanListNotifications(t)
+            })
+            .catch((error) => { t.fail(error) })
+        })
+      }
+
+      const testCanListNotifications = (t) => {
+        t.test(`${t.name}`, (t) => {
+          let currentTime = new Date().getTime()
+          requestUtil.list(proto.categories.BOOKMARKS, currentTime)
+            .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
+            .then((response) => {
+              const s3Record = response[0]
+              if (!s3Record) {
+                t.pass('empty SQS notifications/missing records, check if more than one tests are running at the same time')
+              } else {
+                // FIXME: Should this deserialize to 'CREATE' ?
+                t.equals(s3Record.action, 0, `${t.name}: action`)
+                t.deepEquals(s3Record.deviceId, record.deviceId, `${t.name}: deviceId`)
+                t.deepEquals(s3Record.objectId, record.objectId, `${t.name}: objectId`)
+                t.deepEquals(s3Record.bookmark.site, record.bookmark.site, `${t.name}: bookmark.site`)
+                t.deepEquals(s3Record.bookmark.isFolder, record.bookmark.isFolder, `${t.name}: bookmark.isFolder`)
+                t.deepEquals(s3Record.bookmark.hideInToolbar, record.bookmark.hideInToolbar, `${t.name}: bookmark.hideInToolbar`)
+                t.deepEquals(s3Record.bookmark.order, record.bookmark.order, `${t.name}: bookmark.order`)
+              }
+              testCanDeleteBookmarks(t)
+            })
+            .catch((error) => { t.fail(error) })
+        })
+      }
+    }
+    const testCanDeleteBookmarks = (t) => {
+      t.test('#deleteCategory bookmarks', (t) => {
+        t.plan(2)
+        requestUtil.deleteCategory(proto.categories.BOOKMARKS)
+          .then((_response) => {
+            requestUtil.list(proto.categories.BOOKMARKS)
+              .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
+              .then((response) => {
+                t.equals(response.length, 0, `${t.name} works`)
+                testCanDeleteHistorySites(t)
+              })
+              .catch((error) => { t.fail(error) })
+          })
+          .catch((error) => { t.fail(error) })
+      })
     }
 
     const testCanDeleteHistorySites = (t) => {

@@ -52,7 +52,7 @@ const messages = {
    * with new records, do
    * GET_EXISTING_OBJECTS -> RESOLVE_SYNC_RECORDS -> RESOLVED_SYNC_RECORDS
    */
-  FETCH_SYNC_RECORDS: _, /* @param Array.<string> categoryNames, @param {number} startAt (in seconds or milliseconds), @param {number=} maxRecords limit response to a given max number of records. set to 0 or falsey to not limit the response. */
+  FETCH_SYNC_RECORDS: _, /* @param Array.<string> categoryNames, @param {number} startAt (in seconds or milliseconds), @param {number=} maxRecords limit response to a given max number of records. set to 0 or falsey to not limit the response */
   /**
    * browser -> webview
    * sent to fetch all sync devices. webview responds with RESOLVED_SYNC_RECORDS.
@@ -103,7 +103,28 @@ const messages = {
    * webview -> browser
    * webview sends this to delete all site settings.
    */
-  DELETE_SYNC_SITE_SETTINGS: _
+  DELETE_SYNC_SITE_SETTINGS: _,
+  /**
+   * browser -> webview
+   * browser sends this to get base bookmarks order for the particular device.
+   */
+  GET_BOOKMARKS_BASE_ORDER: _, /* @param {string} deviceId, @param {string} platform */
+  /**
+   * webview -> browser
+   * webview sends base bookmarks order.
+   */
+  SAVE_BOOKMARKS_BASE_ORDER: _, /* @param {string} order */
+  /**
+   * browser -> webview
+   * browser sends this to get a bookmark order based on prev and next bookmark orders.
+   * parentOrder should be set if both prevOrder and nextOrder
+   */
+  GET_BOOKMARK_ORDER: _, /* @param {string} prevOrder, @param {string} nextOrder, @param {string} parentOrder */
+  /**
+   * webview -> browser
+   * webview sends this to set a bookmark order based on prev and next bookmark orders..
+   */
+  SAVE_BOOKMARK_ORDER: _ /* @param {string} order, @param {string} prevOrder, @param {string} nextOrder, @param {string} parentOrder */
 }
 
 module.exports = mapValuesByKeys(messages)

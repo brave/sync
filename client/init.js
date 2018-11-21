@@ -1,6 +1,5 @@
 'use strict'
 
-const {deriveKeys} = require('../lib/crypto')
 const crypto = require('brave-crypto')
 const messages = require('./constants/messages')
 const {syncVersion} = require('./config')
@@ -29,7 +28,7 @@ module.exports.init = function () {
         reject(new Error('Invalid crypto seed'))
         return
       }
-      resolve({keys: deriveKeys(seed), deviceId, config})
+      resolve({seed, deviceId, config})
     })
   })
 }
