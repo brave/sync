@@ -46,7 +46,7 @@
     "nodemon": "^1.18.6",
     "standard": "^11.0.1",
     "tape": "^4.6.3",
-    "tape-run": "^4.0.0",
+    "tape-run": "^5.0.0",
     "timekeeper": "^2.0.0",
     "uglify-js-harmony": "^2.7.5"
   },
