@@ -18,7 +18,7 @@ module.exports = {
   // How many seconds messages will be invisible for another poll
   SQS_MESSAGES_VISIBILITY_TIMEOUT: 30, // In seconds
   // How many seconds we should wait for messages
-  SQS_MESSAGES_LONGPOLL_TIMEOUT: 3, // In seconds
+  SQS_MESSAGES_LONGPOLL_TIMEOUT: 10, // In seconds
   // 2-byte encryption nonce counter, rotated periodically
   nonceCounter: 0,
   // Sync library version, updated every brave/sync release
