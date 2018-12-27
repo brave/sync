@@ -28,14 +28,14 @@ npm run start
 ## Testing
 
 The sync client uses Browserify to transform Node js into browser js. To unittest
-the library in a browser (default: electron), run `npm browsertest`.
-To test in a different browser run `npm browsertest -- --browser chrome`.
+the library in a browser (default: electron), run `npm run browsertest`.
+To test in a different browser run `npm run browsertest -- --browser chrome`.
 Results appear in both the browser inspector and your terminal.
 
 To run tests in Node, just do `npm test`.
 
 To do a basic client/server integration test against the production server, run
-`npm run client` and navigate to `http://localhost:8000/`). The page
+`npm run client` and navigate to `http://localhost:4000/`). The page
 should not show any 'ERROR' messages and should end with 'success'.
 
 ## Development
