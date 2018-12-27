@@ -173,12 +173,15 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
  * @param {number=} maxRecords Limit response to a given number of recods. By default the Sync lib will fetch all matching records, which might take a long time. If falsey, fetch all records.
  * @returns {Promise(Array.<Object>)}
  */
-RequestUtil.prototype.list = function (category, startAt, maxRecords) {
+RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContinuationToken) {
   const prefix = `${this.apiVersion}/${this.userId}/${category}`
   let options = {
     MaxKeys: maxRecords || 1000,
     Bucket: this.bucket,
     Prefix: prefix
+  }
+  if (nextContinuationToken != '') {
+    options.ContinuationToken = nextContinuationToken
   }
   if (startAt) { options.StartAfter = `${prefix}/${startAt}` }
   return this.withRetry(() => {
