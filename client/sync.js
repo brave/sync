@@ -22,6 +22,7 @@ var clientUserId = null
 var clientKeys = {}
 var config = {}
 var seed
+var nextContinuationTokens = {}
 
 /**
  * Logs stuff on the visible HTML page.
@@ -105,7 +106,11 @@ const startSync = (requester) => {
       if (!proto.categories[category]) {
         throw new Error(`Unsupported sync category: ${category}`)
       }
-      requester.list(proto.categories[category], startAt, limitResponse).then((s3Objects) => {
+      let continuationToken = ''
+      if (nextContinuationTokens[category]) {
+        continuationToken = nextContinuationTokens[category]
+      }
+      requester.list(proto.categories[category], startAt, limitResponse, continuationToken).then((s3Objects) => {
         const jsRecords = getJSRecords(s3Objects.contents)
         logSync(`got ${jsRecords.length} decrypted records in ${category} after ${startAt}`)
         let lastRecordTimestamp
@@ -116,6 +121,12 @@ const startSync = (requester) => {
           requester.setListInProgress(true)
         } else if (!s3Objects.isTruncated) {
           requester.setListInProgress(false)
+        }
+        if (s3Objects.isTruncated) {
+          // When is it truncated we need to provide continuation token, so system could understand where to continue from next time
+          nextContinuationTokens[category] = s3Objects.nextContinuationToken
+        } else {
+          nextContinuationTokens[category] = ''
         }
         ipc.send(messages.GET_EXISTING_OBJECTS, category, jsRecords, lastRecordTimestamp, s3Objects.isTruncated)
       })
