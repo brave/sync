@@ -180,7 +180,7 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContin
     Bucket: this.bucket,
     Prefix: prefix
   }
-  if (nextContinuationToken != '') {
+  if (nextContinuationToken !== '') {
     options.ContinuationToken = nextContinuationToken
   }
   if (startAt) { options.StartAfter = `${prefix}/${startAt}` }
