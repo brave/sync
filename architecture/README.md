@@ -25,7 +25,7 @@ The following are suggestions for improving the design.  The improvements begin 
 
 One of the main issues with the current implementation is the use of SQS to report back all the bookmarks of a given user's device.  Due to [SQS batch limitations](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-batch-api-actions.html), the only option (due to the design of Brave Sync) is client-side buffering.  This too also has [limitations](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-client-side-buffering-request-batching.html). 
 
-A much more scalable approach would be to use [DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Limits.html#default-limits-capacity-units-provisioned-throughput) to handle bookmark sync requests. S3 would still be used for other Sync artifacts.
+A much more scalable approach would be to use [DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Limits.html#default-limits-capacity-units-provisioned-throughput) to handle bookmark sync requests. S3 would still be used for other Sync artifacts. In addition, moving the EC2 instances to be part of an AutoScaling group would help with backend performance when writing to S3 when sync requests increase.
 
 ### Suggestion 2: Suggestion 1 + Using Kinesis Firehose to store sync artifacts in S3
 
