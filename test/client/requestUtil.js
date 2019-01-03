@@ -392,14 +392,129 @@ test('client RequestUtil', (t) => {
 
     const testCanLimitResponseToOne = (t) => {
       t.test('limitResponse to 1', (t) => {
-        t.plan(2)
+        t.plan(3)
         requestUtil.list(proto.categories.PREFERENCES, 0, 1)
           .then((s3Objects) => {
             t.assert(s3Objects.isTruncated === true, `${t.name} has true isTruncated value`)
             t.assert(s3Objects.contents.length === 1, `${t.name} has one record`)
+            testCanGetBookmarksInChunks(t)
           })
           .catch((error) => t.fail(error))
       })
+    }
+
+    const testCanGetBookmarksInChunks = (t) => {
+      const records = [
+        {
+        action: 'CREATE',
+        deviceId: new Uint8Array([0]),
+        objectId: testHelper.newUuid(),
+        bookmark: {
+          site: {
+            location: `https://brave.com?q=1`,
+            title: 'lulz',
+            lastAccessedTime: 1480000000 * 1000,
+            creationTime: 1480000000 * 1000
+          },
+          isFolder: false,
+          hideInToolbar: false,
+          order: '1.0.0.1'
+        }},
+        {
+          action: 'CREATE',
+          deviceId: new Uint8Array([0]),
+          objectId: testHelper.newUuid(),
+          bookmark: {
+            site: {
+              location: `https://brave.com?q=2`,
+              title: 'lulz',
+              lastAccessedTime: 1480000000 * 1000,
+              creationTime: 1480000000 * 1000
+            },
+            isFolder: false,
+            hideInToolbar: false,
+            order: '1.0.0.2'
+        }},
+        {
+          action: 'CREATE',
+          deviceId: new Uint8Array([0]),
+          objectId: testHelper.newUuid(),
+          bookmark: {
+            site: {
+              location: `https://brave.com?q=3`,
+              title: 'lulz',
+              lastAccessedTime: 1480000000 * 1000,
+              creationTime: 1480000000 * 1000
+            },
+            isFolder: false,
+            hideInToolbar: false,
+            order: '1.0.0.3'
+        }},
+        {
+          action: 'CREATE',
+          deviceId: new Uint8Array([0]),
+          objectId: testHelper.newUuid(),
+          bookmark: {
+            site: {
+              location: `https://brave.com?q=4`,
+              title: 'lulz',
+              lastAccessedTime: 1480000000 * 1000,
+              creationTime: 1480000000 * 1000
+            },
+            isFolder: false,
+            hideInToolbar: false,
+            order: '1.0.0.4'
+        }},
+        {
+          action: 'CREATE',
+          deviceId: new Uint8Array([0]),
+          objectId: testHelper.newUuid(),
+          bookmark: {
+            site: {
+              location: `https://brave.com?q=5`,
+              title: 'lulz',
+              lastAccessedTime: 1480000000 * 1000,
+              creationTime: 1480000000 * 1000
+            },
+            isFolder: false,
+            hideInToolbar: false,
+            order: '1.0.0.5'
+        }}
+      ]
+
+      records.forEach((record) => {
+        requestUtil.put(proto.categories.BOOKMARKS, record)
+      })
+
+      t.test('#getBookmarksInChunks', (t) => {
+        t.plan(1)
+        getBookmarksInChunks(t, '', 1)
+      })
+
+      const getBookmarksInChunks = (t, continuationToken, iterationNumber) => {
+        if ((continuationToken === undefined || continuationToken === '') && iterationNumber > 1) {
+          t.assert(true, 'getBookmarksInChunks exit recurtion')
+          return
+        }
+        t.test('#getBookmarksInChunks attempt #' + iterationNumber, (t) => {
+          t.plan(3)
+          requestUtil.list(proto.categories.BOOKMARKS, 0, 3, continuationToken)
+          .then((s3Objects) => {
+            t.assert(s3Objects.contents.length <= 3, `${t.name} has less or exactly 3 records`)
+            if (s3Objects.isTruncated === true && s3Objects.nextContinuationToken !== '' && s3Objects.nextContinuationToken !== undefined) {
+              t.assert(true, `${t.name} isTruncated is true and nextContinuationToken is not empty`)
+            } else if (s3Objects.isTruncated === false && (s3Objects.nextContinuationToken === '' || s3Objects.nextContinuationToken === undefined) && iterationNumber > 1) {
+              t.assert(true, `${t.name} isTruncated is false and nextContinuationToken is empty`)
+            } else {
+              t.assert(false, `${t.name} isTruncated and nextContinuationToken values doesn't match, iterationNumber: ${iterationNumber}`)
+            }
+            continuationToken = s3Objects.nextContinuationToken
+            iterationNumber = iterationNumber + 1
+            getBookmarksInChunks(t, continuationToken, iterationNumber)
+          })
+          .catch((error) => t.fail(error))
+        })
+      }
     }
 
     const expiredCredentials = {
