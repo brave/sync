@@ -49,8 +49,6 @@ const RequestUtil = function (opts = {}) {
   this.serializer = opts.serializer
   this.serverUrl = opts.serverUrl
   this.userId = Buffer.from(opts.keys.publicKey).toString('base64')
-  // For SQS notifications filter, we should keep /
-  this.userIdEncoded = encodeURIComponent(this.userId).replace('%2F', '/')
   // For SQS names, which don't allow + and /
   this.userIdBase62 = this.userId.replace(/[^A-Za-z0-9]/g, '')
   this.encrypt = cryptoUtil.Encrypt(this.serializer, opts.keys.secretboxKey, CONFIG.nonceCounter)
@@ -203,7 +201,7 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContin
     }
 
     return s3Helper.listNotifications(this.sqs, notificationParams, category,
-      `${this.apiVersion}/${this.userIdEncoded}/${category}`)
+      prefix)
   })
 }
 
