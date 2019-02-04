@@ -1,3 +1,4 @@
+const merge = require('lodash.merge')
 const test = require('tape')
 const testHelper = require('../testHelper')
 const timekeeper = require('timekeeper')
@@ -172,10 +173,15 @@ test('recordUtil.resolve', (t) => {
     })
   })
 
-  t.test('UPDATE, existing object with same props -> null', (t) => {
+  t.test('UPDATE, existing object with same props -> record', (t) => {
+    // considering bookmarks swap under the same parent folder
     forRecordsWithAction(t, proto.actions.UPDATE, (record, existingObject) => {
       const resolved = recordUtil.resolve(record, existingObject)
-      t.equals(resolved, null, `${t.name}: ${record.objectData}`)
+      if (record.objectData === 'siteSetting') {
+        t.equals(resolved, null, `${t.name}: ${record.objectData}`)
+      } else {
+        t.equals(resolved, record, `${t.name}: ${record.objectData}`)
+      }
     })
   })
 
@@ -405,7 +411,7 @@ test('recordUtil.resolveRecords()', (t) => {
     t.deepEquals(resolved, expected, t.name)
   })
 
-  t.test(`${t.name} sequential Updates should become no op`, (t) => {
+  t.test(`${t.name} sequential Updates should be merged`, (t) => {
     t.plan(1)
     const update1 = UpdateRecord({
       objectId: recordBookmark.objectId,
@@ -422,8 +428,12 @@ test('recordUtil.resolveRecords()', (t) => {
       [update1, existingObject],
       [update2, existingObject]
     ]
+    const newRecord = {}
+    merge(newRecord, update1)
+    merge(newRecord, update2)
+    const newRecords = [newRecord]
     const resolved = recordUtil.resolveRecords(input)
-    t.deepEquals(resolved, [], t.name)
+    t.deepEquals(resolved, newRecords, t.name)
   })
 
   t.test(`${t.name} Create + Update of a new object should resolve to a single Create`, (t) => {

@@ -143,13 +143,8 @@ const resolveRecordWithObject = (record, existingObject) => {
   if (type === 'siteSetting') {
     return resolveSiteSettingsRecordWithObject(record, existingObject)
   }
-  if (record.action === proto.actions.UPDATE) {
-    if (deepEqual(record[type], existingObject[type])) {
-      // no-op
-      return null
-    }
-    return record
-  } else if (record.action === proto.actions.DELETE) {
+  if (record.action === proto.actions.UPDATE ||
+      record.action === proto.actions.DELETE) {
     return record
   } else {
     throw new Error('Invalid record action')
