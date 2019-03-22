@@ -81,10 +81,18 @@ RequestUtil.prototype.refreshAWSCredentials = function () {
   }
   return window.fetch(url, params)
     .then((response) => {
-      if (!response.ok) {
+      if (response.ok) {
+        return response.arrayBuffer()
+      }
+      if (response.status === 400) {
+        // Bad request
+        return response.text().then((text) => {
+          // See server/lib/request-verifier.js for error strings
+          throw new Error(`Credential server response 400. ${text}`)
+        })
+      } else {
         throw new Error(`Credential server response ${response.status}`)
       }
-      return response.arrayBuffer()
     })
     .then((buffer) => {
       console.log('Refreshed credentials.')
