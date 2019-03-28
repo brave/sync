@@ -26,6 +26,11 @@ message SecretboxRecord {
   bytes nonceRandom = 3;
 }
 
+message MetaInfo {
+  optional string key = 1;
+  optional string value = 2;
+}
+
 message SyncRecord {
   enum Action {
     CREATE = 0;
@@ -49,6 +54,7 @@ message SyncRecord {
     repeated string fields = 6;
     bool hideInToolbar = 7;
     string order = 8;
+    repeated MetaInfo metaInfo= 9;
   }
   message SiteSetting {
     string hostPattern = 1;
