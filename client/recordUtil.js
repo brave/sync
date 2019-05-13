@@ -250,25 +250,40 @@ const mergeRecord = (record1, record2) => {
 
 /**
  * Within an array of [record, object], merge items whose records have the
- * same objectId.
+ * same objectId and same actions.
+ * Requirements:
+ * 1) should not combine any CREATE
+ * 2) should not combine any DELETE
+ * 3) all of UPDATE should be combined to single update
  * @param {Array} recordsAndObjects Same format as input to resolveRecords().
  * @returns {Array}
  */
 const mergeRecords = (recordsAndObjects) => {
-  const objectIdMap = {} // map of objectId to [record, object]
+  var mergedResult = []
   recordsAndObjects.forEach((recordAndObject) => {
     const record = recordAndObject[0]
-    const object = recordAndObject[1]
     const id = JSON.stringify(record.objectId)
-    if (objectIdMap[id]) {
-      const mergedRecord = mergeRecord(objectIdMap[id][0], record)
-      objectIdMap[id] = [mergedRecord, object]
-    } else {
-      objectIdMap[id] = recordAndObject
+
+    if (!mergedResult.length ||
+        record.action === proto.actions.CREATE ||
+        record.action === proto.actions.DELETE) {
+      mergedResult.push(recordAndObject)
+      return
     }
-  })
-  // webkit does not support Object.values
-  return Object.keys(objectIdMap).map((key) => objectIdMap[key])
+
+    // Go through mergedResult from last to first
+    for (var j = mergedResult.length - 1; j > 0; --j) {
+      if (JSON.stringify(mergedResult[j][0].objectId) === id &&
+          // Should not merge with CREATE or DELETE, only UPDATE
+          mergedResult[j][0].action === proto.actions.UPDATE) {
+        mergedResult[j][0] = mergeRecord(mergedResult[j][0], record)
+        return
+      }
+    }
+    mergedResult.push(recordAndObject)
+  }) // recordsAndObjects.forEach
+
+  return mergedResult
 }
 
 /**
