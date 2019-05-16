@@ -252,7 +252,10 @@ const mergeRecord = (record1, record2) => {
  * Within an array of [record, object], merge items whose records have the
  * same objectId and same actions.
  * Requirements:
- * 1) should not combine any CREATE
+ * 1) should not combine CREATE when object is not null:
+ *    [[CREATE, object], [UPDATE, object]] => [[CREATE, object], [UPDATE, object]]
+ *    [[CREATE, null], [UPDATE, null]] => [[CREATE(2), null]]
+ *    [[CREATE, null], [UPDATE, object]] => ??? seems impossible => [[CREATE(2), object]]
  * 2) should not combine any DELETE
  * 3) all of UPDATE should be combined to single update
  * @param {Array} recordsAndObjects Same format as input to resolveRecords().
@@ -262,20 +265,26 @@ const mergeRecords = (recordsAndObjects) => {
   var mergedResult = []
   recordsAndObjects.forEach((recordAndObject) => {
     const record = recordAndObject[0]
+    const existingObject = recordAndObject[1]
     const id = JSON.stringify(record.objectId)
 
     if (!mergedResult.length ||
-        record.action === proto.actions.CREATE ||
+        (record.action === proto.actions.CREATE && existingObject) ||
         record.action === proto.actions.DELETE) {
       mergedResult.push(recordAndObject)
       return
     }
 
+    // We reach this point in 2 cases
+    // 1. record.action is UPDATE  => should merge with UPDATE or [CREATE, null]
+    // 2. record.action is CREATE and existingObject is null => should merge with UPDATE or [CREATE, null]
+
     // Go through mergedResult from last to first
     for (var j = mergedResult.length - 1; j >= 0; --j) {
       if (JSON.stringify(mergedResult[j][0].objectId) === id &&
           // Should not merge with CREATE or DELETE, only UPDATE
-          mergedResult[j][0].action === proto.actions.UPDATE) {
+          (mergedResult[j][0].action === proto.actions.UPDATE ||
+          (mergedResult[j][0].action === proto.actions.CREATE && !mergedResult[j][1]))) {
         mergedResult[j][0] = mergeRecord(mergedResult[j][0], record)
         return
       }
