@@ -437,7 +437,9 @@ test('recordUtil.resolveRecords()', (t) => {
         { site: Object.assign({}, siteProps, updateSiteProps) }
       )
     })
-    const input = [[recordBookmark, null], [updateBookmark, null]]
+    var recordBookmarkCopy = recordBookmark
+    recordBookmarkCopy.action = proto.actions.CREATE
+    const input = [[recordBookmarkCopy, null], [updateBookmark, null]]
     const resolved = recordUtil.resolveRecords(input)
     t.deepEquals(resolved, [expectedRecord], t.name)
   })
