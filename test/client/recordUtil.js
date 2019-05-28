@@ -377,7 +377,7 @@ test('recordUtil.resolve', (t) => {
 })
 
 test('recordUtil.resolveRecords()', (t) => {
-  t.plan(5)
+  t.plan(7)
 
   t.test(`${t.name} resolves same data cross-platform on laptop and android`, (t) => {
     t.plan(1)
@@ -405,7 +405,7 @@ test('recordUtil.resolveRecords()', (t) => {
     t.deepEquals(resolved, expected, t.name)
   })
 
-  t.test(`${t.name} sequential Updates should become no op`, (t) => {
+  t.test(`${t.name} sequential Updates should become no op if the merged result equals to existingObject`, (t) => {
     t.plan(1)
     const update1 = UpdateRecord({
       objectId: recordBookmark.objectId,
@@ -437,9 +437,45 @@ test('recordUtil.resolveRecords()', (t) => {
         { site: Object.assign({}, siteProps, updateSiteProps) }
       )
     })
-    const input = [[recordBookmark, null], [updateBookmark, null]]
+    var recordBookmarkCopy = recordBookmark
+    recordBookmarkCopy.action = proto.actions.CREATE
+    const input = [[recordBookmarkCopy, null], [updateBookmark, null]]
     const resolved = recordUtil.resolveRecords(input)
     t.deepEquals(resolved, [expectedRecord], t.name)
+  })
+
+  t.test(`${t.name} Create + Update + Update of an existing object should resolve to a separate Update`, (t) => {
+    t.plan(1)
+
+    var createBookmark = recordBookmark
+    createBookmark.action = proto.actions.CREATE
+    const existingObject = recordBookmark
+
+    var updateBookmark1 = updateBookmark
+    updateBookmark1.bookmark.site.title = 'Title1'
+    var updateBookmark2 = updateBookmark
+    updateBookmark2.bookmark.site.title = 'Title2'
+
+    const input = [[createBookmark, existingObject], [updateBookmark1, existingObject], [updateBookmark2, existingObject]]
+    const resolved = recordUtil.resolveRecords(input)
+    const expected = [updateBookmark2]
+    t.deepEquals(resolved, expected, t.name)
+  })
+
+  t.test(`${t.name} Update + Update of an existing object should resolve a single Update`, (t) => {
+    t.plan(1)
+
+    const existingObject = recordBookmark
+
+    var updateBookmark1 = updateBookmark
+    updateBookmark1.bookmark.site.title = 'Title1'
+    var updateBookmark2 = updateBookmark
+    updateBookmark2.bookmark.site.title = 'Title2'
+
+    const input = [[updateBookmark1, existingObject], [updateBookmark2, existingObject]]
+    const resolved = recordUtil.resolveRecords(input)
+    const expected = [updateBookmark2]
+    t.deepEquals(resolved, expected, t.name)
   })
 
   t.test(`${t.name} resolves bookmark records with same parent folder`, (t) => {
