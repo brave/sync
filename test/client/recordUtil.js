@@ -377,7 +377,7 @@ test('recordUtil.resolve', (t) => {
 })
 
 test('recordUtil.resolveRecords()', (t) => {
-  t.plan(5)
+  t.plan(6)
 
   t.test(`${t.name} resolves same data cross-platform on laptop and android`, (t) => {
     t.plan(1)
@@ -440,6 +440,28 @@ test('recordUtil.resolveRecords()', (t) => {
     const input = [[recordBookmark, null], [updateBookmark, null]]
     const resolved = recordUtil.resolveRecords(input)
     t.deepEquals(resolved, [expectedRecord], t.name)
+  })
+
+  t.test(`${t.name} Create + Delete of non-existing object should be resolve to none`, (t) => {
+    t.plan(1)
+    var createBookmark = CreateRecord({
+      objectId: recordBookmark.objectId,
+      objectData: 'bookmark',
+      bookmark: Object.assign(
+        {},
+        props.bookmark,
+        { site: Object.assign({}, siteProps) }
+      )
+    })
+    var deleteBookmark = DeleteRecord({
+      objectId: recordBookmark.objectId,
+      objectData: 'bookmark',
+      bookmark: { site: siteProps }
+    })
+    const input = [[createBookmark, null], [deleteBookmark, null]]
+    const resolved = recordUtil.resolveRecords(input)
+    const expected = []
+    t.deepEquals(resolved, expected, t.name)
   })
 
   t.test(`${t.name} resolves bookmark records with same parent folder`, (t) => {
