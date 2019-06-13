@@ -5,7 +5,7 @@ const radix64 = require('../lib/radix64')
 const s3Helper = require('../lib/s3Helper')
 
 test('s3Helper', (t) => {
-  t.plan(2)
+  t.plan(3)
 
   t.test('byteArray/s3String conversion', (t) => {
     t.plan(10)
@@ -14,6 +14,21 @@ test('s3Helper', (t) => {
       const s3String = s3Helper.byteArrayToS3String(bytes)
       t.deepEqual(bytes, s3Helper.s3StringToByteArray(s3String))
     }
+  })
+
+  t.test('extractPseudoKey', (t) => {
+    t.plan(2)
+    const s3Prefix = '0/xGrUe8vokl9kjAx+RTu9t6I1UnOT7mcdcizAVI+2bos=/2/1482435340000'
+    const data = new Uint8Array(10)
+    const s3Keys = s3Helper.encodeDataToS3KeyArray(s3Prefix, data)
+    t.equal(s3Keys.length, 1, `${t.name} encodes to one part`)
+    const pseudoKey = s3Helper.extractPseudoKey({ Key: s3Keys[0] })
+
+    const parsedKey = s3Helper.parseS3Key(s3Keys[0])
+    const decodedData = s3Helper.s3StringToByteArray(parsedKey.recordPartString)
+    const dataCrc = radix64.fromNumber(crc.crc32.unsigned(decodedData.buffer))
+
+    t.equal(pseudoKey, `1482435340000-${dataCrc}`, `${t.name} expected pseudo-key`)
   })
 
   t.test('encodeDataToS3KeyArray / parseS3Key', (t) => {
