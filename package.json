@@ -7,9 +7,9 @@
     "lint": "standard",
     "lint-fix": "standard --fix",
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
-    "build": "npm run build-proto && browserify client/sync.js | uglifyjs - > bundles/bundle.js && cpr client/constants bundles/constants -o",
+    "build": "npm run build-proto && browserify client/sync.js | uglifyjs > bundles/bundle.js && cpr client/constants bundles/constants -o",
     "build-proto": "pbjs --target=static-module lib/api.proto > lib/api.proto.js",
-    "browsertest": "npm run build-proto; npm run start-test; browserify test/client/*.js test/*.js | uglifyjs - | tape-run; exitCode=$?; npm run stop-test; exit $exitCode",
+    "browsertest": "npm run build-proto; npm run start-test; browserify test/client/*.js test/*.js | uglifyjs | tape-run; exitCode=$?; npm run stop-test; exit $exitCode",
     "browsertest-chrome": "npm run build-proto; npm run start-test; browserify test/client/*.js | tape-run --browser chrome; exitCode=$?; npm run stop-test; exit $exitCode",
     "browsertest-safari": "npm run build-proto; npm run start-test; browserify test/client/*.js | tape-run --browser safari; exitCode=$?; npm run stop-test; exit $exitCode",
     "check": "npm audit",
@@ -48,7 +48,7 @@
     "tape": "^4.6.3",
     "tape-run": "^6.0.0",
     "timekeeper": "^2.0.0",
-    "uglify-js-harmony": "^2.7.5"
+    "uglify-es": "^3.3.9"
   },
   "dependencies": {
     "@protobufjs/utf8": "^1.1.0",
