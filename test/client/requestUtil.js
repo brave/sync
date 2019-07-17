@@ -192,7 +192,7 @@ test('client RequestUtil', (t) => {
         objectId: testHelper.newUuid(),
         bookmark: {
           site: {
-            location: `https://brave.com?q=${'x'.repeat(4096)}`,
+            location: `https://brave.com?q=${'x'.repeat(4)}`,
             title: 'lulz',
             lastAccessedTime: 1480000000 * 1000,
             creationTime: 1480000000 * 1000
@@ -200,6 +200,22 @@ test('client RequestUtil', (t) => {
           isFolder: false,
           hideInToolbar: false,
           order: '1.0.0.1'
+        }
+      }
+      const record2 = {
+        action: 'CREATE',
+        deviceId: new Uint8Array([0]),
+        objectId: testHelper.newUuid(),
+        bookmark: {
+          site: {
+            location: `https://brave.com?q=${'x'.repeat(4096)}`,
+            title: 'lulz2',
+            lastAccessedTime: 1480000000 * 1000,
+            creationTime: 1480000000 * 1000
+          },
+          isFolder: false,
+          hideInToolbar: false,
+          order: '1.0.0.2'
         }
       }
 
@@ -231,30 +247,55 @@ test('client RequestUtil', (t) => {
               t.deepEquals(s3Record.bookmark.isFolder, record.bookmark.isFolder, `${t.name}: bookmark.isFolder`)
               t.deepEquals(s3Record.bookmark.hideInToolbar, record.bookmark.hideInToolbar, `${t.name}: bookmark.hideInToolbar`)
               t.deepEquals(s3Record.bookmark.order, record.bookmark.order, `${t.name}: bookmark.order`)
-              testCanListNotifications(t)
+              testIgnoreSQSseenFromS3Records(t)
             })
             .catch((error) => { t.fail(error) })
         })
       }
 
+      const testIgnoreSQSseenFromS3Records = (t) => {
+        t.test(`${t.name} ignore SQS seen from S3`, (t) => {
+          t.plan(2)
+          let currentTime = new Date().getTime()
+          requestUtil.list(proto.categories.BOOKMARKS, currentTime)
+            .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
+            .then((response) => {
+              // This record previously was in list S3, so now should be filtered out
+              t.equals(response.length, 0)
+              testSendSecondBookmark(t)
+            })
+            .catch((error) => { t.fail(error) })
+        })
+      }
+
+      const testSendSecondBookmark = (t) => {
+        t.plan(2)
+        requestUtil.put(proto.categories.BOOKMARKS, record2)
+        setTimeout(() => {
+          testCanListNotifications(t)
+        }, 4000)
+      }
+
       const testCanListNotifications = (t) => {
-        t.test(`${t.name}`, (t) => {
+        t.test(`${t.name} can list notification`, (t) => {
           let currentTime = new Date().getTime()
           requestUtil.list(proto.categories.BOOKMARKS, currentTime)
             .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
             .then((response) => {
               const s3Record = response[0]
+              // Here we always see error `Record with CRC xxxxx is missing parts or corrupt.`
+              // if record2.bookmark.site.location length is ~ 4096
               if (!s3Record) {
                 t.pass('empty SQS notifications/missing records, check if more than one tests are running at the same time')
               } else {
                 // FIXME: Should this deserialize to 'CREATE' ?
                 t.equals(s3Record.action, 0, `${t.name}: action`)
-                t.deepEquals(s3Record.deviceId, record.deviceId, `${t.name}: deviceId`)
-                t.deepEquals(s3Record.objectId, record.objectId, `${t.name}: objectId`)
-                t.deepEquals(s3Record.bookmark.site, record.bookmark.site, `${t.name}: bookmark.site`)
-                t.deepEquals(s3Record.bookmark.isFolder, record.bookmark.isFolder, `${t.name}: bookmark.isFolder`)
-                t.deepEquals(s3Record.bookmark.hideInToolbar, record.bookmark.hideInToolbar, `${t.name}: bookmark.hideInToolbar`)
-                t.deepEquals(s3Record.bookmark.order, record.bookmark.order, `${t.name}: bookmark.order`)
+                t.deepEquals(s3Record.deviceId, record2.deviceId, `${t.name}: deviceId`)
+                t.deepEquals(s3Record.objectId, record2.objectId, `${t.name}: objectId`)
+                t.deepEquals(s3Record.bookmark.site, record2.bookmark.site, `${t.name}: bookmark.site`)
+                t.deepEquals(s3Record.bookmark.isFolder, record2.bookmark.isFolder, `${t.name}: bookmark.isFolder`)
+                t.deepEquals(s3Record.bookmark.hideInToolbar, record2.bookmark.hideInToolbar, `${t.name}: bookmark.hideInToolbar`)
+                t.deepEquals(s3Record.bookmark.order, record2.bookmark.order, `${t.name}: bookmark.order`)
               }
               testCanDeleteBookmarks(t)
             })
