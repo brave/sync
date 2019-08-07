@@ -12,32 +12,90 @@ module.exports.getBaseBookmarksOrder = (deviceId, platform) => {
 
 /**
  * Helper to get next order number.
- * @param {number} lastNumber - last digit of prev order
- * @param {string} order - the order string
+ * @param {array} prevIntArr - int array representing prev order
  * @return {string}
  */
-const getNextOrderFromPrevOrder = (lastNumber, order) => {
+const getNextOrderFromPrevOrder = (prevIntArr) => {
+  if (prevIntArr.length <= 2) {
+    throw new Error('Invalid input order')
+  }
+  const lastNumber = prevIntArr[prevIntArr.length - 1]
   if (lastNumber <= 0) {
     throw new Error('Invalid input order')
   } else {
-    return order + (lastNumber + 1)
+    prevIntArr[prevIntArr.length - 1]++
+    return toOrderString(prevIntArr)
   }
 }
 
 /**
  * Helper to get previous order number.
- * @param {number} lastNumber - last digit of next order
- * @param {string} order - the order string
+ * @param {array} nextIntArr - int array representing next order
  * @return {string}
  */
-const getPrevOrderFromNextOrder = (lastNumber, order) => {
+const getPrevOrderFromNextOrder = (nextIntArr) => {
+  const lastNumber = nextIntArr[nextIntArr.length - 1]
+  nextIntArr.length = nextIntArr.length - 1
   if (lastNumber <= 0) {
     throw new Error('Invalid input order')
   } else if (lastNumber === 1) {
-    return order + '0.1'
+    return toOrderString(nextIntArr) + '.0.1'
   } else {
-    return order + (lastNumber - 1)
+    nextIntArr.push(lastNumber - 1)
+    return toOrderString(nextIntArr)
   }
+}
+
+/**
+ * Helper to convert order from string to int array.
+ * @param {string} s - string representing order
+ * @return {array}
+ */
+const orderToIntArray = (s) => {
+  if (!s) {
+    return []
+  }
+
+  const arrayS = s.split('.')
+  const arrayInt = arrayS.map(s => parseInt(s, 10))
+  return arrayInt
+}
+
+/**
+ * Helper to convert order from int array to string .
+ * @param {string} s - int array representing order
+ * @return {array}
+ */
+const toOrderString = (arrayInt) => {
+  return arrayInt.join('.')
+}
+
+/**
+ * Helper to lexicographical compare orders represented by int array. Exported for tests.
+ * @param {array} leftIntVec - int array representing left order to compare
+ * @param {array} rightIntVec - int array representing right order to compare
+ * @return {bool} - true if leftIntVec < rightIntVec
+ */
+module.exports.compareIntVecOrders = (leftIntVec, rightIntVec) => {
+  var iLeft = 0
+  var iRight = 0
+  for (; iLeft < leftIntVec.length && iRight < rightIntVec.length; ++iLeft, ++iRight) {
+    if (leftIntVec[iLeft] < rightIntVec[iRight]) return true
+    if (rightIntVec[iRight] < leftIntVec[iLeft]) return false
+  }
+  return (iLeft === leftIntVec.length) && (iRight !== rightIntVec.length)
+}
+
+const compareIntVecOrders = module.exports.compareIntVecOrders
+
+/**
+ * Helper to lexicographical compare orders represented by strings. Exported for tests.
+ * @param {array} leftIntVec - int array representing left order to compare
+ * @param {array} rightIntVec - int array representing right order to compare
+ * @return {bool} - true if leftIntVec < rightIntVec
+ */
+module.exports.compareStringOrders = (leftOrder, rightOrder) => {
+  return compareIntVecOrders(orderToIntArray(leftOrder), orderToIntArray(rightOrder))
 }
 
 /**
@@ -48,83 +106,57 @@ const getPrevOrderFromNextOrder = (lastNumber, order) => {
  * @returns {String}
  */
 module.exports.getBookmarkOrder = (prevOrder, nextOrder, parentOrder) => {
-  let prevOrderSplit = prevOrder.split('.')
-  let nextOrderSplit = nextOrder.split('.')
-
-  if (prevOrderSplit.length === 1 && nextOrderSplit.length === 1) {
+  const prevIntArr = orderToIntArray(prevOrder)
+  const nextIntArr = orderToIntArray(nextOrder)
+  if (!prevIntArr.length && !nextIntArr.length) {
     if (!parentOrder) {
-      throw new Error(`Invalid previous, next and parent orders: ${prevOrderSplit}, ${nextOrderSplit} and ${parentOrder}`)
+      throw new Error(`Invalid previous, next and parent orders: ${prevOrder}, ${nextOrder} and ${parentOrder}`)
     } else {
       return parentOrder + '.1'
     }
-  }
-  let order = ''
-  if (nextOrderSplit.length === 1) {
-    // Next order is an empty string
-    if (prevOrderSplit.length > 2) {
-      for (var i = 0; i < prevOrderSplit.length - 1; i++) {
-        order += prevOrderSplit[i] + '.'
-      }
-      let lastNumber = parseInt(prevOrderSplit[prevOrderSplit.length - 1])
-      order = getNextOrderFromPrevOrder(lastNumber, order)
-    }
-  } else if (prevOrderSplit.length === 1) {
-    // Prev order is an empty string
-    if (nextOrderSplit.length > 2) {
-      for (i = 0; i < nextOrderSplit.length - 1; i++) {
-        order += nextOrderSplit[i] + '.'
-      }
-      let lastNumber = parseInt(nextOrderSplit[nextOrderSplit.length - 1])
-      order = getPrevOrderFromNextOrder(lastNumber, order)
-    }
+  } else if (!prevIntArr.length && nextIntArr.length) {
+    return getPrevOrderFromNextOrder(nextIntArr)
+  } else if (prevIntArr.length && !nextIntArr.length) {
+    return getNextOrderFromPrevOrder(prevIntArr)
   } else {
-    if (prevOrderSplit.length > 2 && nextOrderSplit.length > 2) {
-      for (i = 0; i < prevOrderSplit.length - 1; i++) {
-        order += prevOrderSplit[i] + '.'
-      }
-      if (prevOrderSplit.length === nextOrderSplit.length) {
-        // Orders have the same length
-        let lastNumberPrev = parseInt(prevOrderSplit[prevOrderSplit.length - 1])
-        let lastNumberNext = parseInt(nextOrderSplit[nextOrderSplit.length - 1])
-        if (lastNumberNext - lastNumberPrev > 1) {
-          order += (lastNumberPrev + 1)
-        } else {
-          order += lastNumberPrev + '.1'
-        }
-      } else if (prevOrderSplit.length < nextOrderSplit.length) {
-        // Next order is longer than previous order
-        let lastNumberDiff = true
-        for (i = 0; i < prevOrderSplit.length - 1; i++) {
-          if (prevOrderSplit[i] === nextOrderSplit[i]) {
-            continue
-          }
-          lastNumberDiff = false
-          break
-        }
-        order += prevOrderSplit[prevOrderSplit.length - 1] + '.'
-        let currentIndex = prevOrderSplit.length
-        while (parseInt(nextOrderSplit[currentIndex]) === 0) {
-          order += nextOrderSplit[currentIndex] + '.'
-          currentIndex++
-        }
-        let lastNumberNext = parseInt(nextOrderSplit[currentIndex])
-        let lastNumberPrev = parseInt(prevOrderSplit[prevOrderSplit.length - 1])
-        if (lastNumberDiff) {
-          let samePositionNumberNext = parseInt(nextOrderSplit[prevOrderSplit.length - 1])
-          if ((samePositionNumberNext - lastNumberPrev) >= 1) {
-            order += '1'
-          } else {
-            order = getPrevOrderFromNextOrder(lastNumberNext, order)
-          }
-        } else {
-          order = getPrevOrderFromNextOrder(lastNumberNext, order)
-        }
-      } else {
-        // Prev order is longer than next order
-        let lastNumber = parseInt(prevOrderSplit[prevOrderSplit.length - 1])
-        order = getNextOrderFromPrevOrder(lastNumber, order)
+    // Both prev and next are not empty
+    if (!compareIntVecOrders(prevIntArr, nextIntArr)) {
+      throw new Error(`Invalid input, prevOrder should be less then nextOrder, prevOrder=${prevOrder}, prevOrder=${nextOrder}`)
+    }
+
+    // Assume prev looks as a.b.c.d
+    // result candidates are:
+    // a.b.c.(d+1)
+    // a.b.c.d.1
+    // a.b.c.d.0.1
+    // a.b.c.d.0.0.1
+    // ...
+    // each of them is greater than prev
+
+    // Length of result in worse case can be one segment longer
+    // than length of next
+    // And result should be < next
+
+    var resultIntArr = prevIntArr.slice()
+    resultIntArr[resultIntArr.length - 1]++
+    // Case a.b.c.(d+1)
+    if (compareIntVecOrders(resultIntArr, nextIntArr)) {
+      return toOrderString(resultIntArr)
+    }
+    resultIntArr = prevIntArr.slice()
+    resultIntArr.push(1)
+    if (compareIntVecOrders(resultIntArr, nextIntArr)) {
+      return toOrderString(resultIntArr)
+    }
+    const insertAt = prevIntArr.length
+    const tryUntilSize = nextIntArr.length + 1
+    while (resultIntArr.length < tryUntilSize) {
+      resultIntArr.splice(insertAt, 0, 0)
+      if (compareIntVecOrders(resultIntArr, nextIntArr)) {
+        return toOrderString(resultIntArr)
       }
     }
   }
-  return order
+
+  throw new Error(`Invalid previous, next and parent orders: ${prevOrder}, ${nextOrder} and ${parentOrder}`)
 }
