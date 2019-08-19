@@ -62,6 +62,7 @@ const RequestUtil = function (opts = {}) {
     const credentials = this.parseAWSResponse(opts.credentialsBytes)
     this.saveAWSCredentials(credentials)
   }
+  this.SQSUrlByCat = []
 }
 
 /**
@@ -194,9 +195,15 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContin
     if (this.shouldListObject(startAt, category)) {
       return s3Helper.listObjects(this.s3, options, !!maxRecords)
     }
+
+    if (!this.SQSUrlByCat[category]) {
+      console.error(`Could not find SQS url for category ${category}`)
+      throw new Error(`Could not find SQS url for category '${category}'`)
+    }
+
     // We poll from SQS
     let notificationParams = {
-      QueueUrl: `${this.SQSUrl}`,
+      QueueUrl: `${this.SQSUrlByCat[category]}`,
       AttributeNames: [
         'All'
       ],
@@ -214,6 +221,11 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContin
 }
 
 /**
+ * Array of categories which have queue in SQS
+ */
+const CATEGORIES_FOR_SQS = [proto.categories.BOOKMARKS, proto.categories.PREFERENCES]
+
+/**
  * Checks do we need to use s3 list Object or SQS notifications
  * @param {number=} startAt return objects with timestamp >= startAt (e.g. 1482435340). Could be seconds or milliseconds
  * @param {string} category - the category ID
@@ -225,7 +237,7 @@ RequestUtil.prototype.shouldListObject = function (startAt, category) {
 
   return !startAtToCheck ||
       (currentTime - startAtToCheck) > parseInt(s3Helper.SQS_RETENTION, 10) * 1000 ||
-      category !== proto.categories.BOOKMARKS ||
+      !CATEGORIES_FOR_SQS.includes(category) ||
       this.listInProgress === true
 }
 
@@ -257,8 +269,40 @@ RequestUtil.prototype.setListInProgress = function (listInProgress) {
  * @param {string} deviceId
  * @returns {string}
  */
-RequestUtil.prototype.sqsName = function (deviceId) {
-  return `${this.bucket}-${this.apiVersion}-${this.userIdBase62}-${deviceId}`
+RequestUtil.prototype.sqsName = function (deviceId, category) {
+  // How it was:
+  // Lambda uses 'function getSQSPrefix(bucket, apiVersion, user)'
+  // which calculates ${this.bucket}-${this.apiVersion}-${this.userIdBase62}
+  // and then in lambda 'sqs.listQueues' lists all queues representing
+  // devices in chain:
+  //  dev0 "...${this.bucket}-${this.apiVersion}-${this.userIdBase62}-0"
+  //  dev1 "...${this.bucket}-${this.apiVersion}-${this.userIdBase62}-1"
+  //  dev2 "...${this.bucket}-${this.apiVersion}-${this.userIdBase62}-2"
+  //  ...
+
+  // How it is modified
+  // Lambda uses 'function getSQSPrefix(bucket, apiVersion, user, category)'
+  // which calculates:
+  // - for preferences: ${this.bucket}-${this.apiVersion}-${this.userIdBase62}-c${category}
+  // - for bookmarks: ${this.bucket}-${this.apiVersion}-${this.userIdBase62}
+  // and then in lambda 'sqs.listQueues' lists all queues representing queues
+  // of given catergory through all devices:
+  // dev0 bookmarks "...${this.bucket}-${this.apiVersion}-${this.userIdBase62}-0"
+  // dev0 preferences "...${this.bucket}-${this.apiVersion}-${this.userIdBase62}-0-c2"
+  // dev1 bookmarks "...${this.bucket}-${this.apiVersion}-${this.userIdBase62}-1"
+  // dev1 preferences "...${this.bucket}-${this.apiVersion}-${this.userIdBase62}-1-c2"
+  // ...
+  // Note SQS name for bookmarks remains the old, for compatibility
+
+  var queueName = ''
+  if (category === proto.categories.BOOKMARKS) {
+    queueName = `${this.bucket}-${this.apiVersion}-${this.userIdBase62}-${deviceId}`
+  } else if (category === proto.categories.PREFERENCES) {
+    queueName = `${this.bucket}-${this.apiVersion}-${this.userIdBase62}-${deviceId}-c${category}`
+  } else {
+    throw new Error(`Could not make SQS name for unknown category '${category}'`)
+  }
+  return queueName
 }
 
 /**
@@ -272,23 +316,32 @@ RequestUtil.prototype.createAndSubscribeSQS = function (deviceId) {
     throw new Error('createSQS failed. deviceId is null!')
   }
   this.deviceId = deviceId
-  let newQueueParams = {
-    QueueName: this.sqsName(deviceId),
-    Attributes: {
-      'MessageRetentionPeriod': s3Helper.SQS_RETENTION
-    }
-  }
-  return new Promise((resolve, reject) => {
-    this.sqs.createQueue(newQueueParams, (error, data) => {
-      if (error) {
-        console.log('SQS creation failed with error: ' + error)
-        reject(error)
-      } else if (data) {
-        this.SQSUrl = data.QueueUrl
-        resolve([])
+  const createAndSubscribeSQSforCategory = function (deviceId, category, thisRef) {
+    let newQueueParams = {
+      QueueName: thisRef.sqsName(deviceId, category),
+      Attributes: {
+        'MessageRetentionPeriod': s3Helper.SQS_RETENTION
       }
+    }
+    return new Promise((resolve, reject) => {
+      thisRef.sqs.createQueue(newQueueParams, (error, data) => {
+        if (error) {
+          console.log('SQS creation failed with error: ' + error)
+          reject(error)
+        } else if (data) {
+          thisRef.SQSUrlByCat[category] = data.QueueUrl
+          resolve([])
+        }
+      })
     })
-  })
+  }
+  var createSQSPromises = []
+  // Simple for loop instead foreach to capture 'this'
+  for (var i = 0; i < CATEGORIES_FOR_SQS.length; ++i) {
+    createSQSPromises.push(createAndSubscribeSQSforCategory(deviceId, CATEGORIES_FOR_SQS[i], this))
+  }
+
+  return Promise.all(createSQSPromises)
 }
 
 /**
@@ -392,10 +445,10 @@ RequestUtil.prototype.deleteUser = function () {
   return this.s3DeletePrefix(`${this.apiVersion}/${this.userId}`)
 }
 
-RequestUtil.prototype.purgeUserQueue = function () {
+RequestUtil.prototype.purgeUserCategoryQueue = function (category) {
   return new Promise((resolve, reject) => {
     let params = {
-      QueueName: this.sqsName(this.deviceId)
+      QueueName: this.sqsName(this.deviceId, category)
     }
     this.sqs.getQueueUrl(params, (error, data) => {
       if (error) {
@@ -416,6 +469,15 @@ RequestUtil.prototype.purgeUserQueue = function () {
       }
     })
   })
+}
+
+RequestUtil.prototype.purgeUserQueue = function () {
+  var purgeQueuePromises = []
+  for (var i = 0; i < CATEGORIES_FOR_SQS.length; ++i) {
+    purgeQueuePromises.push(this.purgeUserCategoryQueue(CATEGORIES_FOR_SQS[i]))
+  }
+
+  return Promise.all(purgeQueuePromises)
 }
 
 /**
