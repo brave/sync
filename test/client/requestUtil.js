@@ -44,6 +44,9 @@ test('client RequestUtil', (t) => {
   const testPrototype = (t, requestUtil, keys) => {
     test.onFinish(() => {
       requestUtil.deleteUser()
+        .then(() => {
+          requestUtil.purgeUserQueue()
+        })
         .catch((error) => { console.log(`Cleanup failed: ${error}`) })
     })
     const serializer = requestUtil.serializer
