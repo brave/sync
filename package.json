@@ -14,6 +14,7 @@
     "browsertest-safari": "npm run build-proto; npm run start-test; browserify test/client/*.js | tape-run --browser safari; exitCode=$?; npm run stop-test; exit $exitCode",
     "check": "npm audit",
     "client": "npm run build && python -m SimpleHTTPServer",
+    "precoverage": "optional-dev-dependency -t istanbul",
     "coverage": "NODE_CONFIG_DIR=server/config/ istanbul cover tape test/*.js test/server/**/*.js --report lcovonly -- -R spec",
     "dist": "npm run build && cpr bundles/bundle.js ../browser-laptop/app/extensions/brave/content/scripts/sync.js -o && cpr bundles/constants/ ../browser-laptop/js/constants/sync/ -f '\\w+\\.js' -o",
     "start": "NODE_CONFIG_DIR=server/config/ node server/index.js",
@@ -42,13 +43,19 @@
     "browserify": "^16.1.1",
     "cpr": "^3.0.1",
     "flow-bin": "^0.35.0",
-    "istanbul": "^0.4.5",
     "nodemon": "^1.18.6",
+    "optional-dev-dependency": "^2.0.1",
     "standard": "^11.0.1",
     "tape": "^4.6.3",
     "tape-run": "^6.0.0",
     "timekeeper": "^2.0.0",
     "uglify-es": "^3.3.9"
+  },
+  "optionalDevDependencies": {
+    "istanbul": [
+      "^0.4.5",
+      "istanbul"
+    ]
   },
   "dependencies": {
     "@protobufjs/utf8": "^1.1.0",
