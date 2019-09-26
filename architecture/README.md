@@ -6,6 +6,12 @@ The purpose of this document is to provide recommendations to address performanc
 
 ![Brave Sync Design](diagrams/BraveSyncDiagram.jpg)
 
+### Preious Design
+In the previous design,
+Step 3 was different:
+
+![Brave Sync Design - Previous](diagrams/BraveSyncPreviousDiagram.jpg)
+
 ### Bottlenecks
 
 Bottlenecks in the current design include the following:
