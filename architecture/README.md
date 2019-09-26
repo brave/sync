@@ -6,7 +6,7 @@ The purpose of this document is to provide recommendations to address performanc
 
 ![Brave Sync Design](diagrams/BraveSyncDiagram.jpg)
 
-### Preious Design
+### Previous Design
 In the previous design,
 Step 3 was different:
 
