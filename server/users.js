@@ -30,12 +30,12 @@ router.post('/:userId/credentials', (request, response) => {
     }
   })
 
-  const key = "sync-dau-" + new Date().toISOString().split('T')[0]
-  redis.pfadd(key, request.userId, function(err, reply) {
+  const key = 'sync-dau-' + new Date().toISOString().split('T')[0]
+  redis.pfadd(key, request.userId, function (err, reply) {
     if (err) {
-      Util.logger.error("error recording DAU in redis")
+      Util.logger.error('error recording DAU in redis')
     }
-  });
+  })
 
   Promise.all([credentialPromise, postAuthenticatorPromise])
     .then(([aws, s3Post]) => {
