@@ -69,6 +69,7 @@
     "lodash.merge": "^4.6.2",
     "protobufjs": "^6.8.0",
     "raven": "^0.12.3",
+    "redis": "^2.8.0",
     "request": "^2.79.0",
     "tweetnacl": "^1.0.0",
     "uuid": "^3.0.1",

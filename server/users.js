@@ -1,10 +1,12 @@
 'use strict'
 
 const Express = require('express')
+const redis = require('./redis.js')
 const requestVerifier = require('./lib/request-verifier.js')
 const router = Express.Router()
 const serializer = require('../lib/serializer.js')
 const config = require('config')
+const Util = require('./lib/util.js')
 // TODO: This returns a Promise; we may want to block requests until it resolves
 serializer.init()
 
@@ -27,6 +29,13 @@ router.post('/:userId/credentials', (request, response) => {
       reject(exception)
     }
   })
+
+  const key = "sync-dau-" + new Date().toISOString().split('T')[0]
+  redis.pfadd(key, request.userId, function(err, reply) {
+    if (err) {
+      Util.logger.error("error recording DAU in redis")
+    }
+  });
 
   Promise.all([credentialPromise, postAuthenticatorPromise])
     .then(([aws, s3Post]) => {

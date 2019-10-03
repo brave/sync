@@ -9,6 +9,7 @@
   /*"categoryIdPreferences": "2",*/
   "logLevel": "LOG_LEVEL",
   "port": "PORT",
+  "redisUrl": "REDIS_URL",
   "sentryUrl": "SENTRY_URL",
   "serverUrl": "SERVER_URL",
   "userAgent": "USER_AGENT",
