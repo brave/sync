@@ -1,4 +1,4 @@
 {
   "logLevel": "info",
-  "userAwsCredentialTtl": 129600
+  "userAwsCredentialTtl": 86400
 }
