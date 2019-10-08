@@ -67,13 +67,16 @@ exports.parseUA = parseUA
 
 function parseUA (agent) {
   const ua = useragent.lookup(agent)
-  const client = ua.family === 'Chrome' ? 'chrome' : 'other'
+  const other = 'other'
+  if (ua.family.indexOf('Chrome') !== 0) {
+    return other
+  }
   const os = {
     'Mac OS X': 'mac',
     'Windows': 'windows',
     'Linux': 'linux',
     'Android': 'android',
     'iOS': 'ios'
-  }[ua.os.family] || 'other'
-  return [os, client]
+  }[ua.os.family] || other
+  return os
 }
