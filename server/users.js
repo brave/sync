@@ -32,8 +32,8 @@ router.post('/:userId/credentials', (request, response) => {
   })
 
   const date = new Date().toISOString().split('T')[0]
-  const agent = useragent.lookup(request.headers['user-agent'])
-  const platform = agent.toString()
+  const ua = useragent.lookup(request.headers['user-agent'])
+  const platform = ua.family === 'Chrome' ? ua.toString() : 'Other'
   const key = ['sync', 'dau', date, platform].join('-')
   redis.pfadd(key, request.userId, function (err, reply) {
     if (err) {
