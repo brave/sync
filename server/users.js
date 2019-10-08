@@ -1,7 +1,6 @@
 'use strict'
 
 const Express = require('express')
-const useragent = require('useragent')
 const redis = require('./redis.js')
 const requestVerifier = require('./lib/request-verifier.js')
 const router = Express.Router()
@@ -32,9 +31,8 @@ router.post('/:userId/credentials', (request, response) => {
   })
 
   const date = new Date().toISOString().split('T')[0]
-  const ua = useragent.lookup(request.headers['user-agent'])
-  const platform = ua.family === 'Chrome' ? ua.toString() : 'Other'
-  const key = ['sync', 'dau', date, platform].join('-')
+  const platform = Util.parseUA(request.headers['user-agent'])
+  const key = ['sync', 'dau', date].concat(platform).join('-')
   redis.pfadd(key, request.userId, function (err, reply) {
     if (err) {
       Util.logger.error('error recording DAU in redis')
