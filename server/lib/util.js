@@ -1,4 +1,5 @@
 const winston = require('winston')
+const useragent = require('useragent')
 const config = require('config')
 
 exports.logger = new (winston.Logger)({
@@ -60,4 +61,22 @@ exports.dateToAmzDate = (date) => {
 
 exports.awsS3Endpoint = () => {
   return `https://${config.awsS3Bucket}.s3.dualstack.${config.awsRegion}.amazonaws.com`
+}
+
+exports.parsePlatform = parsePlatform
+
+function parsePlatform (agent) {
+  const ua = useragent.lookup(agent)
+  const other = 'other'
+  if (ua.family.indexOf('Chrome') !== 0) {
+    return other
+  }
+  const os = {
+    'Mac OS X': 'mac',
+    'Windows': 'windows',
+    'Linux': 'linux',
+    'Android': 'android',
+    'iOS': 'ios'
+  }[ua.os.family] || other
+  return os
 }
