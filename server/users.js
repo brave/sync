@@ -35,7 +35,7 @@ router.post('/:userId/credentials', (request, response) => {
   const key = ['sync', 'dau', date, platform].join('-')
   redis.pfadd(key, request.userId, function (err, reply) {
     if (err) {
-      Util.logger.error('error recording DAU in redis')
+      Util.logger.error('error recording DAU in redis', err)
     }
   })
 
