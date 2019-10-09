@@ -63,9 +63,9 @@ exports.awsS3Endpoint = () => {
   return `https://${config.awsS3Bucket}.s3.dualstack.${config.awsRegion}.amazonaws.com`
 }
 
-exports.parseUA = parseUA
+exports.parsePlatform = parsePlatform
 
-function parseUA (agent) {
+function parsePlatform (agent) {
   const ua = useragent.lookup(agent)
   const other = 'other'
   if (ua.family.indexOf('Chrome') !== 0) {

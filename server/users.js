@@ -31,7 +31,7 @@ router.post('/:userId/credentials', (request, response) => {
   })
 
   const date = new Date().toISOString().split('T')[0]
-  const platform = Util.parseUA(request.headers['user-agent'])
+  const platform = Util.parsePlatform(request.headers['user-agent'])
   const key = ['sync', 'dau', date, platform].join('-')
   redis.pfadd(key, request.userId, function (err, reply) {
     if (err) {
