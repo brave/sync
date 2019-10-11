@@ -68,7 +68,8 @@ exports.parsePlatform = parsePlatform
 function parsePlatform (agent) {
   const ua = useragent.lookup(agent)
   const other = 'other'
-  if (ua.family.indexOf('Chrome') !== 0) {
+  const { family } = ua
+  if (family.indexOf('Chrome') !== 0 && family !== 'Firefox iOS') {
     return other
   }
   const os = {
