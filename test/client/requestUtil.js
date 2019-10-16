@@ -79,7 +79,7 @@ test('client RequestUtil', (t) => {
         requestUtil.list(proto.categories.PREFERENCES)
           .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
           .then((response) => {
-            const s3Record = response[0]
+            const s3Record = response[0].record
             // FIXME: Should this deserialize to 'CREATE' ?
             t.equals(s3Record.action, 0, `${t.name}: action`)
             t.deepEquals(s3Record.deviceId, deviceRecord.deviceId, `${t.name}: deviceId`)
@@ -128,9 +128,9 @@ test('client RequestUtil', (t) => {
                 .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
                 .then((response) => {
                   t.equals(response.length, 3, t.name)
-                  const s3Record0 = response[0]
-                  const s3Record1 = response[1]
-                  const s3Record2 = response[2]
+                  const s3Record0 = response[0].record
+                  const s3Record1 = response[1].record
+                  const s3Record2 = response[2].record
                   t.equals(s3Record0.device.name, `pyramid at ${TIME_B}`)
                   t.equals(s3Record1.device.name, `pyramid at ${TIME_C}`)
                   t.equals(s3Record2.device.name, `pyramid at ${TIME_D}`)
@@ -175,7 +175,7 @@ test('client RequestUtil', (t) => {
           requestUtil.list(proto.categories.HISTORY_SITES)
             .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
             .then((response) => {
-              const s3Record = response[0]
+              const s3Record = response[0].record
               // FIXME: Should this deserialize to 'CREATE' ?
               t.equals(s3Record.action, 0, `${t.name}: action`)
               t.deepEquals(s3Record.deviceId, record.deviceId, `${t.name}: deviceId`)
@@ -241,7 +241,7 @@ test('client RequestUtil', (t) => {
           requestUtil.list(proto.categories.BOOKMARKS)
             .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
             .then((response) => {
-              const s3Record = response[0]
+              const s3Record = response[0].record
               // FIXME: Should this deserialize to 'CREATE' ?
               t.equals(s3Record.action, 0, `${t.name}: action`)
               t.deepEquals(s3Record.deviceId, record.deviceId, `${t.name}: deviceId`)
@@ -285,7 +285,7 @@ test('client RequestUtil', (t) => {
           requestUtil.list(proto.categories.BOOKMARKS, currentTime)
             .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
             .then((response) => {
-              const s3Record = response[0]
+              const s3Record = response[0] ? response[0].record : response[0]
               // Here we always see error `Record with CRC xxxxx is missing parts or corrupt.`
               // if record2.bookmark.site.location length is ~ 4096
               if (!s3Record) {
@@ -385,7 +385,7 @@ test('client RequestUtil', (t) => {
                 .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
                 .then((response) => {
                   t.equals(response.length, 1, `${t.name} deletes records`)
-                  const s3Record = response[0]
+                  const s3Record = response[0].record
                   t.assert(s3Record.device && s3Record.device.name, `${t.name} preserves device records`)
                   testCanLimitResponse(t)
                 })

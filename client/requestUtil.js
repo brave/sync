@@ -354,6 +354,7 @@ RequestUtil.prototype.s3ObjectsToRecords = function (s3Objects) {
   const radix64 = require('../lib/radix64')
   const output = []
   const partBuffer = {}
+  let objectMap = {}
   for (let s3Object of s3Objects) {
     const parsedKey = s3Helper.parseS3Key(s3Object.Key)
     const fullCrc = parsedKey.recordCrc
@@ -362,6 +363,11 @@ RequestUtil.prototype.s3ObjectsToRecords = function (s3Objects) {
       partBuffer[fullCrc] = partBuffer[fullCrc].concat(data)
       data = partBuffer[fullCrc]
     }
+    if (objectMap[fullCrc]) {
+      objectMap[fullCrc].push(s3Object.Key)
+    } else {
+      objectMap[fullCrc] = [s3Object.Key]
+    }
     const dataBytes = s3Helper.s3StringToByteArray(data)
     const dataCrc = radix64.fromNumber(crc.crc32.unsigned(dataBytes.buffer))
     if (dataCrc === fullCrc) {
@@ -369,7 +375,10 @@ RequestUtil.prototype.s3ObjectsToRecords = function (s3Objects) {
       try {
         decrypted = this.decrypt(dataBytes)
         decrypted.syncTimestamp = parsedKey.timestamp
-        output.push(decrypted)
+        output.push(
+          { record: decrypted,
+            objects: objectMap[fullCrc]
+          })
       } catch (e) {
         console.log(`Record with CRC ${crc} can't be decrypted: ${e}`)
       }
@@ -417,6 +426,42 @@ RequestUtil.prototype.put = function (category, record) {
         .then(checkFetchStatus)
     })
     return Promise.all(fetchPromises)
+  })
+}
+
+RequestUtil.prototype.compactRecords = function (category) {
+  const thisCategory = category
+  if (!recordUtil.CATEGORY_IDS.includes(thisCategory)) {
+    throw new Error(`Unsupported sync category: ${category}`)
+  }
+
+  const prefix = `${this.apiVersion}/${this.userId}/${category}`
+  let options = {
+    MaxKeys: 1000,
+    Bucket: this.bucket,
+    Prefix: prefix
+  }
+  this.withRetry(() => {
+    return s3Helper.listObjects(this.s3, options, false)
+  }).then((s3Objects) => {
+    let latestRecords = {}
+    let s3ObjectsToDelete = []
+    const recordObjects = this.s3ObjectsToRecords(s3Objects.contents)
+    console.error(recordObjects)
+    recordObjects.forEach((recordObject) => {
+      const record = recordObject.record
+      if (latestRecords[record.objectId]) {
+        if (record.syncTimestamp > latestRecords[record.objectId].record.syncTimestamp) {
+          s3ObjectsToDelete = s3ObjectsToDelete.concat(latestRecords[record.objectId].objects)
+          latestRecords[record.objectId] = recordObject
+        } else {
+          s3ObjectsToDelete = s3ObjectsToDelete.concat(recordObject.objects)
+        }
+      } else {
+        latestRecords[record.objectId] = recordObject
+      }
+    })
+    s3Helper.deleteObjects(this.s3, this.bucket, s3ObjectsToDelete)
   })
 }
 

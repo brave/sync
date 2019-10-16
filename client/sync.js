@@ -58,10 +58,11 @@ const maybeSetDeviceId = (requester) => {
   }
   return requester.list(proto.categories.PREFERENCES)
     .then(s3Objects => requester.s3ObjectsToRecords(s3Objects.contents))
-    .then((records) => {
+    .then((recordObjects) => {
       let maxId = -1
-      if (records && records.length) {
-        records.forEach((record) => {
+      if (recordObjects && recordObjects.length) {
+        recordObjects.forEach((recordObject) => {
+          const record = recordObject.record
           const device = record.device
           if (device && record.deviceId[0] > maxId) {
             maxId = record.deviceId[0]
@@ -86,9 +87,10 @@ const startSync = (requester) => {
    * @returns  {Array.<Object>}
    */
   const getJSRecords = (s3Objects, filterFunction) => {
-    const records = requester.s3ObjectsToRecords(s3Objects)
+    const recordObjects = requester.s3ObjectsToRecords(s3Objects)
     let jsRecords = []
-    for (let record of records) {
+    for (let recordObject of recordObjects) {
+      const record = recordObject.record
       const jsRecord = recordUtil.syncRecordAsJS(record)
       // Useful but stored in the S3 key.
       jsRecord.syncTimestamp = record.syncTimestamp
@@ -109,6 +111,9 @@ const startSync = (requester) => {
       let continuationToken = ''
       if (nextContinuationTokens[category]) {
         continuationToken = nextContinuationTokens[category]
+      }
+      if (proto.categories[category] === proto.categories.BOOKMARKS) {
+        requester.compactRecords(proto.categories.BOOKMARKS)
       }
       requester.list(proto.categories[category], startAt, limitResponse, continuationToken).then((s3Objects) => {
         const jsRecords = getJSRecords(s3Objects.contents)
