@@ -285,6 +285,26 @@ module.exports.resolveRecords = (recordsAndExistingObjects) => {
       normalizeBookmark(item[1])
     }
   })
+
+  // Remove obvious conflicting records [CREATE, object]
+  // We are able to remove [CREATE, object] because:
+  // 1. [[CREATE, object]] => []
+  //    if this is the only records for the given object_id - it will be ignored, see `module.exports.resolve`
+  // 2. [[CREATE, object], [UPDATE, object]] =>  [[UPDATE, object]]
+  //    if we keep [CREATE, object], then transform chain will be:
+  //        [[CREATE, object], [UPDATE, object]] => [[CREATE, object]] => []
+  //    we expect to have [[CREATE, object], [UPDATE, object]] => [[UPDATE, object]]
+  //    so we should remove the conflicted [CREATE, object]
+  // 3. [[CREATE, object], ([UPDATE, object]), [DELETE, object]] => [DELETE, object]
+  //    in this case ignoring of [CREATE, object] will not harm result and will give [DELETE, object]
+  for (var i = recordsAndExistingObjects.length - 1; i >= 0; --i) {
+    if (recordsAndExistingObjects[i] && recordsAndExistingObjects[i][0]) {
+      if (recordsAndExistingObjects[i][0].action === proto.actions.CREATE && recordsAndExistingObjects[i][1]) {
+        recordsAndExistingObjects.splice(i, 1)
+      }
+    }
+  }
+
   const merged = mergeRecords(recordsAndExistingObjects)
   merged.forEach(([record, existingObject]) => {
     const resolved = this.resolve(record, existingObject)
