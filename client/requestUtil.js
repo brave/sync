@@ -447,7 +447,6 @@ RequestUtil.prototype.compactRecords = function (category) {
     let latestRecords = {}
     let s3ObjectsToDelete = []
     const recordObjects = this.s3ObjectsToRecords(s3Objects.contents)
-    console.error(recordObjects)
     recordObjects.forEach((recordObject) => {
       const record = recordObject.record
       if (latestRecords[record.objectId]) {

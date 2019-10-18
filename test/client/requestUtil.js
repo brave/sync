@@ -387,13 +387,84 @@ test('client RequestUtil', (t) => {
                   t.equals(response.length, 1, `${t.name} deletes records`)
                   const s3Record = response[0].record
                   t.assert(s3Record.device && s3Record.device.name, `${t.name} preserves device records`)
-                  testCanLimitResponse(t)
+                  testCanDoCompaction(t)
                 })
                 .catch((error) => { t.fail(error) })
             })
             .catch((error) => { t.fail(error) })
         })
         .catch((error) => { t.fail(error) })
+      })
+    }
+
+    const testCanDoCompaction = (t) => {
+      t.test('#compact bookmarks', (t) => {
+        t.plan(3)
+        const recordObjectId = testHelper.newUuid()
+        const record2ObjectId = testHelper.newUuid()
+        const record = {
+          action: 'CREATE',
+          deviceId: new Uint8Array([0]),
+          objectId: recordObjectId,
+          bookmark: {
+            site: {
+              location: `https://brave.com?q=${'x'.repeat(4)}`,
+              title: 'BRAVE',
+              lastAccessedTime: 1480000000 * 1000,
+              creationTime: 1480000000 * 1000
+            },
+            isFolder: false,
+            hideInToolbar: false,
+            order: '1.0.0.1'
+          }
+        }
+        const record2 = {
+          action: 'CREATE',
+          deviceId: new Uint8Array([0]),
+          objectId: record2ObjectId,
+          bookmark: {
+            site: {
+              location: `https://brave.com?q=${'x'.repeat(4096)}`,
+              title: 'BRAVEE',
+              lastAccessedTime: 1480000000 * 1000,
+              creationTime: 1480000000 * 1000
+            },
+            isFolder: false,
+            hideInToolbar: false,
+            order: '1.0.0.2'
+          }
+        }
+        let record_update = record
+        record_update.action = 'UPDATE'
+        let record2_update = record2
+        record2_update.action = 'UPDATE'
+
+        requestUtil.put(proto.categories.BOOKMARKS, record)
+        requestUtil.put(proto.categories.BOOKMARKS, record2)
+        for (let i = 0; i < 100; ++i) {
+          record_update.bookmark.site.title = `${record.bookmark.site.title} ${i}`
+          record2_update.bookmark.site.title = `${record2.bookmark.site.title} ${i}`
+          requestUtil.put(proto.categories.BOOKMARKS, record_update)
+          requestUtil.put(proto.categories.BOOKMARKS, record2_update)
+        }
+        requestUtil.compactRecords(proto.categories.BOOKMARKS)
+        setTimeout(() => {
+          requestUtil.list(proto.categories.BOOKMARKS)
+            .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
+            .then((response) => {
+              t.equals(response.length, 2, `${t.name} check records number`)
+              const s3Record = response[0].record
+              const s3Record2 = response[1].record
+              t.deepEquals(s3Record.objectId, record.objectId, `${t.name}: objectId`)
+              t.deepEquals(s3Record.bookmark.site.title, record_update.bookmark.site.title, `${t.name}: bookmark.title`)
+              requestUtil.deleteCategory(proto.categories.BOOKMARKS)
+                .then((_response) => {
+                  testCanLimitResponse(t)
+                })
+                .catch((error) => { t.fail(error) })
+            })
+            .catch((error) => { t.fail(error) })
+        }, 60000)
       })
     }
 
