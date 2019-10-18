@@ -112,9 +112,6 @@ const startSync = (requester) => {
       if (nextContinuationTokens[category]) {
         continuationToken = nextContinuationTokens[category]
       }
-      if (proto.categories[category] === proto.categories.BOOKMARKS) {
-        requester.compactRecords(proto.categories.BOOKMARKS)
-      }
       requester.list(proto.categories[category], startAt, limitResponse, continuationToken).then((s3Objects) => {
         const jsRecords = getJSRecords(s3Objects.contents)
         logSync(`got ${jsRecords.length} decrypted records in ${category} after ${startAt}`)
@@ -188,6 +185,13 @@ const startSync = (requester) => {
     requester.deleteCategory(proto.categories[category]).then(() => {
       requester.purgeUserQueue()
     })
+  })
+  ipc.on(messages.COMPACT_SYNC_CATEGORY, (e, category) => {
+    if (!proto.categories[category]) {
+      throw new Error(`Unsupported sync category: ${category}`)
+    }
+    logSync(`Compacting category: ${category}`)
+    requester.compactCategory(proto.categories[category])
   })
   ipc.on(messages.DELETE_SYNC_SITE_SETTINGS, (e) => {
     logSync(`Deleting siteSettings`)

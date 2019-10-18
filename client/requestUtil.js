@@ -429,7 +429,11 @@ RequestUtil.prototype.put = function (category, record) {
   })
 }
 
-RequestUtil.prototype.compactRecords = function (category) {
+/**
+ * Compact all records in a category
+ * @param {string=} category - the category ID
+ */
+RequestUtil.prototype.compactCategory = function (category) {
   const thisCategory = category
   if (!recordUtil.CATEGORY_IDS.includes(thisCategory)) {
     throw new Error(`Unsupported sync category: ${category}`)

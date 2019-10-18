@@ -447,7 +447,8 @@ test('client RequestUtil', (t) => {
           requestUtil.put(proto.categories.BOOKMARKS, record_update)
           requestUtil.put(proto.categories.BOOKMARKS, record2_update)
         }
-        requestUtil.compactRecords(proto.categories.BOOKMARKS)
+        requestUtil.compactCategory(proto.categories.BOOKMARKS)
+        // takes about 1 minute for delete to be completely done
         setTimeout(() => {
           requestUtil.list(proto.categories.BOOKMARKS)
             .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
