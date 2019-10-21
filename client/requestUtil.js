@@ -448,17 +448,21 @@ RequestUtil.prototype.compactCategory = function (category) {
   this.withRetry(() => {
     return s3Helper.listObjects(this.s3, options, false)
   }).then((s3Objects) => {
+    // This is used to keep the most recent records for each object id
     let latestRecords = {}
     let s3ObjectsToDelete = []
     const recordObjects = this.s3ObjectsToRecords(s3Objects.contents)
     recordObjects.forEach((recordObject) => {
       const record = recordObject.record
       if (latestRecords[record.objectId]) {
+        console.log('compaction deletes')
         if (record.syncTimestamp > latestRecords[record.objectId].record.syncTimestamp) {
           s3ObjectsToDelete = s3ObjectsToDelete.concat(latestRecords[record.objectId].objects)
+          console.log(latestRecords[record.objectId].record)
           latestRecords[record.objectId] = recordObject
         } else {
           s3ObjectsToDelete = s3ObjectsToDelete.concat(recordObject.objects)
+          console.log(record)
         }
       } else {
         latestRecords[record.objectId] = recordObject
