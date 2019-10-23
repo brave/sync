@@ -377,7 +377,7 @@ test('recordUtil.resolve', (t) => {
 })
 
 test('recordUtil.resolveRecords()', (t) => {
-  t.plan(7)
+  t.plan(8)
 
   t.test(`${t.name} resolves same data cross-platform on laptop and android`, (t) => {
     t.plan(1)
@@ -464,7 +464,7 @@ test('recordUtil.resolveRecords()', (t) => {
     t.deepEquals(resolved, expected, t.name)
   })
 
-  t.test(`${t.name} Create + existing and Modify + existing: should be resolved to Modify`, (t) => {
+  t.test(`${t.name} [[CREATE, object], [UPDATE, object]] => [[UPDATE, object]]`, (t) => {
     // ... and data from Create should be dropped
     t.plan(1)
     const create = CreateRecord({
@@ -490,6 +490,40 @@ test('recordUtil.resolveRecords()', (t) => {
       [update, existingObject]
     ]
     const expected = [update]
+    const resolved = recordUtil.resolveRecords(input)
+    t.deepEquals(resolved, expected, t.name)
+  })
+
+  t.test(`${t.name} [[CREATE/UPDATE, object]..., [DELETE, object]] => [[DELETE, object]]`, (t) => {
+    t.plan(1)
+    const create = CreateRecord({
+      objectId: recordBookmark.objectId,
+      objectData: 'bookmark',
+      bookmark: Object.assign(
+        {},
+        props.bookmark,
+        { site: Object.assign({}, siteProps) }
+      )
+    })
+    const existingObject = Object.assign({}, create)
+    existingObject.action = proto.actions.UPDATE
+
+    const update = Object.assign({}, existingObject)
+    update.bookmark = Object.assign({}, existingObject.bookmark)
+    update.bookmark.site = Object.assign({}, existingObject.bookmark.site)
+    update.bookmark.site.customTitle += `-Updated`
+
+    const deleteRecord = Object.assign({}, update)
+    deleteRecord.action = proto.actions.DELETE
+    deleteRecord.bookmark = Object.assign({}, update.bookmark)
+    deleteRecord.bookmark.site = Object.assign({}, update.bookmark.site)
+
+    const input = [
+      [create, existingObject],
+      [update, existingObject],
+      [deleteRecord, existingObject]
+    ]
+    const expected = [deleteRecord]
     const resolved = recordUtil.resolveRecords(input)
     t.deepEquals(resolved, expected, t.name)
   })
