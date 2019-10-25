@@ -189,13 +189,14 @@ test('client RequestUtil', (t) => {
     }
 
     const testCanPutBookmarks = (t) => {
+      // This record will be split into 6 parts
       const record = {
         action: 'CREATE',
         deviceId: new Uint8Array([0]),
         objectId: testHelper.newUuid(),
         bookmark: {
           site: {
-            location: `https://brave.com?q=${'x'.repeat(4)}`,
+            location: `https://brave.com?q=${'x'.repeat(4096)}`,
             title: 'lulz',
             lastAccessedTime: 1480000000 * 1000,
             creationTime: 1480000000 * 1000
@@ -211,7 +212,7 @@ test('client RequestUtil', (t) => {
         objectId: testHelper.newUuid(),
         bookmark: {
           site: {
-            location: `https://brave.com?q=${'x'.repeat(4096)}`,
+            location: `https://brave.com?q=${'x'.repeat(4)}`,
             title: 'lulz2',
             lastAccessedTime: 1480000000 * 1000,
             creationTime: 1480000000 * 1000
@@ -237,10 +238,14 @@ test('client RequestUtil', (t) => {
 
       const testCanListObjects = (t) => {
         t.test(`${t.name}`, (t) => {
-          t.plan(8)
-          requestUtil.list(proto.categories.BOOKMARKS)
-            .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
-            .then((response) => {
+          t.plan(10)
+          requestUtil.list(proto.categories.BOOKMARKS, 0, 3)
+            .then(s3Objects => {
+              t.equals(s3Objects.isTruncated, true)
+              t.deepEquals(requestUtil.s3ObjectsToRecords(s3Objects.contents), [])
+              return requestUtil.list(proto.categories.BOOKMARKS, 0, 3, s3Objects.nextContinuationToken)
+                .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
+            }).then((response) => {
               const s3Record = response[0].record
               // FIXME: Should this deserialize to 'CREATE' ?
               t.equals(s3Record.action, 0, `${t.name}: action`)
@@ -285,7 +290,7 @@ test('client RequestUtil', (t) => {
           requestUtil.list(proto.categories.BOOKMARKS, currentTime)
             .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
             .then((response) => {
-              const s3Record = response[0] ? response[0].record : response[0]
+              const s3Record = response[1] ? response[1].record : response[1]
               // Here we always see error `Record with CRC xxxxx is missing parts or corrupt.`
               // if record2.bookmark.site.location length is ~ 4096
               if (!s3Record) {
@@ -418,6 +423,7 @@ test('client RequestUtil', (t) => {
             order: '1.0.0.1'
           }
         }
+        // This record will be split into 6 parts
         const record2 = {
           action: 'CREATE',
           deviceId: new Uint8Array([0]),
@@ -441,16 +447,21 @@ test('client RequestUtil', (t) => {
 
         requestUtil.put(proto.categories.BOOKMARKS, record)
         requestUtil.put(proto.categories.BOOKMARKS, record2)
-        for (let i = 0; i < 100; ++i) {
-          record_update.bookmark.site.title = `${record.bookmark.site.title} ${i}`
-          record2_update.bookmark.site.title = `${record2.bookmark.site.title} ${i}`
+        for (let i = 0; i < 5; ++i) {
           requestUtil.put(proto.categories.BOOKMARKS, record_update)
           requestUtil.put(proto.categories.BOOKMARKS, record2_update)
         }
-        requestUtil.compactCategory(proto.categories.BOOKMARKS)
-        // takes about 1 minute for delete to be completely done
+        const consoleLogBak = console.log
+        // limit batch size to 10 to test cross batch compaction for around 40
+        // objects
+        requestUtil.list(proto.categories.BOOKMARKS, 0, 10, '', {compaction: true}).then(() => {
+          console.log = function() {}
+        })
+        // takes about 1.5 minute for delete to be completely done and we also
+        // have 15 second timeout for each batch
         setTimeout(() => {
-          requestUtil.list(proto.categories.BOOKMARKS)
+          console.log = consoleLogBak
+          requestUtil.list(proto.categories.BOOKMARKS, 0, 0)
             .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
             .then((response) => {
               t.equals(response.length, 2, `${t.name} check records number`)
@@ -465,7 +476,7 @@ test('client RequestUtil', (t) => {
                 .catch((error) => { t.fail(error) })
             })
             .catch((error) => { t.fail(error) })
-        }, 60000)
+        }, 90000)
       })
     }
 

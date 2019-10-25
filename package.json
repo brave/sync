@@ -67,6 +67,7 @@
     "deep-equal": "^1.0.1",
     "express": "^4.14.0",
     "lodash.merge": "^4.6.2",
+    "lru-cache": "^5.1.1",
     "protobufjs": "^6.8.0",
     "raven": "^0.12.3",
     "redis": "^2.8.0",

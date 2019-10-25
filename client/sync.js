@@ -190,8 +190,9 @@ const startSync = (requester) => {
     if (!proto.categories[category]) {
       throw new Error(`Unsupported sync category: ${category}`)
     }
-    logSync(`Compacting category: ${category}`)
-    requester.compactCategory(proto.categories[category])
+    requester.list(proto.categories[category], 0, 1000, '', {compaction: true}).then(() => {
+      logSync(`Compacting category: ${category}`)
+    })
   })
   ipc.on(messages.DELETE_SYNC_SITE_SETTINGS, (e) => {
     logSync(`Deleting siteSettings`)
