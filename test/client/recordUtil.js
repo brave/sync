@@ -1,6 +1,5 @@
 const test = require('tape')
 const testHelper = require('../testHelper')
-const timekeeper = require('timekeeper')
 const proto = require('../../client/constants/proto')
 const recordUtil = require('../../client/recordUtil')
 const Serializer = require('../../lib/serializer')
@@ -53,7 +52,6 @@ const recordBookmark = Record({objectData: 'bookmark', bookmark: props.bookmark}
 const recordHistorySite = Record({objectData: 'historySite', historySite: siteProps})
 const recordSiteSetting = Record({objectData: 'siteSetting', siteSetting: props.siteSetting})
 const recordDevice = Record({objectData: 'device', device: {name: 'test pyramid'}})
-const baseRecords = [recordBookmark, recordHistorySite, recordSiteSetting]
 
 const updateBookmark = UpdateRecord({
   objectId: recordBookmark.objectId,
@@ -71,309 +69,98 @@ const updateSiteSetting = UpdateRecord({
   siteSetting: {shieldsUp: true}
 })
 
-test('recordUtil.resolve', (t) => {
-  t.plan(14)
+const bookmarkRecordEx = (action, timestamp) => {
+  let bookmark = Record({objectData: 'bookmark', bookmark: props.bookmark})
+  bookmark.action = action
+  if (timestamp) {
+    bookmark.syncTimestamp = timestamp
+  }
+  return bookmark
+}
 
-  const forRecordsWithAction = (t, action, callback) => {
-    t.plan(baseRecords.length)
-    for (let record of baseRecords) {
-      record.action = action
-      const existingObject = Object.assign({}, record, {action: proto.actions.CREATE})
-      callback(record, existingObject)
-    }
+test('recordUtil.getThisPairWinner', (t) => {
+  t.plan(3)
+  t.test('DELETE wins over CREATE/UPDATE/null', (t) => {
+    t.plan(5)
+    const bookmarkDelete = bookmarkRecordEx(proto.actions.DELETE, 1571929910002)
+    const bookmarkCreate = bookmarkRecordEx(proto.actions.CREATE, 1571929910002)
+    const bookmarkUpdate = bookmarkRecordEx(proto.actions.UPDATE, 1571929910002)
+
+    const winner = recordUtil.getThisPairWinner([bookmarkDelete, bookmarkCreate])
+    t.deepEquals(winner, bookmarkDelete, t.name)
+    const winner2 = recordUtil.getThisPairWinner([bookmarkDelete, bookmarkUpdate])
+    t.deepEquals(winner2, bookmarkDelete, t.name)
+    const winner3 = recordUtil.getThisPairWinner([bookmarkDelete, null])
+    t.deepEquals(winner3, bookmarkDelete, t.name)
+
+    const winner4 = recordUtil.getThisPairWinner([bookmarkCreate, bookmarkDelete])
+    t.deepEquals(winner4, bookmarkDelete, t.name)
+    const winner5 = recordUtil.getThisPairWinner([bookmarkUpdate, bookmarkDelete])
+    t.deepEquals(winner5, bookmarkDelete, t.name)
+  })
+
+  t.test('Latest wins', (t) => {
+    t.plan(2)
+    const latest = bookmarkRecordEx(proto.actions.UPDATE, 1571929910002)
+    const earliest = bookmarkRecordEx(proto.actions.UPDATE, 1571929910001)
+
+    t.test('Remote wins if latest', (t) => {
+      t.plan(1)
+      const remote = latest
+      const local = earliest
+      const winner = recordUtil.getThisPairWinner([remote, local])
+      t.deepEquals(winner, remote, t.name)
+    })
+    t.test('Local wins if latest', (t) => {
+      t.plan(1)
+      const remote = earliest
+      const local = latest
+      const winner = recordUtil.getThisPairWinner([remote, local])
+      t.deepEquals(winner, local, t.name)
+    })
+  })
+
+  t.test('When timestamp is not specified, wins remote', (t) => {
+    t.plan(3)
+    const remote = bookmarkRecordEx(proto.actions.CREATE)
+    const local = bookmarkRecordEx(proto.actions.UPDATE)
+
+    t.equals(!!remote.syncTimestamp, false)
+    t.equals(!!local.syncTimestamp, false)
+
+    const winner = recordUtil.getThisPairWinner([remote, local])
+    t.deepEquals(winner, remote, t.name)
+  })
+})
+
+test('recordUtil.keepMostRecent', (t) => {
+  t.plan(1)
+  const recordWithObjectId = (objectId, title) => {
+    let record = bookmarkRecordEx(proto.actions.UPDATE)
+    record.objectId = objectId
+    record.bookmark.site.title = title
+    return record
   }
 
-  t.test('CREATE, existing object -> null', (t) => {
-    forRecordsWithAction(t, proto.actions.CREATE, (record, existingObject) => {
-      const resolved = recordUtil.resolve(record, existingObject)
-      t.equals(resolved, null, `${t.name}: ${record.objectData}`)
-    })
-  })
+  const id1 = [102, 169, 71, 255, 160, 7, 199, 37, 174, 1, 89, 148, 37, 235, 137, 188]
+  const id2 = [57, 70, 144, 212, 237, 131, 12, 182, 117, 184, 46, 131, 46, 82, 113, 92]
 
-  t.test('CREATE, no existing object -> identity', (t) => {
-    forRecordsWithAction(t, proto.actions.CREATE, (record) => {
-      const resolved = recordUtil.resolve(record, undefined)
-      t.deepEquals(resolved, record, `${t.name}: ${record.objectData}`)
-    })
-  })
+  const obj1Local = recordWithObjectId(id1, 'title_1_local')
+  const obj11 = recordWithObjectId(id1, 'title_11')
+  const obj12 = recordWithObjectId(id1, 'title_12')
+  const obj13 = recordWithObjectId(id1, 'title_13')
 
-  t.test('DELETE, existing object -> identity', (t) => {
-    forRecordsWithAction(t, proto.actions.DELETE, (record, existingObject) => {
-      const resolved = recordUtil.resolve(record, existingObject)
-      t.deepEquals(resolved, record, `${t.name}: ${record.objectData}`)
-    })
-  })
+  const obj2Local = recordWithObjectId(id2, 'title_2_local')
+  const obj21 = recordWithObjectId(id2, 'title_21')
+  const obj22 = recordWithObjectId(id2, 'title_22')
+  const obj23 = recordWithObjectId(id2, 'title_23')
 
-  t.test('DELETE siteSetting, existing -> overlapping props', (t) => {
-    t.plan(1)
-    const deleteSiteSetting = DeleteRecord({
-      objectId: recordSiteSetting.objectId,
-      objectData: 'siteSetting',
-      siteSetting: {
-        hostPattern: 'https?://soundcloud.com',
-        fingerprintingProtection: true, // In recordSiteSetting.siteSetting
-        httpsEverywhere: false // Not in recordSiteSetting.siteSetting
-      }
-    })
-    const expected = DeleteRecord({
-      objectId: recordSiteSetting.objectId,
-      objectData: 'siteSetting',
-      siteSetting: {
-        fingerprintingProtection: true,
-        hostPattern: 'https?://soundcloud.com'
-      }
-    })
-    const resolved = recordUtil.resolve(deleteSiteSetting, recordSiteSetting)
-    t.deepEquals(resolved, expected, `${t.name}`)
-  })
+  const result = recordUtil.keepMostRecent([
+    [obj11, obj1Local], [obj21, obj2Local], [obj22, obj2Local],
+    [obj12, obj1Local], [obj13, obj1Local], [obj23, obj2Local]
+  ])
 
-  t.test('DELETE siteSetting, existing, no common props -> null', (t) => {
-    t.plan(1)
-    const deleteSiteSetting = DeleteRecord({
-      objectId: recordSiteSetting.objectId,
-      objectData: 'siteSetting',
-      siteSetting: {
-        hostPattern: 'https?://soundcloud.com',
-        httpsEverywhere: false // Not in recordSiteSetting.siteSetting
-      }
-    })
-    const resolved = recordUtil.resolve(deleteSiteSetting, recordSiteSetting)
-    t.equals(resolved, null, `${t.name}`)
-  })
-
-  t.test('DELETE site, existing, no props -> identity', (t) => {
-    t.plan(1)
-    const deleteSite = DeleteRecord({
-      objectId: recordBookmark.objectId,
-      deviceId: [0],
-      objectData: 'bookmark',
-      bookmark: {}
-    })
-    const resolved = recordUtil.resolve(deleteSite, recordBookmark)
-    t.equals(resolved, deleteSite, `${t.name}`)
-  })
-
-  t.test('DELETE site, no existing object, no props -> null', (t) => {
-    t.plan(1)
-    const deleteSite = DeleteRecord({
-      objectId: recordHistorySite.objectId,
-      deviceId: [0],
-      objectData: 'historySite',
-      historySite: {}
-    })
-    const resolved = recordUtil.resolve(deleteSite, null)
-    t.equals(resolved, null, `${t.name}`)
-  })
-
-  t.test('DELETE, no existing object -> null', (t) => {
-    forRecordsWithAction(t, proto.actions.DELETE, (record) => {
-      const resolved = recordUtil.resolve(record, undefined)
-      t.equals(resolved, null, `${t.name}: ${record.objectData}`)
-    })
-  })
-
-  t.test('UPDATE, existing object with same props -> null', (t) => {
-    forRecordsWithAction(t, proto.actions.UPDATE, (record, existingObject) => {
-      const resolved = recordUtil.resolve(record, existingObject)
-      t.equals(resolved, null, `${t.name}: ${record.objectData}`)
-    })
-  })
-
-  t.test('UPDATE, existing object with same props reordered -> null', (t) => {
-    t.plan(1)
-    const siteSettingReordered = UpdateRecord({
-      objectId: recordSiteSetting.objectId,
-      objectData: 'siteSetting',
-      siteSetting: {
-        shieldsUp: false, // yolo
-        fingerprintingProtection: false,
-        hostPattern: 'https?://soundcloud.com',
-        zoomLevel: 2.5,
-        noScript: false
-      }
-    })
-    const resolved = recordUtil.resolve(siteSettingReordered, recordSiteSetting)
-    t.equals(resolved, null, `${t.name}: object props are reordered`)
-  })
-
-  t.test('UPDATE, existing object with different props -> identity', (t) => {
-    t.plan(3)
-    const resolvedBookmark = recordUtil.resolve(updateBookmark, recordBookmark)
-    t.deepEquals(resolvedBookmark, updateBookmark, `${t.name}: bookmark`)
-    const resolvedHistorySite = recordUtil.resolve(updateHistorySite, recordHistorySite)
-    t.deepEquals(resolvedHistorySite, updateHistorySite, `${t.name}: historySite`)
-    const resolvedSiteSetting = recordUtil.resolve(updateSiteSetting, recordSiteSetting)
-    t.deepEquals(resolvedSiteSetting, updateSiteSetting, `${t.name}: siteSetting`)
-  })
-
-  t.test('UPDATE siteSetting, existing -> only changed props', (t) => {
-    t.plan(1)
-    const updateSiteSetting = UpdateRecord({
-      objectId: recordSiteSetting.objectId,
-      objectData: 'siteSetting',
-      siteSetting: {
-        hostPattern: 'https?://soundcloud.com',
-        fingerprintingProtection: false, // Same as recordSiteSetting.siteSetting
-        httpsEverywhere: false // Not in recordSiteSetting.siteSetting
-      }
-    })
-    const expected = UpdateRecord({
-      objectId: recordSiteSetting.objectId,
-      objectData: 'siteSetting',
-      siteSetting: {
-        hostPattern: 'https?://soundcloud.com',
-        httpsEverywhere: false
-      }
-    })
-    const resolved = recordUtil.resolve(updateSiteSetting, recordSiteSetting)
-    t.deepEquals(resolved, expected, `${t.name}`)
-  })
-
-  t.test('UPDATE siteSetting, existing, no changed props -> null', (t) => {
-    t.plan(1)
-    const updateSiteSetting = UpdateRecord({
-      objectId: recordSiteSetting.objectId,
-      objectData: 'siteSetting',
-      siteSetting: {
-        hostPattern: 'https?://soundcloud.com',
-        fingerprintingProtection: false // Same as recordSiteSetting.siteSetting
-      }
-    })
-    const resolved = recordUtil.resolve(updateSiteSetting, recordSiteSetting)
-    t.equals(resolved, null, `${t.name}`)
-  })
-
-  t.test('UPDATE, no existing object', (t) => {
-    t.plan(8)
-    const time = 1480000000 * 1000
-    const url = 'https://jisho.org'
-
-    const resolveToNull = (t, recordProps, message) => {
-      t.plan(1)
-      const record = Record(
-        Object.assign({}, recordProps, {action: proto.actions.UPDATE})
-      )
-      const resolvedRecord = recordUtil.resolve(record)
-      t.equals(resolvedRecord, null, message)
-    }
-
-    const resolveToCreate = (t, recordProps, resolvedProps, message) => {
-      t.plan(1)
-      const record = Record(
-        Object.assign({}, recordProps, {action: proto.actions.UPDATE})
-      )
-      const expectedRecord = Record(Object.assign(
-        {},
-        resolvedProps,
-        {
-          action: proto.actions.CREATE,
-          deviceId: record.deviceId,
-          objectId: record.objectId
-        }
-      ))
-
-      timekeeper.freeze(time)
-      const resolvedRecord = recordUtil.resolve(record)
-      timekeeper.reset()
-      t.deepEquals(resolvedRecord, expectedRecord, message)
-    }
-
-    t.test(`${t.name}, historySite, .customTitle -> null`, (t) => {
-      const recordProps = {objectData: 'historySite', historySite: {customTitle: 'pyramid'}}
-      resolveToNull(t, recordProps, t.name)
-    })
-
-    t.test(`${t.name}, historySite, .location -> create`, (t) => {
-      const recordProps = {objectData: 'historySite', historySite: {location: url}}
-      const resolvedProps = {
-        historySite: {
-          location: url,
-          title: '',
-          customTitle: url,
-          lastAccessedTime: time,
-          creationTime: time,
-          favicon: ''
-        },
-        objectData: 'historySite'
-      }
-      resolveToCreate(t, recordProps, resolvedProps, t.name)
-    })
-
-    t.test(`${t.name}, bookmark, .site.customTitle -> null`, (t) => {
-      const recordProps = {
-        objectData: 'bookmark',
-        bookmark: {site: {customTitle: 'i like turtles'}}
-      }
-      resolveToNull(t, recordProps, t.name)
-    })
-
-    t.test(`${t.name}, bookmark, .site.location -> create bookmark`, (t) => {
-      const recordProps = {
-        objectData: 'bookmark',
-        bookmark: {site: {location: url}}
-      }
-      const resolvedProps = {
-        bookmark: {
-          site: {
-            location: url,
-            title: '',
-            customTitle: url,
-            lastAccessedTime: time,
-            creationTime: time,
-            favicon: ''
-          },
-          isFolder: false
-        },
-        objectData: 'bookmark'
-      }
-      resolveToCreate(t, recordProps, resolvedProps, t.name)
-    })
-
-    t.test(`${t.name}, bookmark, .isFolder .site.customTitle -> create folder`, (t) => {
-      const recordProps = {
-        bookmark: {
-          site: {customTitle: 'sweet title'},
-          isFolder: true
-        },
-        objectData: 'bookmark'
-      }
-      resolveToCreate(t, recordProps, recordProps, t.name)
-    })
-
-    t.test(`${t.name}, bookmark, .isFolder, .site.title -> create folder`, (t) => {
-      const recordProps = {
-        bookmark: {
-          site: {title: 'salty title'},
-          isFolder: true
-        },
-        objectData: 'bookmark'
-      }
-      resolveToCreate(t, recordProps, recordProps, t.name)
-    })
-
-    t.test(`${t.name}, siteSetting, .safeBrowsing -> null`, (t) => {
-      const recordProps = {
-        objectData: 'siteSetting',
-        siteSetting: {safeBrowsing: false}
-      }
-      resolveToNull(t, recordProps, t.name)
-    })
-
-    t.test(`${t.name}, siteSetting, .hostPattern -> create`, (t) => {
-      const recordProps = {
-        objectData: 'siteSetting',
-        siteSetting: {hostPattern: url, noScript: false}
-      }
-      const resolvedProps = {
-        siteSetting: {
-          hostPattern: url,
-          noScript: false
-        },
-        objectData: 'siteSetting'
-      }
-      resolveToCreate(t, recordProps, resolvedProps, t.name)
-    })
-  })
+  t.deepEquals(result, [[obj13, obj1Local], [obj23, obj2Local]], t.name)
 })
 
 test('recordUtil.resolveRecords()', (t) => {
@@ -405,7 +192,7 @@ test('recordUtil.resolveRecords()', (t) => {
     t.deepEquals(resolved, expected, t.name)
   })
 
-  t.test(`${t.name} sequential Updates should become no op`, (t) => {
+  t.test(`${t.name} sequential Updates should become the latest update`, (t) => {
     t.plan(1)
     const update1 = UpdateRecord({
       objectId: recordBookmark.objectId,
@@ -423,26 +210,17 @@ test('recordUtil.resolveRecords()', (t) => {
       [update2, existingObject]
     ]
     const resolved = recordUtil.resolveRecords(input)
-    t.deepEquals(resolved, [], t.name)
+    t.deepEquals(resolved, [update2], t.name)
   })
 
-  t.test(`${t.name} Create + Update of a new object should resolve to a single Create`, (t) => {
+  t.test(`${t.name} Create + Update of a new object should resolve to the latest Update`, (t) => {
     t.plan(1)
-    const expectedRecord = CreateRecord({
-      objectId: recordBookmark.objectId,
-      objectData: 'bookmark',
-      bookmark: Object.assign(
-        {},
-        props.bookmark,
-        { site: Object.assign({}, siteProps, updateSiteProps) }
-      )
-    })
     const input = [[recordBookmark, null], [updateBookmark, null]]
     const resolved = recordUtil.resolveRecords(input)
-    t.deepEquals(resolved, [expectedRecord], t.name)
+    t.deepEquals(resolved, [updateBookmark], t.name)
   })
 
-  t.test(`${t.name} Create + Delete of non-existing object should be resolve to none`, (t) => {
+  t.test(`${t.name} Create + Delete of non-existing object should be resolve to last Delete`, (t) => {
     t.plan(1)
     var createBookmark = CreateRecord({
       objectId: recordBookmark.objectId,
@@ -460,7 +238,7 @@ test('recordUtil.resolveRecords()', (t) => {
     })
     const input = [[createBookmark, null], [deleteBookmark, null]]
     const resolved = recordUtil.resolveRecords(input)
-    const expected = []
+    const expected = [deleteBookmark]
     t.deepEquals(resolved, expected, t.name)
   })
 
