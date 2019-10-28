@@ -58,10 +58,11 @@ const maybeSetDeviceId = (requester) => {
   }
   return requester.list(proto.categories.PREFERENCES)
     .then(s3Objects => requester.s3ObjectsToRecords(s3Objects.contents))
-    .then((records) => {
+    .then((recordObjects) => {
       let maxId = -1
-      if (records && records.length) {
-        records.forEach((record) => {
+      if (recordObjects && recordObjects.length) {
+        recordObjects.forEach((recordObject) => {
+          const record = recordObject.record
           const device = record.device
           if (device && record.deviceId[0] > maxId) {
             maxId = record.deviceId[0]
@@ -86,9 +87,10 @@ const startSync = (requester) => {
    * @returns  {Array.<Object>}
    */
   const getJSRecords = (s3Objects, filterFunction) => {
-    const records = requester.s3ObjectsToRecords(s3Objects)
+    const recordObjects = requester.s3ObjectsToRecords(s3Objects)
     let jsRecords = []
-    for (let record of records) {
+    for (let recordObject of recordObjects) {
+      const record = recordObject.record
       const jsRecord = recordUtil.syncRecordAsJS(record)
       // Useful but stored in the S3 key.
       jsRecord.syncTimestamp = record.syncTimestamp
@@ -182,6 +184,14 @@ const startSync = (requester) => {
     logSync(`Deleting category: ${category}`)
     requester.deleteCategory(proto.categories[category]).then(() => {
       requester.purgeUserQueue()
+    })
+  })
+  ipc.on(messages.COMPACT_SYNC_CATEGORY, (e, category) => {
+    if (!proto.categories[category]) {
+      throw new Error(`Unsupported sync category: ${category}`)
+    }
+    requester.list(proto.categories[category], 0, 1000, '', {compaction: true}).then(() => {
+      logSync(`Compacting category: ${category}`)
     })
   })
   ipc.on(messages.DELETE_SYNC_SITE_SETTINGS, (e) => {

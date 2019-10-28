@@ -7,6 +7,7 @@ const proto = require('./constants/proto')
 const {limitConcurrency} = require('../lib/promiseHelper')
 const s3Helper = require('../lib/s3Helper')
 const serializer = require('../lib/serializer')
+const LRUCache = require('lru-cache')
 
 const CONFIG = require('./config')
 
@@ -63,6 +64,9 @@ const RequestUtil = function (opts = {}) {
     this.saveAWSCredentials(credentials)
   }
   this.SQSUrlByCat = []
+  this.missingObjectsCache = new LRUCache(50)
+  // This is used to keep the most recent records for each object id
+  this.latestRecordsCache = new LRUCache(100)
 }
 
 /**
@@ -178,9 +182,12 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
  * @param {string} category - the category ID
  * @param {number=} startAt return objects with timestamp >= startAt (e.g. 1482435340)
  * @param {number=} maxRecords Limit response to a given number of recods. By default the Sync lib will fetch all matching records, which might take a long time. If falsey, fetch all records.
+ * @param {{
+ *    compaction {boolean} // compact records while list object from S3
+ *  }} opts
  * @returns {Promise(Array.<Object>)}
  */
-RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContinuationToken) {
+RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContinuationToken, opts = {}) {
   const prefix = `${this.apiVersion}/${this.userId}/${category}`
   let options = {
     MaxKeys: maxRecords || 1000,
@@ -192,8 +199,26 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContin
   }
   if (startAt) { options.StartAfter = `${prefix}/${startAt}` }
   return this.withRetry(() => {
-    if (this.shouldListObject(startAt, category)) {
-      return s3Helper.listObjects(this.s3, options, !!maxRecords)
+    if (this.shouldListObject(startAt, category) || opts.compaction) {
+      const s3ObjectsPromise = s3Helper.listObjects(this.s3, options, !!maxRecords)
+      if (!opts.compaction) {
+        return s3ObjectsPromise
+      }
+      return new Promise((resolve, reject) => {
+        s3ObjectsPromise.then((s3Objects) => {
+          setTimeout(() => {
+            this.compactObjects(s3Objects.contents)
+            if (s3Objects.isTruncated) {
+              return this.list(category, startAt, maxRecords, s3Objects.nextContinuationToken, opts)
+            }
+            return new Promise((resolve, reject) => {
+              // compaction is done
+              resolve()
+            })
+          }, 15000)
+        })
+        resolve()
+      })
     }
 
     if (!this.SQSUrlByCat[category]) {
@@ -354,6 +379,11 @@ RequestUtil.prototype.s3ObjectsToRecords = function (s3Objects) {
   const radix64 = require('../lib/radix64')
   const output = []
   const partBuffer = {}
+  const objectMap = {}
+  // restore the partBuffer from last round
+  this.missingObjectsCache.forEach((value, key, cache) => {
+    partBuffer[key] = value
+  })
   for (let s3Object of s3Objects) {
     const parsedKey = s3Helper.parseS3Key(s3Object.Key)
     const fullCrc = parsedKey.recordCrc
@@ -362,6 +392,11 @@ RequestUtil.prototype.s3ObjectsToRecords = function (s3Objects) {
       partBuffer[fullCrc] = partBuffer[fullCrc].concat(data)
       data = partBuffer[fullCrc]
     }
+    if (objectMap[fullCrc]) {
+      objectMap[fullCrc].push(s3Object.Key)
+    } else {
+      objectMap[fullCrc] = [s3Object.Key]
+    }
     const dataBytes = s3Helper.s3StringToByteArray(data)
     const dataCrc = radix64.fromNumber(crc.crc32.unsigned(dataBytes.buffer))
     if (dataCrc === fullCrc) {
@@ -369,16 +404,21 @@ RequestUtil.prototype.s3ObjectsToRecords = function (s3Objects) {
       try {
         decrypted = this.decrypt(dataBytes)
         decrypted.syncTimestamp = parsedKey.timestamp
-        output.push(decrypted)
+        output.push(
+          { record: decrypted,
+            objects: objectMap[fullCrc]
+          })
       } catch (e) {
         console.log(`Record with CRC ${crc} can't be decrypted: ${e}`)
       }
       if (partBuffer[fullCrc]) { delete partBuffer[fullCrc] }
+      if (this.missingObjectsCache.has(fullCrc)) { this.missingObjectsCache.del(fullCrc) }
     } else {
       partBuffer[fullCrc] = data
     }
   }
   for (let crc in partBuffer) {
+    this.missingObjectsCache.set(crc, partBuffer[crc])
     console.log(`Record with CRC ${crc} is missing parts or corrupt.`)
   }
   return output
@@ -418,6 +458,34 @@ RequestUtil.prototype.put = function (category, record) {
     })
     return Promise.all(fetchPromises)
   })
+}
+
+/**
+ * Compact all records in a category
+ * @param {string=} category - the category ID
+ */
+RequestUtil.prototype.compactObjects = function (s3Objects) {
+  let s3ObjectsToDelete = []
+  const recordObjects = this.s3ObjectsToRecords(s3Objects)
+  recordObjects.forEach((recordObject) => {
+    const record = recordObject.record
+    const id = JSON.stringify(record.objectId)
+    if (this.latestRecordsCache.has(id)) {
+      console.log('compaction deletes')
+      const cacheRecordObject = this.latestRecordsCache.get(id)
+      if (record.syncTimestamp > cacheRecordObject.record.syncTimestamp) {
+        s3ObjectsToDelete = s3ObjectsToDelete.concat(cacheRecordObject.objects)
+        console.log(cacheRecordObject.record)
+        this.latestRecordsCache.set(id, recordObject)
+      } else {
+        s3ObjectsToDelete = s3ObjectsToDelete.concat(recordObject.objects)
+        console.log(record)
+      }
+    } else {
+      this.latestRecordsCache.set(id, recordObject)
+    }
+  })
+  s3Helper.deleteObjects(this.s3, this.bucket, s3ObjectsToDelete)
 }
 
 RequestUtil.prototype.s3PostFormData = function (objectKey) {

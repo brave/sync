@@ -100,6 +100,11 @@ const messages = {
    */
   DELETE_SYNC_CATEGORY: _, /* @param {string} categoryName */
   /**
+   * browser -> webview
+   * browser sends this to compact records in a category
+   */
+  COMPACT_SYNC_CATEGORY: _, /* @param {string} categoryName */
+  /**
    * webview -> browser
    * webview sends this to delete all site settings.
    */
