@@ -184,6 +184,7 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
  * @param {number=} maxRecords Limit response to a given number of recods. By default the Sync lib will fetch all matching records, which might take a long time. If falsey, fetch all records.
  * @param {{
  *    compaction {boolean} // compact records while list object from S3
+ *    compactionCb {function} // callback when compaction is done
  *  }} opts
  * @returns {Promise(Array.<Object>)}
  */
@@ -206,13 +207,17 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContin
       }
       return new Promise((resolve, reject) => {
         s3ObjectsPromise.then((s3Objects) => {
+          this.compactObjects(s3Objects.contents)
+          // wait for 15 seconds between batches
           setTimeout(() => {
-            this.compactObjects(s3Objects.contents)
             if (s3Objects.isTruncated) {
               return this.list(category, startAt, maxRecords, s3Objects.nextContinuationToken, opts)
             }
             return new Promise((resolve, reject) => {
               // compaction is done
+              if (opts.compactionCb) {
+                opts.compactionCb()
+              }
               resolve()
             })
           }, 15000)

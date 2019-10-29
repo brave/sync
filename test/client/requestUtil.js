@@ -454,29 +454,32 @@ test('client RequestUtil', (t) => {
         const consoleLogBak = console.log
         // limit batch size to 10 to test cross batch compaction for around 40
         // objects
-        requestUtil.list(proto.categories.BOOKMARKS, 0, 10, '', {compaction: true}).then(() => {
+        requestUtil.list(proto.categories.BOOKMARKS, 0, 10, '', {compaction: true,
+          compactionCb: () => {
+            console.log = consoleLogBak
+            console.log('compaction is done')
+            //  we already have 15 second timeout for each batch so no need to
+            //  do another wait after compaction is done
+            requestUtil.list(proto.categories.BOOKMARKS, 0, 0)
+              .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
+              .then((response) => {
+                t.equals(response.length, 2, `${t.name} check records number`)
+                const s3Record = response[0].record
+                const s3Record2 = response[1].record
+                t.deepEquals(s3Record.objectId, record.objectId, `${t.name}: objectId`)
+                t.deepEquals(s3Record.bookmark.site.title, record_update.bookmark.site.title, `${t.name}: bookmark.title`)
+                requestUtil.deleteCategory(proto.categories.BOOKMARKS)
+                  .then((_response) => {
+                    testCanLimitResponse(t)
+                  })
+                  .catch((error) => { t.fail(error) })
+              })
+              .catch((error) => { t.fail(error) })
+          }
+        }).then(() => {
+          // compaction is still in progress
           console.log = function() {}
         })
-        // takes about 1.5 minute for delete to be completely done and we also
-        // have 15 second timeout for each batch
-        setTimeout(() => {
-          console.log = consoleLogBak
-          requestUtil.list(proto.categories.BOOKMARKS, 0, 0)
-            .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
-            .then((response) => {
-              t.equals(response.length, 2, `${t.name} check records number`)
-              const s3Record = response[0].record
-              const s3Record2 = response[1].record
-              t.deepEquals(s3Record.objectId, record.objectId, `${t.name}: objectId`)
-              t.deepEquals(s3Record.bookmark.site.title, record_update.bookmark.site.title, `${t.name}: bookmark.title`)
-              requestUtil.deleteCategory(proto.categories.BOOKMARKS)
-                .then((_response) => {
-                  testCanLimitResponse(t)
-                })
-                .catch((error) => { t.fail(error) })
-            })
-            .catch((error) => { t.fail(error) })
-        }, 90000)
       })
     }
 

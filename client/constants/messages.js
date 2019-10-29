@@ -106,6 +106,11 @@ const messages = {
   COMPACT_SYNC_CATEGORY: _, /* @param {string} categoryName */
   /**
    * webview -> browser
+   * sent after compaction is competed.
+   */
+  COMPACTED_SYNC_CATEGORY: _, /* @param {string} categoryName */
+  /**
+   * webview -> browser
    * webview sends this to delete all site settings.
    */
   DELETE_SYNC_SITE_SETTINGS: _,
