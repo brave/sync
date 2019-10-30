@@ -195,9 +195,19 @@ const startSync = (requester) => {
       ipc.send(messages.COMPACTED_SYNC_CATEGORY, category)
       isCompactionInProgress = false
     }
+    const compactionUpdate = (records) => {
+      let jsRecords = []
+      for (let record of records) {
+        const jsRecord = recordUtil.syncRecordAsJS(record)
+        jsRecord.syncTimestamp = record.syncTimestamp
+        jsRecords.push(jsRecord)
+      }
+      logSync(`Compaction records update category: ${category}`)
+      ipc.send(messages.GET_EXISTING_OBJECTS, category, jsRecords, 0, false)
+    }
     if (!isCompactionInProgress) {
       requester.list(proto.categories[category], 0, 1000, '',
-        {compaction: true, compactionCb: compactionDone}).then(() => {
+        {compaction: true, compactionDoneCb: compactionDone, compactionUpdateCb: compactionUpdate}).then(() => {
         logSync(`Compacting category: ${category}`)
         isCompactionInProgress = true
       })

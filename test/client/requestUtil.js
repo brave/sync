@@ -455,7 +455,7 @@ test('client RequestUtil', (t) => {
         // limit batch size to 10 to test cross batch compaction for around 40
         // objects
         requestUtil.list(proto.categories.BOOKMARKS, 0, 10, '', {compaction: true,
-          compactionCb: () => {
+          compactionDoneCb: () => {
             console.log = consoleLogBak
             console.log('compaction is done')
             //  we already have 15 second timeout for each batch so no need to
