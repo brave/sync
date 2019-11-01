@@ -404,7 +404,7 @@ test('client RequestUtil', (t) => {
 
     const testCanDoCompaction = (t) => {
       t.test('#compact bookmarks', (t) => {
-        t.plan(3)
+        t.plan(7)
         const recordObjectId = testHelper.newUuid()
         const record2ObjectId = testHelper.newUuid()
         const record = {
@@ -452,12 +452,25 @@ test('client RequestUtil', (t) => {
           requestUtil.put(proto.categories.BOOKMARKS, record2_update)
         }
         const consoleLogBak = console.log
+        let counter = 0
+        let compactedRecord = []
+        const compactionUpdate = (records) => {
+          compactedRecord = compactedRecord.concat(records)
+          counter = counter + 1
+        }
         // limit batch size to 10 to test cross batch compaction for around 40
         // objects
         requestUtil.list(proto.categories.BOOKMARKS, 0, 10, '', {compaction: true,
+          compactionUpdateCb: compactionUpdate,
           compactionDoneCb: () => {
             console.log = consoleLogBak
             console.log('compaction is done')
+            t.equals(counter, 5)
+            t.equals(compactedRecord.length, 9)
+            t.equals(
+              compactedRecord.filter(record => record.objectId.toString() === record_update.objectId.toString()).length, 4)
+            t.equals(
+              compactedRecord.filter(record => record.objectId.toString() === record2_update.objectId.toString()).length, 5)
             //  we already have 15 second timeout for each batch so no need to
             //  do another wait after compaction is done
             requestUtil.list(proto.categories.BOOKMARKS, 0, 0)
