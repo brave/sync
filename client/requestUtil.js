@@ -184,6 +184,8 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
  * @param {number=} maxRecords Limit response to a given number of recods. By default the Sync lib will fetch all matching records, which might take a long time. If falsey, fetch all records.
  * @param {{
  *    compaction {boolean} // compact records while list object from S3
+ *    compactionDoneCb {function} // callback when compaction is done
+ *    compactionUpdateCb {function} // callback for client to update missing local records
  *  }} opts
  * @returns {Promise(Array.<Object>)}
  */
@@ -206,13 +208,20 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContin
       }
       return new Promise((resolve, reject) => {
         s3ObjectsPromise.then((s3Objects) => {
+          const compactedRecords = this.compactObjects(s3Objects.contents)
+          if (opts.compactionUpdateCb) {
+            opts.compactionUpdateCb(compactedRecords)
+          }
+          // wait for 15 seconds between batches
           setTimeout(() => {
-            this.compactObjects(s3Objects.contents)
             if (s3Objects.isTruncated) {
               return this.list(category, startAt, maxRecords, s3Objects.nextContinuationToken, opts)
             }
             return new Promise((resolve, reject) => {
               // compaction is done
+              if (opts.compactionDoneCb) {
+                opts.compactionDoneCb()
+              }
               resolve()
             })
           }, 15000)
@@ -463,9 +472,11 @@ RequestUtil.prototype.put = function (category, record) {
 /**
  * Compact all records in a category
  * @param {string=} category - the category ID
+ * @returns {Array.<Object>} - records after compaction
  */
 RequestUtil.prototype.compactObjects = function (s3Objects) {
   let s3ObjectsToDelete = []
+  const compactedRecords = {}
   const recordObjects = this.s3ObjectsToRecords(s3Objects)
   recordObjects.forEach((recordObject) => {
     const record = recordObject.record
@@ -477,15 +488,18 @@ RequestUtil.prototype.compactObjects = function (s3Objects) {
         s3ObjectsToDelete = s3ObjectsToDelete.concat(cacheRecordObject.objects)
         console.log(cacheRecordObject.record)
         this.latestRecordsCache.set(id, recordObject)
+        compactedRecords[id] = record
       } else {
         s3ObjectsToDelete = s3ObjectsToDelete.concat(recordObject.objects)
         console.log(record)
       }
     } else {
       this.latestRecordsCache.set(id, recordObject)
+      compactedRecords[id] = record
     }
   })
   s3Helper.deleteObjects(this.s3, this.bucket, s3ObjectsToDelete)
+  return Object.values(compactedRecords)
 }
 
 RequestUtil.prototype.s3PostFormData = function (objectKey) {
