@@ -23,6 +23,7 @@ var clientKeys = {}
 var config = {}
 var seed
 var nextContinuationTokens = {}
+var isCompactionInProgress = false
 
 /**
  * Logs stuff on the visible HTML page.
@@ -190,9 +191,27 @@ const startSync = (requester) => {
     if (!proto.categories[category]) {
       throw new Error(`Unsupported sync category: ${category}`)
     }
-    requester.list(proto.categories[category], 0, 1000, '', {compaction: true}).then(() => {
-      logSync(`Compacting category: ${category}`)
-    })
+    const compactionDone = () => {
+      ipc.send(messages.COMPACTED_SYNC_CATEGORY, category)
+      isCompactionInProgress = false
+    }
+    const compactionUpdate = (records) => {
+      let jsRecords = []
+      for (let record of records) {
+        const jsRecord = recordUtil.syncRecordAsJS(record)
+        jsRecord.syncTimestamp = record.syncTimestamp
+        jsRecords.push(jsRecord)
+      }
+      logSync(`Compaction records update category: ${category}`)
+      ipc.send(messages.GET_EXISTING_OBJECTS, category, jsRecords, 0, false)
+    }
+    if (!isCompactionInProgress) {
+      requester.list(proto.categories[category], 0, 1000, '',
+        {compaction: true, compactionDoneCb: compactionDone, compactionUpdateCb: compactionUpdate}).then(() => {
+        logSync(`Compacting category: ${category}`)
+        isCompactionInProgress = true
+      })
+    }
   })
   ipc.on(messages.DELETE_SYNC_SITE_SETTINGS, (e) => {
     logSync(`Deleting siteSettings`)
