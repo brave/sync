@@ -152,6 +152,8 @@ const startSync = (requester) => {
   ipc.on(messages.SEND_SYNC_RECORDS, (e, category, records) => {
     logSync(`Sending ${records.length} records`)
     const categoryId = proto.categories[category]
+    const promisePuts = []
+    const sentRecords = []
     records.forEach((record) => {
       if (!record) {
         logSync(`could not send empty record`, ERROR)
@@ -163,11 +165,17 @@ const startSync = (requester) => {
       if (record.bookmark && record.bookmark.parentFolderObjectId) {
         record.bookmark.parentFolderObjectId = new Uint8Array(record.bookmark.parentFolderObjectId)
       }
-      requester.bufferedPut(categoryId, record).then(() => {
-        logSync(`sending record: ${JSON.stringify(record)}`)
-      }).catch((e) => {
-        logSync(`could not send record ${JSON.stringify(record)}: ${e}`, ERROR)
-      })
+      promisePuts.push(
+        requester.bufferedPut(categoryId, record).then(() => {
+          logSync(`sending record: ${JSON.stringify(record)}`)
+          sentRecords.push(record)
+        }).catch((e) => {
+          logSync(`could not send record ${JSON.stringify(record)}: ${e}`, ERROR)
+        })
+      )
+    })
+    Promise.all(promisePuts).then(() => {
+      ipc.send(messages.SENT_SYNC_RECORDS, category, sentRecords)
     })
   })
   ipc.on(messages.DELETE_SYNC_USER, (e) => {
