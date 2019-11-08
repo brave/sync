@@ -85,6 +85,12 @@ const messages = {
    */
   SEND_SYNC_RECORDS: _, /* @param {string=} categoryName, @param {Array.<Object>} records */
   /**
+   * webview ->  browser
+   * browser can check whether the records in SEND_SYNC_RECORDS get uploaded
+   * successfully.
+   */
+  SENT_SYNC_RECORDS: _, /* @param {string=} categoryName, @param {Array.<Object>} records */
+  /**
    * browser -> webview
    * browser sends this to delete the current user.
    */
