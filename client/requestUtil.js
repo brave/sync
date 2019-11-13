@@ -342,9 +342,10 @@ RequestUtil.prototype.sqsName = function (deviceId, category) {
 /**
  * Creates SQS for the current device.
  * @param {string} deviceId
+ * @param {string} deviceUuid
  * @returns {Promise}
  */
-RequestUtil.prototype.createAndSubscribeSQS = function (deviceId) {
+RequestUtil.prototype.createAndSubscribeSQS = function (deviceId, deviceUuid) {
   // Creating a query for the current userId
   if (!deviceId) {
     throw new Error('createSQS failed. deviceId is null!')
