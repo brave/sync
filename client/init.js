@@ -1,9 +1,9 @@
 'use strict'
 
 const crypto = require('brave-crypto')
+const libCrypto = require('../lib/crypto')
 const messages = require('./constants/messages')
 const {syncVersion} = require('./config')
-const uuidv4 = require('uuid/v4')
 
 /**
  * Initializes crypto and device ID
@@ -13,14 +13,16 @@ module.exports.init = function () {
   return new Promise((resolve, reject) => {
     const ipc = window.chrome.ipcRenderer
     ipc.send(messages.GET_INIT_DATA, syncVersion)
-    ipc.once(messages.GOT_INIT_DATA, (e, seed, deviceId, config, deviceUuid) => {
+    ipc.once(messages.GOT_INIT_DATA, (e, seed, deviceId, config, deviceIdV2) => {
+      // TODO(darkdh): save uuid for migrated devices
+      if (deviceIdV2.length === 0) {
+        deviceIdV2 = Buffer.from(libCrypto.randomBytes(3)).toString('hex')
+      }
       if (seed === null) {
         // Generate a new "persona"
         seed = crypto.getSeed() // 32 bytes
         deviceId = new Uint8Array([0])
-        // dash is reserved for s3 key delimiters
-        deviceUuid = uuidv4().replace(/(-)/g, '_')
-        ipc.send(messages.SAVE_INIT_DATA, seed, deviceId, deviceUuid)
+        ipc.send(messages.SAVE_INIT_DATA, seed, deviceId, deviceIdV2)
         // TODO: The background process should listen for SAVE_INIT_DATA and emit
         // GOT_INIT_DATA once the save is successful
       }
@@ -31,7 +33,7 @@ module.exports.init = function () {
         reject(new Error('Invalid crypto seed'))
         return
       }
-      resolve({seed, deviceId, config, deviceUuid})
+      resolve({seed, deviceId, config, deviceIdV2})
     })
   })
 }

@@ -2,6 +2,7 @@
 
 const awsSdk = require('aws-sdk')
 const cryptoUtil = require('./cryptoUtil')
+const deepEqual = require('deep-equal')
 const recordUtil = require('./recordUtil')
 const proto = require('./constants/proto')
 const {limitConcurrency} = require('../lib/promiseHelper')
@@ -64,6 +65,7 @@ const RequestUtil = function (opts = {}) {
     this.saveAWSCredentials(credentials)
   }
   this.SQSUrlByCat = []
+  this.oldSQSUrlByCat = []
   this.missingObjectsCache = new LRUCache(50)
   // This is used to keep the most recent records for each object id
   this.latestRecordsCache = new LRUCache(100)
@@ -249,8 +251,27 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContin
       WaitTimeSeconds: CONFIG.SQS_MESSAGES_LONGPOLL_TIMEOUT
     }
 
-    return s3Helper.listNotifications(this.sqs, notificationParams, category,
-      prefix)
+    if (this.oldSQSUrlByCat[category]) {
+      let oldNotificationParams = Object.assign({}, notificationParams)
+      oldNotificationParams.QueueUrl = `${this.oldSQSUrlByCat[category]}`
+
+      return s3Helper.listNotifications(this.sqs, notificationParams, category, prefix).then((values) => {
+        if (this.shouldRetireOldSQSQueue(parseInt(values.createdTimeStamp))) {
+          return this.deleteSQSQueue(this.oldSQSUrlByCat[category]).then(() => {
+            delete this.oldSQSUrlByCat[category]
+            return values
+          })
+        }
+        return s3Helper.listNotifications(this.sqs, oldNotificationParams, category, prefix).then((oldValues) => {
+          if (deepEqual(values.contents, oldValues.contents, {strict: true})) {
+            return values
+          }
+          return {contents: values.contents.concat(oldValues.contents),
+            createdTimeStamp: values.createdTimeStamp}
+        })
+      })
+    }
+    return s3Helper.listNotifications(this.sqs, notificationParams, category, prefix)
   })
 }
 
@@ -273,6 +294,14 @@ RequestUtil.prototype.shouldListObject = function (startAt, category) {
       (currentTime - startAtToCheck) > parseInt(s3Helper.SQS_RETENTION, 10) * 1000 ||
       !CATEGORIES_FOR_SQS.includes(category) ||
       this.listInProgress === true
+}
+
+RequestUtil.prototype.shouldRetireOldSQSQueue = function (createdTimestamp) {
+  let currentTime = new Date().getTime()
+  let newQueueCreatedTime =
+    this.normalizeTimestampToMs(createdTimestamp, currentTime)
+
+  return (currentTime - newQueueCreatedTime) > parseInt(s3Helper.SQS_RETENTION, 10) * 1000
 }
 
 /**
@@ -342,15 +371,16 @@ RequestUtil.prototype.sqsName = function (deviceId, category) {
 /**
  * Creates SQS for the current device.
  * @param {string} deviceId
- * @param {string} deviceUuid
+ * @param {string} deviceIdV2
  * @returns {Promise}
  */
-RequestUtil.prototype.createAndSubscribeSQS = function (deviceId, deviceUuid) {
+RequestUtil.prototype.createAndSubscribeSQS = function (deviceId, deviceIdV2) {
   // Creating a query for the current userId
-  if (!deviceId) {
-    throw new Error('createSQS failed. deviceId is null!')
+  if (!deviceIdV2) {
+    throw new Error('createSQS failed. deviceIdV2 is null!')
   }
   this.deviceId = deviceId
+  this.deviceIdV2 = deviceIdV2
   const createAndSubscribeSQSforCategory = function (deviceId, category, thisRef) {
     let newQueueParams = {
       QueueName: thisRef.sqsName(deviceId, category),
@@ -370,10 +400,31 @@ RequestUtil.prototype.createAndSubscribeSQS = function (deviceId, deviceUuid) {
       })
     })
   }
+
+  const subscribeOldSQSforCategory = function (deviceId, category, thisRef) {
+    return new Promise((resolve, reject) => {
+      let params = {
+        QueueName: thisRef.sqsName(deviceId, category)
+      }
+      thisRef.sqs.getQueueUrl(params, (error, data) => {
+        if (error) {
+          // queue doesn't exist
+          resolve()
+        } else if (data) {
+          thisRef.oldSQSUrlByCat[category] = data.QueueUrl
+          resolve()
+        }
+      })
+    })
+  }
   var createSQSPromises = []
   // Simple for loop instead foreach to capture 'this'
   for (var i = 0; i < CATEGORIES_FOR_SQS.length; ++i) {
-    createSQSPromises.push(createAndSubscribeSQSforCategory(deviceId, CATEGORIES_FOR_SQS[i], this))
+    // Doesn't have to create about to deprecate quques
+    // createSQSPromises.push(createAndSubscribeSQSforCategory(deviceId, CATEGORIES_FOR_SQS[i], this))
+    createSQSPromises.push(subscribeOldSQSforCategory(deviceId, CATEGORIES_FOR_SQS[i], this))
+    createSQSPromises.push(createAndSubscribeSQSforCategory(deviceIdV2, CATEGORIES_FOR_SQS[i], this))
+    // TODO(darkdh): encode into base64
   }
 
   return Promise.all(createSQSPromises)
@@ -531,7 +582,7 @@ RequestUtil.prototype.deleteUser = function () {
 RequestUtil.prototype.purgeUserCategoryQueue = function (category) {
   return new Promise((resolve, reject) => {
     let params = {
-      QueueName: this.sqsName(this.deviceId, category)
+      QueueName: this.sqsName(this.deviceIdV2, category)
     }
     this.sqs.getQueueUrl(params, (error, data) => {
       if (error) {
@@ -550,6 +601,20 @@ RequestUtil.prototype.purgeUserCategoryQueue = function (category) {
           resolve([])
         })
       }
+    })
+  })
+}
+
+RequestUtil.prototype.deleteSQSQueue = function (url) {
+  return new Promise((resolve, reject) => {
+    let params = {
+      QueueUrl: url
+    }
+    this.sqs.deleteQueue(params, (err, data) => {
+      if (err) {
+        console.log('SQS deleteQueue failed with error: ' + err)
+      }
+      resolve([])
     })
   })
 }
