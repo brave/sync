@@ -420,8 +420,7 @@ RequestUtil.prototype.createAndSubscribeSQS = function (deviceId, deviceIdV2) {
   var createSQSPromises = []
   // Simple for loop instead foreach to capture 'this'
   for (var i = 0; i < CATEGORIES_FOR_SQS.length; ++i) {
-    // Doesn't have to create about to deprecate quques
-    // createSQSPromises.push(createAndSubscribeSQSforCategory(deviceId, CATEGORIES_FOR_SQS[i], this))
+    // Doesn't have to create about to deprecated queues
     createSQSPromises.push(subscribeOldSQSforCategory(deviceId, CATEGORIES_FOR_SQS[i], this))
     createSQSPromises.push(createAndSubscribeSQSforCategory(deviceIdV2, CATEGORIES_FOR_SQS[i], this))
     // TODO(darkdh): encode into base64

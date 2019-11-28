@@ -7,7 +7,7 @@ const recordUtil = require('./recordUtil')
 const messages = require('./constants/messages')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
-const {deriveKeys} = require('../lib/crypto')
+const {deriveKeys, generateDeviceIdV2} = require('../lib/crypto')
 
 let ipc = window.chrome.ipcRenderer
 
@@ -52,7 +52,7 @@ const logSync = (message, logLevel = DEBUG) => {
  * @returns {Promise}
  */
 const maybeSetDeviceId = (requester) => {
-  if (clientDeviceId !== null) {
+  if (clientDeviceId !== null && clientDeviceIdV2.length !== 0 ) {
     return Promise.resolve(requester)
   }
   if (!requester || !requester.s3) {
@@ -72,6 +72,7 @@ const maybeSetDeviceId = (requester) => {
         })
       }
       clientDeviceId = new Uint8Array([maxId + 1])
+      clientDeviceIdV2 = generateDeviceIdV2()
       ipc.send(messages.SAVE_INIT_DATA, seed, clientDeviceId, clientDeviceIdV2)
       return Promise.resolve(requester)
     })

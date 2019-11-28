@@ -1,7 +1,7 @@
 'use strict'
 
 const crypto = require('brave-crypto')
-const libCrypto = require('../lib/crypto')
+const {generateDeviceIdV2} = require('../lib/crypto')
 const messages = require('./constants/messages')
 const {syncVersion} = require('./config')
 
@@ -14,18 +14,16 @@ module.exports.init = function () {
     const ipc = window.chrome.ipcRenderer
     ipc.send(messages.GET_INIT_DATA, syncVersion)
     ipc.once(messages.GOT_INIT_DATA, (e, seed, deviceId, config, deviceIdV2) => {
-      // TODO(darkdh): save uuid for migrated devices
-      if (deviceIdV2.length === 0) {
-        deviceIdV2 = Buffer.from(libCrypto.randomBytes(3)).toString('hex')
-      }
       if (seed === null) {
         // Generate a new "persona"
         seed = crypto.getSeed() // 32 bytes
         deviceId = new Uint8Array([0])
+        deviceIdV2 = generateDeviceIdV2()
         ipc.send(messages.SAVE_INIT_DATA, seed, deviceId, deviceIdV2)
         // TODO: The background process should listen for SAVE_INIT_DATA and emit
         // GOT_INIT_DATA once the save is successful
       }
+
       // XXX: workaround #17
       seed = seed instanceof Array ? new Uint8Array(seed) : seed
       deviceId = deviceId instanceof Array ? new Uint8Array(deviceId) : deviceId
