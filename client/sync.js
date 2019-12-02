@@ -52,7 +52,11 @@ const logSync = (message, logLevel = DEBUG) => {
  * @returns {Promise}
  */
 const maybeSetDeviceId = (requester) => {
-  if (clientDeviceId !== null && clientDeviceIdV2.length !== 0 ) {
+  if (clientDeviceId !== null) {
+    if (clientDeviceIdV2.length === 0) {
+      clientDeviceIdV2 = generateDeviceIdV2()
+      ipc.send(messages.SAVE_INIT_DATA, seed, clientDeviceId, clientDeviceIdV2)
+    }
     return Promise.resolve(requester)
   }
   if (!requester || !requester.s3) {

@@ -251,18 +251,21 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContin
       WaitTimeSeconds: CONFIG.SQS_MESSAGES_LONGPOLL_TIMEOUT
     }
 
+    // We will fetch from both old and new SQS queues until old one gets retired
     if (this.oldSQSUrlByCat[category]) {
       let oldNotificationParams = Object.assign({}, notificationParams)
       oldNotificationParams.QueueUrl = `${this.oldSQSUrlByCat[category]}`
 
-      return s3Helper.listNotifications(this.sqs, notificationParams, category, prefix).then((values) => {
+      return s3Helper.listNotifications(
+        this.sqs, notificationParams, category, prefix).then((values) => {
         if (this.shouldRetireOldSQSQueue(parseInt(values.createdTimeStamp))) {
           return this.deleteSQSQueue(this.oldSQSUrlByCat[category]).then(() => {
             delete this.oldSQSUrlByCat[category]
             return values
           })
         }
-        return s3Helper.listNotifications(this.sqs, oldNotificationParams, category, prefix).then((oldValues) => {
+        return s3Helper.listNotifications(
+          this.sqs, oldNotificationParams, category, prefix).then((oldValues) => {
           if (deepEqual(values.contents, oldValues.contents, {strict: true})) {
             return values
           }
@@ -296,6 +299,13 @@ RequestUtil.prototype.shouldListObject = function (startAt, category) {
       this.listInProgress === true
 }
 
+/**
+ * The retention time of our SQS queue is 24 hours so we will retire old SQS
+ * queue created by device id after 24 hours
+ * @param {number=} createdTimestamp is the when new device id v2 queue was
+ * created
+ * @returns {boolean}
+ */
 RequestUtil.prototype.shouldRetireOldSQSQueue = function (createdTimestamp) {
   let currentTime = new Date().getTime()
   let newQueueCreatedTime =
@@ -423,7 +433,6 @@ RequestUtil.prototype.createAndSubscribeSQS = function (deviceId, deviceIdV2) {
     // Doesn't have to create about to deprecated queues
     createSQSPromises.push(subscribeOldSQSforCategory(deviceId, CATEGORIES_FOR_SQS[i], this))
     createSQSPromises.push(createAndSubscribeSQSforCategory(deviceIdV2, CATEGORIES_FOR_SQS[i], this))
-    // TODO(darkdh): encode into base64
   }
 
   return Promise.all(createSQSPromises)
@@ -604,6 +613,10 @@ RequestUtil.prototype.purgeUserCategoryQueue = function (category) {
   })
 }
 
+/**
+ * Delete SQS queue by url
+ * @param {string} url - SQS queue url
+ */
 RequestUtil.prototype.deleteSQSQueue = function (url) {
   return new Promise((resolve, reject) => {
     let params = {

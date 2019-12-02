@@ -2,6 +2,7 @@ const test = require('tape')
 const testHelper = require('../testHelper')
 const timekeeper = require('timekeeper')
 const clientTestHelper = require('./testHelper')
+const {generateDeviceIdV2} = require('../../lib/crypto')
 const Serializer = require('../../lib/serializer')
 const RequestUtil = require('../../client/requestUtil')
 const proto = require('../../client/constants/proto')
@@ -30,7 +31,7 @@ test('client RequestUtil', (t) => {
         }
 
         const requestUtil = new RequestUtil(args)
-        requestUtil.createAndSubscribeSQS('0')
+        requestUtil.createAndSubscribeSQS('0', generateDeviceIdV2())
           .then(()=> {
             t.pass('can instantiate requestUtil')
             t.test('prototype', (t) => {
