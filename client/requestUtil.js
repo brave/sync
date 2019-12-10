@@ -31,6 +31,26 @@ const isExpiredCredentialError = (error) => {
   })
 }
 
+const createAndSubscribeSQSforCategory = function (deviceId, category, thisRef) {
+  let newQueueParams = {
+    QueueName: thisRef.sqsName(deviceId, category),
+    Attributes: {
+      'MessageRetentionPeriod': s3Helper.SQS_RETENTION
+    }
+  }
+  return new Promise((resolve, reject) => {
+    thisRef.sqs.createQueue(newQueueParams, (error, data) => {
+      if (error) {
+        console.log('SQS creation failed with error: ' + error)
+        reject(error)
+      } else if (data) {
+        thisRef.SQSUrlByCat[category] = data.QueueUrl
+        resolve([])
+      }
+    })
+  })
+}
+
 /**
  * @param {{
  *   apiVersion: <string>,
@@ -379,6 +399,22 @@ RequestUtil.prototype.sqsName = function (deviceId, category) {
 }
 
 /**
+ * Main purpose of this function is to create old SQS queue to test device id v2
+ * migration
+ * @param {string} deviceId
+ * @returns {Promise}
+ */
+RequestUtil.prototype.createAndSubscribeSQSForTest = function (deviceId) {
+  var createSQSPromises = []
+  // Simple for loop instead foreach to capture 'this'
+  for (var i = 0; i < CATEGORIES_FOR_SQS.length; ++i) {
+    createSQSPromises.push(createAndSubscribeSQSforCategory(deviceId, CATEGORIES_FOR_SQS[i], this))
+  }
+
+  return Promise.all(createSQSPromises)
+}
+
+/**
  * Creates SQS for the current device.
  * @param {string} deviceId
  * @param {string} deviceIdV2
@@ -389,27 +425,7 @@ RequestUtil.prototype.createAndSubscribeSQS = function (deviceId, deviceIdV2) {
   if (!deviceIdV2) {
     throw new Error('createSQS failed. deviceIdV2 is null!')
   }
-  this.deviceId = deviceId
   this.deviceIdV2 = deviceIdV2
-  const createAndSubscribeSQSforCategory = function (deviceId, category, thisRef) {
-    let newQueueParams = {
-      QueueName: thisRef.sqsName(deviceId, category),
-      Attributes: {
-        'MessageRetentionPeriod': s3Helper.SQS_RETENTION
-      }
-    }
-    return new Promise((resolve, reject) => {
-      thisRef.sqs.createQueue(newQueueParams, (error, data) => {
-        if (error) {
-          console.log('SQS creation failed with error: ' + error)
-          reject(error)
-        } else if (data) {
-          thisRef.SQSUrlByCat[category] = data.QueueUrl
-          resolve([])
-        }
-      })
-    })
-  }
 
   const subscribeOldSQSforCategory = function (deviceId, category, thisRef) {
     return new Promise((resolve, reject) => {
