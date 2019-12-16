@@ -109,8 +109,8 @@ const startSync = (requester) => {
     return jsRecords
   }
 
-  ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames, startAt, limitResponse) => {
-    logSync(`fetching ${categoryNames} records after ${startAt}`)
+  ipc.on(messages.FETCH_SYNC_RECORDS, (e, categoryNames, startAt, limitResponse, previousFetchTime) => {
+    logSync(`fetching ${categoryNames} records after ${startAt} previous fetch is ${previousFetchTime}`)
     categoryNames.forEach((category) => {
       if (!proto.categories[category]) {
         throw new Error(`Unsupported sync category: ${category}`)
@@ -119,7 +119,7 @@ const startSync = (requester) => {
       if (nextContinuationTokens[category]) {
         continuationToken = nextContinuationTokens[category]
       }
-      requester.list(proto.categories[category], startAt, limitResponse, continuationToken).then((s3Objects) => {
+      requester.list(proto.categories[category], startAt, limitResponse, continuationToken, previousFetchTime).then((s3Objects) => {
         const jsRecords = getJSRecords(s3Objects.contents)
         logSync(`got ${jsRecords.length} decrypted records in ${category} after ${startAt}`)
         let lastRecordTimestamp
@@ -220,7 +220,7 @@ const startSync = (requester) => {
       ipc.send(messages.GET_EXISTING_OBJECTS, category, jsRecords, 0, false)
     }
     if (!isCompactionInProgress) {
-      requester.list(proto.categories[category], 0, 1000, '',
+      requester.list(proto.categories[category], 0, 1000, '', 0,
         {compaction: true, compactionDoneCb: compactionDone, compactionUpdateCb: compactionUpdate}).then(() => {
         logSync(`Compacting category: ${category}`)
         isCompactionInProgress = true
