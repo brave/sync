@@ -2,6 +2,7 @@ const test = require('tape')
 const testHelper = require('../testHelper')
 const timekeeper = require('timekeeper')
 const proto = require('../../client/constants/proto')
+const {generateDeviceIdV2} = require('../../lib/crypto')
 const recordUtil = require('../../client/recordUtil')
 const Serializer = require('../../lib/serializer')
 
@@ -548,8 +549,10 @@ test('recordUtil.syncRecordAsJS()', (t) => {
     })
     conversionEquals({ objectData: 'siteSetting', siteSetting })
 
+    const deviceIdV2 = generateDeviceIdV2()
     const device = serializer.api.SyncRecord.Device.create({
-      name: 'mobile pyramid'
+      name: 'mobile pyramid',
+      deviceIdV2
     })
     conversionEquals({ objectData: 'device', device })
   })
