@@ -82,6 +82,7 @@ message SyncRecord {
   }
   message Device {
     string name = 1;
+    string deviceIdV2 = 2;
   }
   Action action = 1;
   bytes deviceId = 2;
