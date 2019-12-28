@@ -7,7 +7,7 @@ const recordUtil = require('./recordUtil')
 const messages = require('./constants/messages')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
-const {deriveKeys} = require('../lib/crypto')
+const {deriveKeys, generateDeviceIdV2} = require('../lib/crypto')
 
 let ipc = window.chrome.ipcRenderer
 
@@ -18,6 +18,7 @@ const ERROR = 2
 const logElement = document.querySelector('#output')
 
 var clientDeviceId = null
+var clientDeviceIdV2 = null
 var clientUserId = null
 var clientKeys = {}
 var config = {}
@@ -52,6 +53,10 @@ const logSync = (message, logLevel = DEBUG) => {
  */
 const maybeSetDeviceId = (requester) => {
   if (clientDeviceId !== null) {
+    if (clientDeviceIdV2.length === 0) {
+      clientDeviceIdV2 = generateDeviceIdV2()
+      ipc.send(messages.SAVE_INIT_DATA, seed, clientDeviceId, clientDeviceIdV2)
+    }
     return Promise.resolve(requester)
   }
   if (!requester || !requester.s3) {
@@ -71,7 +76,8 @@ const maybeSetDeviceId = (requester) => {
         })
       }
       clientDeviceId = new Uint8Array([maxId + 1])
-      ipc.send(messages.SAVE_INIT_DATA, seed, clientDeviceId)
+      clientDeviceIdV2 = generateDeviceIdV2()
+      ipc.send(messages.SAVE_INIT_DATA, seed, clientDeviceId, clientDeviceIdV2)
       return Promise.resolve(requester)
     })
 }
@@ -252,6 +258,7 @@ const main = () => {
     const clientSerializer = values[0]
     const keys = deriveKeys(values[1].seed)
     const deviceId = values[1].deviceId
+    clientDeviceIdV2 = values[1].deviceIdV2
     seed = values[1].seed
     clientKeys = keys
     config = values[1].config
@@ -288,8 +295,8 @@ const main = () => {
     })
     .then((requester) => {
       if (clientDeviceId !== null && requester && requester.s3) {
-        logSync('set device ID: ' + clientDeviceId)
-        requester.createAndSubscribeSQS(clientDeviceId).then(() => {
+        logSync('set device ID: ' + clientDeviceId + ' device ID V2: ' + clientDeviceIdV2)
+        requester.createAndSubscribeSQS(clientDeviceId, clientDeviceIdV2).then(() => {
           startSync(requester)
         })
           .catch((e) => {

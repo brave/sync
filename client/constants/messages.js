@@ -34,12 +34,17 @@ const messages = {
    * saved. 'config' contains apiVersion, serverUrl, debug;
    * see server/config/default.json
    */
-  GOT_INIT_DATA: _, /* @param {Array} seed, @param {Array} deviceId, @param {Object} config */
+  GOT_INIT_DATA: _, /* @param {Array} seed, @param {Array} deviceId,
+                     * @param {Object} config, @param {string} deviceIdV2
+                     * */
   /**
    * webview -> browser
    * browser must save values in persistent storage if non-empty
+   * It will be called during initial setup or deviceIdV2 migration
    */
-  SAVE_INIT_DATA: _, /* @param {Uint8Array} seed, @param {Uint8Array} deviceId */
+  SAVE_INIT_DATA: _, /* @param {Uint8Array} seed, @param {Uint8Array} deviceId,
+                      * @param {string} deviceIdV2
+                      */
   /**
    * webview -> browser
    * sent when sync has finished initialization
