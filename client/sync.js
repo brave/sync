@@ -7,9 +7,9 @@ const recordUtil = require('./recordUtil')
 const messages = require('./constants/messages')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
-const {deriveKeys, generateDeviceIdV2} = require('../lib/crypto')
+const { deriveKeys, generateDeviceIdV2 } = require('../lib/crypto')
 
-let ipc = window.chrome.ipcRenderer
+const ipc = window.chrome.ipcRenderer
 
 // logging
 const DEBUG = 0
@@ -95,8 +95,8 @@ const startSync = (requester) => {
    */
   const getJSRecords = (s3Objects, filterFunction) => {
     const recordObjects = requester.s3ObjectsToRecords(s3Objects)
-    let jsRecords = []
-    for (let recordObject of recordObjects) {
+    const jsRecords = []
+    for (const recordObject of recordObjects) {
       const record = recordObject.record
       const jsRecord = recordUtil.syncRecordAsJS(record)
       // Useful but stored in the S3 key.
@@ -142,8 +142,8 @@ const startSync = (requester) => {
     })
   })
   ipc.on(messages.FETCH_SYNC_DEVICES, (e) => {
-    logSync(`fetching devices`)
-    requester.list(proto.categories['PREFERENCES'], 0).then((s3Objects) => {
+    logSync('fetching devices')
+    requester.list(proto.categories.PREFERENCES, 0).then((s3Objects) => {
       const isDevice = (jsRecord) => !!jsRecord.device
       const jsRecords = getJSRecords(s3Objects.contents, isDevice)
       logSync(`fetched ${jsRecords.length} devices`)
@@ -162,7 +162,7 @@ const startSync = (requester) => {
     const sentRecords = []
     records.forEach((record) => {
       if (!record) {
-        logSync(`could not send empty record`, ERROR)
+        logSync('could not send empty record', ERROR)
         return
       }
       // Workaround #17
@@ -185,7 +185,7 @@ const startSync = (requester) => {
     })
   })
   ipc.on(messages.DELETE_SYNC_USER, (e) => {
-    logSync(`Deleting user!!`)
+    logSync('Deleting user!!')
     requester.deleteUser().then(() => {
       requester.purgeUserQueue().then(() => {
         ipc.send(messages.DELETED_SYNC_USER)
@@ -210,8 +210,8 @@ const startSync = (requester) => {
       isCompactionInProgress = false
     }
     const compactionUpdate = (records) => {
-      let jsRecords = []
-      for (let record of records) {
+      const jsRecords = []
+      for (const record of records) {
         const jsRecord = recordUtil.syncRecordAsJS(record)
         jsRecord.syncTimestamp = record.syncTimestamp
         jsRecords.push(jsRecord)
@@ -221,24 +221,24 @@ const startSync = (requester) => {
     }
     if (!isCompactionInProgress) {
       requester.list(proto.categories[category], 0, 1000, '',
-        {compaction: true, compactionDoneCb: compactionDone, compactionUpdateCb: compactionUpdate}).then(() => {
+        { compaction: true, compactionDoneCb: compactionDone, compactionUpdateCb: compactionUpdate }).then(() => {
         logSync(`Compacting category: ${category}`)
         isCompactionInProgress = true
       })
     }
   })
   ipc.on(messages.DELETE_SYNC_SITE_SETTINGS, (e) => {
-    logSync(`Deleting siteSettings`)
+    logSync('Deleting siteSettings')
     requester.deleteSiteSettings().then(() => {
       requester.purgeUserQueue()
     })
   })
   ipc.on(messages.GET_BOOKMARKS_BASE_ORDER, (e, deviceId, platform) => {
-    logSync(`Getting bookmarks base order`)
+    logSync('Getting bookmarks base order')
     ipc.send(messages.SAVE_BOOKMARKS_BASE_ORDER, bookmarkUtil.getBaseBookmarksOrder(deviceId, platform))
   })
   ipc.on(messages.GET_BOOKMARK_ORDER, (e, prevOrder, nextOrder, parentOrder) => {
-    logSync(`Getting current bookmark order based on prev, next and parent orders`)
+    logSync('Getting current bookmark order based on prev, next and parent orders')
 
     ipc.send(messages.SAVE_BOOKMARK_ORDER, bookmarkUtil.getBookmarkOrder(prevOrder, nextOrder, parentOrder), prevOrder, nextOrder, parentOrder)
   })

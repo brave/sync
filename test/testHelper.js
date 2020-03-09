@@ -75,9 +75,9 @@ module.exports.Decrypt = (serializer, secretboxKey) => {
  * Copy an object and deep modify the copy to turn Uint8Array into Buffer.
  */
 const deepBufferize = (sourceObject) => {
-  let object = Object.assign({}, sourceObject)
+  const object = Object.assign({}, sourceObject)
   const has = Object.prototype.hasOwnProperty.bind(object)
-  for (let k in object) {
+  for (const k in object) {
     if (!has(k)) { continue }
     if (object[k] instanceof Uint8Array) {
       object[k] = Buffer.from(object[k])

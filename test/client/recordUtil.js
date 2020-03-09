@@ -2,7 +2,7 @@ const test = require('tape')
 const testHelper = require('../testHelper')
 const timekeeper = require('timekeeper')
 const proto = require('../../client/constants/proto')
-const {generateDeviceIdV2} = require('../../lib/crypto')
+const { generateDeviceIdV2 } = require('../../lib/crypto')
 const recordUtil = require('../../client/recordUtil')
 const Serializer = require('../../lib/serializer')
 
@@ -15,13 +15,13 @@ const Record = (props) => {
   return Object.assign({}, baseProps, props)
 }
 const CreateRecord = (props) => {
-  return Record(Object.assign({action: proto.actions.CREATE}, props))
+  return Record(Object.assign({ action: proto.actions.CREATE }, props))
 }
 const UpdateRecord = (props) => {
-  return Record(Object.assign({action: proto.actions.UPDATE}, props))
+  return Record(Object.assign({ action: proto.actions.UPDATE }, props))
 }
 const DeleteRecord = (props) => {
-  return Record(Object.assign({action: proto.actions.DELETE}, props))
+  return Record(Object.assign({ action: proto.actions.DELETE }, props))
 }
 
 const timestampMs = 1480004209001
@@ -48,18 +48,18 @@ const props = {
     zoomLevel: 2.5
   }
 }
-const updateSiteProps = {customTitle: 'a ball pit filled with plush coconuts'}
+const updateSiteProps = { customTitle: 'a ball pit filled with plush coconuts' }
 
-const recordBookmark = Record({objectData: 'bookmark', bookmark: props.bookmark})
-const recordHistorySite = Record({objectData: 'historySite', historySite: siteProps})
-const recordSiteSetting = Record({objectData: 'siteSetting', siteSetting: props.siteSetting})
-const recordDevice = Record({objectData: 'device', device: {name: 'test pyramid'}})
+const recordBookmark = Record({ objectData: 'bookmark', bookmark: props.bookmark })
+const recordHistorySite = Record({ objectData: 'historySite', historySite: siteProps })
+const recordSiteSetting = Record({ objectData: 'siteSetting', siteSetting: props.siteSetting })
+const recordDevice = Record({ objectData: 'device', device: { name: 'test pyramid' } })
 const baseRecords = [recordBookmark, recordHistorySite, recordSiteSetting]
 
 const updateBookmark = UpdateRecord({
   objectId: recordBookmark.objectId,
   objectData: 'bookmark',
-  bookmark: {site: updateSiteProps}
+  bookmark: { site: updateSiteProps }
 })
 const updateHistorySite = UpdateRecord({
   objectId: recordHistorySite.objectId,
@@ -69,7 +69,7 @@ const updateHistorySite = UpdateRecord({
 const updateSiteSetting = UpdateRecord({
   objectId: recordSiteSetting.objectId,
   objectData: 'siteSetting',
-  siteSetting: {shieldsUp: true}
+  siteSetting: { shieldsUp: true }
 })
 
 test('recordUtil.resolve', (t) => {
@@ -77,9 +77,9 @@ test('recordUtil.resolve', (t) => {
 
   const forRecordsWithAction = (t, action, callback) => {
     t.plan(baseRecords.length)
-    for (let record of baseRecords) {
+    for (const record of baseRecords) {
       record.action = action
-      const existingObject = Object.assign({}, record, {action: proto.actions.CREATE})
+      const existingObject = Object.assign({}, record, { action: proto.actions.CREATE })
       callback(record, existingObject)
     }
   }
@@ -252,7 +252,7 @@ test('recordUtil.resolve', (t) => {
     const resolveToNull = (t, recordProps, message) => {
       t.plan(1)
       const record = Record(
-        Object.assign({}, recordProps, {action: proto.actions.UPDATE})
+        Object.assign({}, recordProps, { action: proto.actions.UPDATE })
       )
       const resolvedRecord = recordUtil.resolve(record)
       t.equals(resolvedRecord, null, message)
@@ -261,7 +261,7 @@ test('recordUtil.resolve', (t) => {
     const resolveToCreate = (t, recordProps, resolvedProps, message) => {
       t.plan(1)
       const record = Record(
-        Object.assign({}, recordProps, {action: proto.actions.UPDATE})
+        Object.assign({}, recordProps, { action: proto.actions.UPDATE })
       )
       const expectedRecord = Record(Object.assign(
         {},
@@ -280,12 +280,12 @@ test('recordUtil.resolve', (t) => {
     }
 
     t.test(`${t.name}, historySite, .customTitle -> null`, (t) => {
-      const recordProps = {objectData: 'historySite', historySite: {customTitle: 'pyramid'}}
+      const recordProps = { objectData: 'historySite', historySite: { customTitle: 'pyramid' } }
       resolveToNull(t, recordProps, t.name)
     })
 
     t.test(`${t.name}, historySite, .location -> create`, (t) => {
-      const recordProps = {objectData: 'historySite', historySite: {location: url}}
+      const recordProps = { objectData: 'historySite', historySite: { location: url } }
       const resolvedProps = {
         historySite: {
           location: url,
@@ -303,7 +303,7 @@ test('recordUtil.resolve', (t) => {
     t.test(`${t.name}, bookmark, .site.customTitle -> null`, (t) => {
       const recordProps = {
         objectData: 'bookmark',
-        bookmark: {site: {customTitle: 'i like turtles'}}
+        bookmark: { site: { customTitle: 'i like turtles' } }
       }
       resolveToNull(t, recordProps, t.name)
     })
@@ -311,7 +311,7 @@ test('recordUtil.resolve', (t) => {
     t.test(`${t.name}, bookmark, .site.location -> create bookmark`, (t) => {
       const recordProps = {
         objectData: 'bookmark',
-        bookmark: {site: {location: url}}
+        bookmark: { site: { location: url } }
       }
       const resolvedProps = {
         bookmark: {
@@ -333,7 +333,7 @@ test('recordUtil.resolve', (t) => {
     t.test(`${t.name}, bookmark, .isFolder .site.customTitle -> create folder`, (t) => {
       const recordProps = {
         bookmark: {
-          site: {customTitle: 'sweet title'},
+          site: { customTitle: 'sweet title' },
           isFolder: true
         },
         objectData: 'bookmark'
@@ -344,7 +344,7 @@ test('recordUtil.resolve', (t) => {
     t.test(`${t.name}, bookmark, .isFolder, .site.title -> create folder`, (t) => {
       const recordProps = {
         bookmark: {
-          site: {title: 'salty title'},
+          site: { title: 'salty title' },
           isFolder: true
         },
         objectData: 'bookmark'
@@ -355,7 +355,7 @@ test('recordUtil.resolve', (t) => {
     t.test(`${t.name}, siteSetting, .safeBrowsing -> null`, (t) => {
       const recordProps = {
         objectData: 'siteSetting',
-        siteSetting: {safeBrowsing: false}
+        siteSetting: { safeBrowsing: false }
       }
       resolveToNull(t, recordProps, t.name)
     })
@@ -363,7 +363,7 @@ test('recordUtil.resolve', (t) => {
     t.test(`${t.name}, siteSetting, .hostPattern -> create`, (t) => {
       const recordProps = {
         objectData: 'siteSetting',
-        siteSetting: {hostPattern: url, noScript: false}
+        siteSetting: { hostPattern: url, noScript: false }
       }
       const resolvedProps = {
         siteSetting: {
@@ -392,7 +392,7 @@ test('recordUtil.resolveRecords()', (t) => {
       delete record.syncTimestamp
     })
     const resolvedAndroid = recordUtil.resolveRecords(androidRecordsAndExistingObjects)
-    t.deepEquals(resolvedLaptop, resolvedAndroid, `resolves same bookmarks on android and laptop`)
+    t.deepEquals(resolvedLaptop, resolvedAndroid, 'resolves same bookmarks on android and laptop')
   })
 
   t.test(`${t.name} takes [ [{syncRecord}, {existingObject || null}], ... ] and returns resolved records [{syncRecord}, ...]`, (t) => {
