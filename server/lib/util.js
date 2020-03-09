@@ -14,7 +14,7 @@ exports.debugLogger = (request, response, next) => {
   this.logger.debug('->', request.url)
   this.logger.debug('-> Headers:', request.headers)
   if (request.cookies) {
-    for (let cookieName in request.cookies) {
+    for (const cookieName in request.cookies) {
       this.logger.debug(`-> Cookie: ${cookieName}:`, request.cookies[cookieName])
     }
   }
@@ -39,7 +39,7 @@ exports.conciseTemplateString = (strings, ...values) => {
   output += strings[values.length]
 
   // Split on newlines.
-  let lines = output.split(/(?:\r\n|\n|\r)/)
+  const lines = output.split(/(?:\r\n|\n|\r)/)
 
   // Rip out the leading whitespace.
   return lines.map((line) => {
@@ -70,10 +70,10 @@ function parsePlatform (agent) {
   const other = 'other'
   const os = {
     'Mac OS X': 'mac',
-    'Windows': 'windows',
-    'Linux': 'linux',
-    'Android': 'android',
-    'iOS': 'ios'
+    Windows: 'windows',
+    Linux: 'linux',
+    Android: 'android',
+    iOS: 'ios'
   }[ua.os.family] || other
   if (ua.family.indexOf('Chrome') === 0) {
     return os

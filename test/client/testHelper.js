@@ -66,6 +66,6 @@ module.exports.getSerializedCredentials = (serializer) => {
     })
     .then((credentialsArrayBuffer) => {
       const serializedCredentials = new Uint8Array(credentialsArrayBuffer)
-      return {keys, userId, serializedCredentials}
+      return { keys, userId, serializedCredentials }
     })
 }
