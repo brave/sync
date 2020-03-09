@@ -312,8 +312,8 @@ const CATEGORIES_FOR_SQS = [proto.categories.BOOKMARKS, proto.categories.PREFERE
  * @returns {boolean}
 */
 RequestUtil.prototype.shouldListObject = function (startAt, category) {
-  let currentTime = new Date().getTime()
-  let startAtToCheck = this.normalizeTimestampToMs(startAt, currentTime)
+  const currentTime = new Date().getTime()
+  const startAtToCheck = this.normalizeTimestampToMs(startAt, currentTime)
 
   return !startAtToCheck ||
       (currentTime - startAtToCheck) > parseInt(s3Helper.SQS_RETENTION, 10) * 1000 ||
