@@ -19,8 +19,8 @@ test('deviceId V2 migration', (t) => {
 
         t.throws(() => { return new RequestUtil() }, 'requires arguments')
         const requiredArgs = ['apiVersion', 'keys', 'serializer', 'serverUrl']
-        for (let arg of requiredArgs) {
-          let lessArgs = Object.assign({}, args)
+        for (const arg of requiredArgs) {
+          const lessArgs = Object.assign({}, args)
           lessArgs[arg] = undefined
           t.throws(() => { return new RequestUtil(lessArgs) }, `requires ${arg}`)
         }
@@ -96,7 +96,7 @@ test('deviceId V2 migration', (t) => {
     })
     const testCanListFromOldQueue = (t) => {
       t.test('can list notification from old SQS queue', (t) => {
-        let currentTime = new Date().getTime()
+        const currentTime = new Date().getTime()
         requestUtil.list(proto.categories.BOOKMARKS, currentTime, 0, '', currentTime)
           .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
           .then((response) => {
@@ -126,7 +126,7 @@ test('deviceId V2 migration', (t) => {
     }
     const testCanListFromBothQueues = (t) => {
       t.test('can list notifications from new and old SQS queues', (t) => {
-        let currentTime = new Date().getTime()
+        const currentTime = new Date().getTime()
         requestUtil.list(proto.categories.BOOKMARKS, currentTime, 0, '', currentTime)
           .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
           .then((response) => {

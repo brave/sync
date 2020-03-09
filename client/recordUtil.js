@@ -4,7 +4,7 @@ const deepEqual = require('deep-equal')
 const merge = require('lodash.merge')
 const proto = require('./constants/proto')
 const serializer = require('../lib/serializer')
-const {api} = require('../lib/api.proto.js')
+const { api } = require('../lib/api.proto.js')
 const syncTypes = require('../lib/syncTypes.js')
 
 // ['0', '1', '2']
@@ -62,7 +62,7 @@ const createFromUpdateBookmark = CreateFromUpdate(
         isFolder: false
       }
       const site = createSitePropsFromUpdateSite(bookmark.site)
-      return Object.assign({}, defaultProps, bookmark, {site})
+      return Object.assign({}, defaultProps, bookmark, { site })
     }
   }
 )
@@ -115,7 +115,9 @@ const humanAction = (action) => {
 
 const pickFields = (object, fields) => {
   return fields.reduce((a, x) => {
-    if (object.hasOwnProperty(x)) { a[x] = object[x] }
+    if (Object.prototype.hasOwnProperty.call(object, x)) {
+      a[x] = object[x]
+    }
     return a
   }, {})
 }
@@ -188,8 +190,8 @@ const resolveSiteSettingsRecordWithObject = (record, existingObject) => {
   if (Object.keys(resolvedData).length === 0) {
     return null
   }
-  let resolved = Object.assign({}, record, {[type]: resolvedData})
-  for (let field of commonFields) {
+  const resolved = Object.assign({}, record, { [type]: resolvedData })
+  for (const field of commonFields) {
     if (!recordFields.has(field)) { continue }
     resolved[type][field] = record[type][field]
   }
@@ -214,16 +216,18 @@ module.exports.resolve = (record, existingObject) => {
       return existingObject
         ? nullIgnore()
         : record
-    case proto.actions.UPDATE:
+    case proto.actions.UPDATE: {
       const resolvedUpdate = existingObject
         ? resolveRecordWithObject(record, existingObject)
         : this.createFromUpdate(record)
       return resolvedUpdate || nullIgnore()
-    case proto.actions.DELETE:
+    }
+    case proto.actions.DELETE: {
       const resolvedDelete = existingObject
         ? resolveRecordWithObject(record, existingObject)
         : null
       return resolvedDelete || nullIgnore()
+    }
     default:
       throw new Error(`Invalid record action: ${record.action}`)
   }
@@ -278,7 +282,7 @@ const mergeRecords = (recordsAndObjects) => {
  * @returns {Array.<Object>} Resolved syncRecords to apply to browser data.
  */
 module.exports.resolveRecords = (recordsAndExistingObjects) => {
-  let resolvedRecords = []
+  const resolvedRecords = []
   recordsAndExistingObjects.forEach((item) => {
     if (item) {
       normalizeBookmark(item[0])
@@ -334,7 +338,7 @@ module.exports.syncRecordAsJS = (record) => {
  * @returns {string} e.g. '0' for bookmark
  */
 module.exports.getRecordCategory = (record) => {
-  for (let type in proto.categoryMap) {
+  for (const type in proto.categoryMap) {
     if (record[type]) {
       const categoryName = proto.categoryMap[type]
       if (!categoryName) { return undefined }

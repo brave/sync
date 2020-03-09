@@ -5,7 +5,7 @@ const cryptoUtil = require('./cryptoUtil')
 const deepEqual = require('deep-equal')
 const recordUtil = require('./recordUtil')
 const proto = require('./constants/proto')
-const {limitConcurrency} = require('../lib/promiseHelper')
+const { limitConcurrency } = require('../lib/promiseHelper')
 const s3Helper = require('../lib/s3Helper')
 const serializer = require('../lib/serializer')
 const LRUCache = require('lru-cache')
@@ -32,10 +32,10 @@ const isExpiredCredentialError = (error) => {
 }
 
 const createAndSubscribeSQSforCategory = function (deviceId, category, thisRef) {
-  let newQueueParams = {
+  const newQueueParams = {
     QueueName: thisRef.sqsName(deviceId, category),
     Attributes: {
-      'MessageRetentionPeriod': s3Helper.SQS_RETENTION
+      MessageRetentionPeriod: s3Helper.SQS_RETENTION
     }
   }
   return new Promise((resolve, reject) => {
@@ -196,7 +196,7 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
     sslEnabled: true
   })
 
-  return {s3, postData, expiration, bucket, region, sqs}
+  return { s3, postData, expiration, bucket, region, sqs }
 }
 
 /**
@@ -213,7 +213,7 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
  */
 RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContinuationToken, previousFetchTime, opts = {}) {
   const prefix = `${this.apiVersion}/${this.userId}/${category}`
-  let options = {
+  const options = {
     MaxKeys: maxRecords || 1000,
     Bucket: this.bucket,
     Prefix: prefix
@@ -258,7 +258,7 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContin
     }
 
     // We poll from SQS
-    let notificationParams = {
+    const notificationParams = {
       QueueUrl: `${this.SQSUrlByCat[category]}`,
       AttributeNames: [
         'All'
@@ -273,7 +273,7 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContin
 
     // We will fetch from both old and new SQS queues until old one gets retired
     if (this.oldSQSUrlByCat[category]) {
-      let oldNotificationParams = Object.assign({}, notificationParams)
+      const oldNotificationParams = Object.assign({}, notificationParams)
       oldNotificationParams.QueueUrl = `${this.oldSQSUrlByCat[category]}`
 
       return s3Helper.listNotifications(
@@ -286,11 +286,13 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContin
         }
         return s3Helper.listNotifications(
           this.sqs, oldNotificationParams, category, prefix).then((oldValues) => {
-          if (deepEqual(values.contents, oldValues.contents, {strict: true})) {
+          if (deepEqual(values.contents, oldValues.contents, { strict: true })) {
             return values
           }
-          return {contents: values.contents.concat(oldValues.contents),
-            createdTimeStamp: values.createdTimeStamp}
+          return {
+            contents: values.contents.concat(oldValues.contents),
+            createdTimeStamp: values.createdTimeStamp
+          }
         })
       })
     }
@@ -310,7 +312,7 @@ const CATEGORIES_FOR_SQS = [proto.categories.BOOKMARKS, proto.categories.PREFERE
  * @returns {boolean}
 */
 RequestUtil.prototype.shouldListObject = function (previousFetchTime, category) {
-  let currentTime = new Date().getTime()
+  const currentTime = new Date().getTime()
   return !previousFetchTime ||
       (currentTime - previousFetchTime) > parseInt(s3Helper.SQS_RETENTION, 10) * 1000 ||
       !CATEGORIES_FOR_SQS.includes(category) ||
@@ -325,8 +327,8 @@ RequestUtil.prototype.shouldListObject = function (previousFetchTime, category) 
  * @returns {boolean}
  */
 RequestUtil.prototype.shouldRetireOldSQSQueue = function (createdTimestamp) {
-  let currentTime = new Date().getTime()
-  let newQueueCreatedTime =
+  const currentTime = new Date().getTime()
+  const newQueueCreatedTime =
     this.normalizeTimestampToMs(createdTimestamp, currentTime)
 
   return (currentTime - newQueueCreatedTime) > parseInt(s3Helper.SQS_RETENTION, 10) * 1000
@@ -430,7 +432,7 @@ RequestUtil.prototype.createAndSubscribeSQS = function (deviceId, deviceIdV2) {
 
   const subscribeOldSQSforCategory = function (deviceId, category, thisRef) {
     return new Promise((resolve, reject) => {
-      let params = {
+      const params = {
         QueueName: thisRef.sqsName(deviceId, category)
       }
       thisRef.sqs.getQueueUrl(params, (error, data) => {
@@ -470,7 +472,7 @@ RequestUtil.prototype.s3ObjectsToRecords = function (s3Objects) {
   this.missingObjectsCache.forEach((value, key, cache) => {
     partBuffer[key] = value
   })
-  for (let s3Object of s3Objects) {
+  for (const s3Object of s3Objects) {
     const parsedKey = s3Helper.parseS3Key(s3Object.Key)
     const fullCrc = parsedKey.recordCrc
     let data = parsedKey.recordPartString
@@ -491,7 +493,8 @@ RequestUtil.prototype.s3ObjectsToRecords = function (s3Objects) {
         decrypted = this.decrypt(dataBytes)
         decrypted.syncTimestamp = parsedKey.timestamp
         output.push(
-          { record: decrypted,
+          {
+            record: decrypted,
             objects: objectMap[fullCrc]
           })
       } catch (e) {
@@ -503,7 +506,7 @@ RequestUtil.prototype.s3ObjectsToRecords = function (s3Objects) {
       partBuffer[fullCrc] = data
     }
   }
-  for (let crc in partBuffer) {
+  for (const crc in partBuffer) {
     this.missingObjectsCache.set(crc, partBuffer[crc])
     console.log(`Record with CRC ${crc} is missing parts or corrupt.`)
   }
@@ -582,7 +585,7 @@ RequestUtil.prototype.compactObjects = function (s3Objects) {
 RequestUtil.prototype.s3PostFormData = function (objectKey) {
   let formData = new FormData() // eslint-disable-line
   formData.append('key', objectKey)
-  for (let key of Object.keys(this.postData)) {
+  for (const key of Object.keys(this.postData)) {
     formData.append(key, this.postData[key])
   }
   formData.append('file', new Uint8Array([]))
@@ -606,7 +609,7 @@ RequestUtil.prototype.deleteUser = function () {
 
 RequestUtil.prototype.purgeUserCategoryQueue = function (category) {
   return new Promise((resolve, reject) => {
-    let params = {
+    const params = {
       QueueName: this.sqsName(this.deviceIdV2, category)
     }
     this.sqs.getQueueUrl(params, (error, data) => {
@@ -615,7 +618,7 @@ RequestUtil.prototype.purgeUserCategoryQueue = function (category) {
         resolve([])
         // Just ignore the error
       } else if (data) {
-        let params = {
+        const params = {
           QueueUrl: data.QueueUrl
         }
         this.sqs.purgeQueue(params, (errPurgeSQS, dataPurgeSQS) => {
@@ -636,7 +639,7 @@ RequestUtil.prototype.purgeUserCategoryQueue = function (category) {
  */
 RequestUtil.prototype.deleteSQSQueue = function (url) {
   return new Promise((resolve, reject) => {
-    let params = {
+    const params = {
       QueueUrl: url
     }
     this.sqs.deleteQueue(params, (err, data) => {
