@@ -96,8 +96,8 @@ test('deviceId V2 migration', (t) => {
     })
     const testCanListFromOldQueue = (t) => {
       t.test('can list notification from old SQS queue', (t) => {
-        const currentTime = new Date().getTime()
-        requestUtil.list(proto.categories.BOOKMARKS, currentTime, 0, '', currentTime)
+        let currentTime = new Date().getTime()
+        requestUtil.list(proto.categories.BOOKMARKS, currentTime)
           .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
           .then((response) => {
             t.equals(response.length, 1)
@@ -126,8 +126,8 @@ test('deviceId V2 migration', (t) => {
     }
     const testCanListFromBothQueues = (t) => {
       t.test('can list notifications from new and old SQS queues', (t) => {
-        const currentTime = new Date().getTime()
-        requestUtil.list(proto.categories.BOOKMARKS, currentTime, 0, '', currentTime)
+        let currentTime = new Date().getTime()
+        requestUtil.list(proto.categories.BOOKMARKS, currentTime)
           .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
           .then((response) => {
             t.equals(response.length, 1)
