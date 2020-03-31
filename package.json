@@ -9,12 +9,15 @@
     "flow": "flow; test $? -eq 0 -o $? -eq 2",
     "build": "npm run build-proto && browserify client/sync.js | uglifyjs > bundles/bundle.js && cpr client/constants bundles/constants -o",
     "build-proto": "pbjs --target=static-module lib/api.proto > lib/api.proto.js",
+    "prebrowsertest": "optional-dev-dependency",
     "browsertest": "npm run build-proto; npm run start-test; browserify test/client/*.js test/*.js | uglifyjs | tape-run; exitCode=$?; npm run stop-test; exit $exitCode",
+    "prebrowsertest-chrome": "optional-dev-dependency",
     "browsertest-chrome": "npm run build-proto; npm run start-test; browserify test/client/*.js | tape-run --browser chrome; exitCode=$?; npm run stop-test; exit $exitCode",
+    "prebrowsertest-safari": "optional-dev-dependency",
     "browsertest-safari": "npm run build-proto; npm run start-test; browserify test/client/*.js | tape-run --browser safari; exitCode=$?; npm run stop-test; exit $exitCode",
     "check": "npm audit",
     "client": "npm run build && python -m SimpleHTTPServer",
-    "precoverage": "optional-dev-dependency -t istanbul",
+    "precoverage": "optional-dev-dependency",
     "coverage": "NODE_CONFIG_DIR=server/config/ istanbul cover tape test/*.js test/server/**/*.js --report lcovonly -- -R spec",
     "dist": "npm run build && cpr bundles/bundle.js ../browser-laptop/app/extensions/brave/content/scripts/sync.js -o && cpr bundles/constants/ ../browser-laptop/js/constants/sync/ -f '\\w+\\.js' -o",
     "start": "NODE_CONFIG_DIR=server/config/ node server/index.js",
@@ -47,15 +50,12 @@
     "optional-dev-dependency": "^2.0.1",
     "standard": "^11.0.1",
     "tape": "^4.6.3",
-    "tape-run": "^6.0.0",
     "timekeeper": "^2.0.0",
     "uglify-es": "^3.3.9"
   },
   "optionalDevDependencies": {
-    "istanbul": [
-      "^0.4.5",
-      "istanbul"
-    ]
+    "istanbul": "^0.4.5",
+    "tape-run": "^6.0.0"
   },
   "dependencies": {
     "@protobufjs/utf8": "^1.1.0",
