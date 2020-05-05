@@ -3,6 +3,7 @@
   "awsSecretAccessKey": "AWS_SECRET_ACCESS_KEY",
   "awsRegion": "AWS_REGION",
   "awsS3Bucket": "AWS_S3_BUCKET",
+  /*"awsEndpoint": "http://127.0.0.1:9000",*/
   /*"apiVersion": "0",*/
   /*"categoryIdBookmarks": "0",*/
   /*"categoryIdHistorySites": "1",*/
