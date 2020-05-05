@@ -52,25 +52,7 @@ test('client RequestUtil', (t) => {
     })
     const serializer = requestUtil.serializer
 
-    t.plan(3)
-
-    t.test('#should list object', (t) => {
-      t.plan(3)
-
-      t.equals(true,
-        requestUtil.shouldListObject(0, proto.categories.BOOKMARKS),
-        `${t.name}: previous fetch time is empty - use S3`)
-
-      t.equals(false,
-        requestUtil.shouldListObject(new Date().getTime()-1000*60, proto.categories.BOOKMARKS),
-        `${t.name}: previous fetch is not older than 24h - use SQS`)
-
-      const delta25hours = 1000*60*60*25
-      t.equals(true,
-        requestUtil.shouldListObject(new Date().getTime()-delta25hours, proto.categories.BOOKMARKS),
-        `${t.name}: previous fetch is older than 24h - use S3`)
-    })
-
+    t.plan(2)
     t.test('#put preference: device', (t) => {
       t.plan(2)
       const deviceId = new Uint8Array([0])
@@ -306,7 +288,7 @@ test('client RequestUtil', (t) => {
       const testCanListNotifications = (t) => {
         t.test(`${t.name} can list notification`, (t) => {
           let currentTime = new Date().getTime()
-          requestUtil.list(proto.categories.BOOKMARKS, currentTime, 1000, '', currentTime)
+          requestUtil.list(proto.categories.BOOKMARKS, currentTime)
             .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
             .then((response) => {
               const s3Record = response[1] ? response[1].record : response[1]
@@ -479,7 +461,7 @@ test('client RequestUtil', (t) => {
         }
         // limit batch size to 10 to test cross batch compaction for around 40
         // objects
-        requestUtil.list(proto.categories.BOOKMARKS, 0, 10, '', 0, {compaction: true,
+        requestUtil.list(proto.categories.BOOKMARKS, 0, 10, '', {compaction: true,
           compactionUpdateCb: compactionUpdate,
           compactionDoneCb: () => {
             console.log = consoleLogBak
@@ -492,7 +474,7 @@ test('client RequestUtil', (t) => {
               compactedRecord.filter(record => record.objectId.toString() === record2_update.objectId.toString()).length, 5)
             //  we already have 15 second timeout for each batch so no need to
             //  do another wait after compaction is done
-            requestUtil.list(proto.categories.BOOKMARKS, 0, 0, '', 0)
+            requestUtil.list(proto.categories.BOOKMARKS, 0, 0)
               .then(s3Objects => requestUtil.s3ObjectsToRecords(s3Objects.contents))
               .then((response) => {
                 t.equals(response.length, 2, `${t.name} check records number`)

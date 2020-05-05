@@ -211,7 +211,7 @@ RequestUtil.prototype.parseAWSResponse = function (bytes) {
  *  }} opts
  * @returns {Promise(Array.<Object>)}
  */
-RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContinuationToken, previousFetchTime, opts = {}) {
+RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContinuationToken, opts = {}) {
   const prefix = `${this.apiVersion}/${this.userId}/${category}`
   const options = {
     MaxKeys: maxRecords || 1000,
@@ -223,7 +223,7 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContin
   }
   if (startAt) { options.StartAfter = `${prefix}/${startAt}` }
   return this.withRetry(() => {
-    if (this.shouldListObject(previousFetchTime, category) || opts.compaction) {
+    if (this.shouldListObject(startAt, category) || opts.compaction) {
       const s3ObjectsPromise = s3Helper.listObjects(this.s3, options, !!maxRecords)
       if (!opts.compaction) {
         return s3ObjectsPromise
@@ -237,7 +237,7 @@ RequestUtil.prototype.list = function (category, startAt, maxRecords, nextContin
           // wait for 15 seconds between batches
           setTimeout(() => {
             if (s3Objects.isTruncated) {
-              return this.list(category, startAt, maxRecords, s3Objects.nextContinuationToken, previousFetchTime, opts)
+              return this.list(category, startAt, maxRecords, s3Objects.nextContinuationToken, opts)
             }
             return new Promise((resolve, reject) => {
               // compaction is done
@@ -307,14 +307,16 @@ const CATEGORIES_FOR_SQS = [proto.categories.BOOKMARKS, proto.categories.PREFERE
 
 /**
  * Checks do we need to use s3 list Object or SQS notifications
- * @param {number=} previousFetchTime - the previous fetch time. Could be seconds or milliseconds
+ * @param {number=} startAt return objects with timestamp >= startAt (e.g. 1482435340). Could be seconds or milliseconds
  * @param {string} category - the category ID
  * @returns {boolean}
 */
-RequestUtil.prototype.shouldListObject = function (previousFetchTime, category) {
+RequestUtil.prototype.shouldListObject = function (startAt, category) {
   const currentTime = new Date().getTime()
-  return !previousFetchTime ||
-      (currentTime - previousFetchTime) > parseInt(s3Helper.SQS_RETENTION, 10) * 1000 ||
+  const startAtToCheck = this.normalizeTimestampToMs(startAt, currentTime)
+
+  return !startAtToCheck ||
+      (currentTime - startAtToCheck) > parseInt(s3Helper.SQS_RETENTION, 10) * 1000 ||
       !CATEGORIES_FOR_SQS.includes(category) ||
       this.listInProgress === true
 }
@@ -336,20 +338,17 @@ RequestUtil.prototype.shouldRetireOldSQSQueue = function (createdTimestamp) {
 
 /**
  * Checks do we need to use s3 list Object or SQS notifications
- * @param {number=} timeToNormalize could be seconds or milliseconds
+ * @param {number=} startAt return objects with timestamp >= startAt (e.g. 1482435340). Could be seconds or milliseconds
  * @param {number=} currentTime currentTime in milliseconds
- * @returns {number=} the time for sure in milliseconds
+ * @returns {number=}
 */
-RequestUtil.prototype.normalizeTimestampToMs = function (timeToNormalize, currentTime) {
-  if (!timeToNormalize) {
-    return 0
+RequestUtil.prototype.normalizeTimestampToMs = function (startAt, currentTime) {
+  let startAtToCheck = startAt
+  if (startAtToCheck && currentTime.toString().length - startAtToCheck.toString().length >= 3) {
+    startAtToCheck *= 1000
   }
 
-  if (timeToNormalize && currentTime.toString().length - timeToNormalize.toString().length >= 3) {
-    timeToNormalize *= 1000
-  }
-
-  return timeToNormalize
+  return startAtToCheck
 }
 
 /**
