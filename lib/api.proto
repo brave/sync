@@ -54,7 +54,7 @@ message SyncRecord {
     repeated string fields = 6;
     bool hideInToolbar = 7;
     string order = 8;
-    repeated MetaInfo metaInfo= 9;
+    repeated MetaInfo metaInfo = 9;
   }
   message SiteSetting {
     string hostPattern = 1;
@@ -93,4 +93,5 @@ message SyncRecord {
     SiteSetting siteSetting = 6;
     Device device = 7;
   }
+  repeated MetaInfo metaInfo = 8;
 }
